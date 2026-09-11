@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: ait_backend
+    restart: always
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - DATABASE_URL=postgresql+psycopg2://ait_admin:ait_secure_pass_2026@postgres:5432/ait_db
+      - REDIS_URL=redis://redis:6379/0
+      - USE_REDIS=true
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/backend/storage/uploads
+      - backend_images:/app/backend/storage/images
+
+  user-web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+    container_name: ait_user_web
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ait_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ait_db
+      POSTGRES_USER: ait_admin
+      POSTGRES_PASSWORD: ait_secure_pass_2026
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: ait_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:
+  backend_uploads:
+  backend_images:
