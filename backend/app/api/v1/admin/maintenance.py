@@ -52,7 +52,7 @@ def update_maintenance_mode(
     if req.message:
         state.user_message = req.message
     elif target_mode == "MAINTENANCE":
-        state.user_message = "AIT AI Assistant is undergoing scheduled maintenance. Please check back shortly."
+        state.user_message = "AI-Powered Colleges Chatbot is undergoing scheduled maintenance. Please check back shortly."
     elif target_mode == "READ_ONLY":
         state.user_message = "System is in read-only mode. New mutations are temporarily suspended."
     elif target_mode == "EMERGENCY":

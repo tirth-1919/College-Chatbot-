@@ -24,7 +24,10 @@ class ImageRetrievalEngine:
     }
 
     @classmethod
-    def match_visual_query(cls, db: Session, query: str) -> List[Dict[str, Any]]:
+    def match_visual_query(cls, db: Session, query: str,
+                           college_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Tenant-scoped image retrieval (§15): only the ACTIVE college's
+        verified images can be returned for its conversations."""
         query_lower = query.lower()
 
         # Identify target facility or category
@@ -35,6 +38,8 @@ class ImageRetrievalEngine:
                 break
 
         q = db.query(AitImage).filter(AitImage.verified == True)
+        if college_id:
+            q = q.filter(AitImage.college_id == college_id)
 
         if target_category:
             q = q.filter(or_(AitImage.category == target_category, AitImage.title.ilike(f"%{target_category}%")))

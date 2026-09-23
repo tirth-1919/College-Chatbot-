@@ -1,3 +1,0 @@
-﻿C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\chat\orchestrator.py : Line 119 : # 2. Entity fallback: Search by program
-C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\chat\orchestrator.py : Line 124 : # 3. Topic fallback: Search by intent or detected topic
-C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\chat\orchestrator.py : Line 171 : # 7. Gemini fallback (Section 12)

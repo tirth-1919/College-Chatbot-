@@ -10,7 +10,7 @@ function EntityModal({ entity, onSave, onClose }) {
     category: entity?.category || 'program',
     code: entity?.code || '',
     details: entity?.details ? JSON.stringify(entity.details, null, 2) : '{}',
-    source_url: entity?.source_url || 'https://www.aitindia.in',
+    source_url: entity?.source_url || '',
     status: 'PUBLISHED'
   });
   const [error, setError] = useState('');

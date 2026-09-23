@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Mail, Lock, User as UserIcon, AlertCircle } from 'lucide-react';
 import { apiClient } from '../services/api';
 
-export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
+export function AuthModal({ isOpen, onClose, onAuthSuccess, onNavigateRegister }) {
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,7 +45,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 600 }}>
-            {isSignup ? 'Create Student/Faculty Account' : 'Sign in to AIT Assistant'}
+            {isSignup ? 'Create Student/Faculty Account' : 'Sign in to AI FAQ College Chat Bot'}
           </h2>
           <button className="item-action-icon" onClick={onClose}>
             <X size={18} />
@@ -65,11 +65,11 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               <label style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>Full Name</label>
               <div style={{ position: 'relative' }}>
                 <UserIcon size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
-                  placeholder="e.g. Anjali Sharma" 
-                  value={fullName} 
+                  placeholder="e.g. Anjali Sharma"
+                  value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   style={{ width: '100%', padding: '10px 12px 10px 36px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'white' }}
                 />
@@ -81,10 +81,10 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <label style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>Email Address</label>
             <div style={{ position: 'relative' }}>
               <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-              <input 
-                type="email" 
+              <input
+                type="email"
                 required
-                placeholder="name@aitindia.in" 
+                placeholder="name@example.com" 
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px 10px 36px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'white' }}
@@ -110,7 +110,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           <button 
             type="submit" 
             disabled={loading}
-            style={{ marginTop: '8px', padding: '12px', background: 'linear-gradient(135deg, var(--ait-accent), #e65100)', border: 'none', borderRadius: 'var(--radius-sm)', color: 'white', fontWeight: 600, cursor: 'pointer' }}
+            style={{ marginTop: '8px', padding: '12px', background: 'var(--text-main)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#000000', fontWeight: 600, cursor: 'pointer' }}
           >
             {loading ? 'Please wait...' : (isSignup ? 'Sign Up' : 'Sign In')}
           </button>
@@ -141,6 +141,24 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           >
             {isSignup ? 'Sign In' : 'Create Account'}
           </button>
+        </div>
+
+        <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+          Representing an institution?{' '}
+          <a
+            href="/register-college"
+            onClick={(e) => {
+              e.preventDefault();
+              if (onNavigateRegister) {
+                onNavigateRegister();
+              } else {
+                window.location.href = '/register-college';
+              }
+            }}
+            style={{ color: 'var(--ait-accent)', fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
+          >
+            Register Your College →
+          </a>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import os
 import glob
 import time
+import asyncio
 import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any
@@ -10,6 +11,7 @@ from backend.app.core.config import settings
 from backend.app.automation.engine import automation_engine
 from backend.app.automation.events import event_bus
 from backend.app.models.knowledge import AitEntity, WebsiteSnapshot, KnowledgeGap
+from backend.app.knowledge.crawler import website_crawler
 from backend.app.models.document import Document, DocumentChunk
 from backend.app.models.image import AitImage
 from backend.app.models.admin_system import (
@@ -37,38 +39,12 @@ def job_ait_website_sync(payload: Dict[str, Any]) -> Dict[str, Any]:
         if not automation_engine.acquire_lock(db, "lock:website_sync", ttl_seconds=120):
             return {"status": "SKIPPED", "reason": "Another sync job holds the lock"}
 
-        synced_pages = [
-            {"url": "https://www.aitindia.in/", "title": "Ahmedabad Institute of Technology Home"},
-            {"url": "https://www.aitindia.in/admissions", "title": "AIT Admissions & Eligibility"},
-            {"url": "https://www.aitindia.in/departments/computer-engineering", "title": "AIT Computer Engineering"},
-            {"url": "https://www.aitindia.in/departments/information-technology", "title": "AIT Information Technology"},
-            {"url": "https://www.aitindia.in/departments/bca", "title": "AIT BCA Department"},
-            {"url": "https://www.aitindia.in/departments/mba", "title": "AIT MBA Department"},
-            {"url": "https://www.aitindia.in/placement", "title": "AIT Training & Placement Cell"},
-            {"url": "https://www.aitindia.in/facilities", "title": "AIT Campus Facilities & Infrastructure"}
-        ]
-
-        updated_count = 0
-        for p in synced_pages:
-            content_hash = hashlib.sha256(p["title"].encode()).hexdigest()
-            existing = db.query(WebsiteSnapshot).filter(WebsiteSnapshot.url == p["url"]).first()
-            if not existing:
-                snap = WebsiteSnapshot(
-                    url=p["url"],
-                    title=p["title"],
-                    content_hash=content_hash,
-                    text_content=f"Official verified page content for {p['title']} at Ahmedabad Institute of Technology.",
-                    last_crawled_at=datetime.now(timezone.utc)
-                )
-                db.add(snap)
-                updated_count += 1
-            else:
-                existing.last_crawled_at = datetime.now(timezone.utc)
-
-
-        db.commit()
-        event_bus.publish("WEBSITE_SYNC_COMPLETED", "job_ait_website_sync", payload={"synced_count": len(synced_pages)})
-        return {"status": "SUCCESS", "pages_processed": len(synced_pages), "updated_count": updated_count}
+        sync_result = asyncio.run(website_crawler.synchronize_website(db))
+        event_bus.publish("WEBSITE_SYNC_COMPLETED", "job_ait_website_sync", payload={"synced_count": sync_result.get("total_pages", 0)})
+        return {"status": "SUCCESS", "pages_processed": sync_result.get("total_pages", 0),
+                "updated_count": sync_result.get("updated_pages", 0) + sync_result.get("new_pages", 0),
+                "discovered_pages": sync_result.get("discovered_pages", 0),
+                "errors": sync_result.get("errors", 0)}
     finally:
         automation_engine.release_lock(db, "lock:website_sync")
         db.close()
@@ -257,7 +233,7 @@ def job_backup_creation(payload: Dict[str, Any]) -> Dict[str, Any]:
 
         # Write metadata snapshot
         with open(backup_path, "w") as f:
-            f.write(f"# AIT AI Assistant Database Snapshot\nCreated: {datetime.now(timezone.utc).isoformat()}\n")
+            f.write(f"# AI-Powered Colleges Chatbot Database Snapshot\nCreated: {datetime.now(timezone.utc).isoformat()}\n")
 
         backup_rec = SystemBackup(
             filename=backup_id,

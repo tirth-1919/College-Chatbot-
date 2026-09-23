@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { adminApi } from '../services/adminApi';
 import {
   LayoutDashboard, BookOpen, Globe, FileText, Image, AlertTriangle,
   Cpu, Users, MessageSquare, TrendingUp, Shield, Settings,
   ChevronLeft, ChevronRight, LogOut, Activity, Bell, RefreshCw,
-  Zap, Database, Lock, GitMerge
+  Zap, Database, Lock, GitMerge, Building2, CheckCircle, UploadCloud
 } from 'lucide-react';
 
-const NAV_SECTIONS = [
+const SUPER_ADMIN_NAV = [
   {
     label: 'Overview',
     items: [
@@ -15,15 +16,63 @@ const NAV_SECTIONS = [
     ]
   },
   {
+    label: 'Platform Governance',
+    items: [
+      { key: 'colleges', label: 'Colleges', icon: Building2 },
+      { key: 'approval_center', label: 'Approval Center', icon: CheckCircle, badge: 'pending' },
+      { key: 'change_requests', label: 'Change Requests', icon: GitMerge, badge: 'change_requests' },
+      { key: 'users', label: 'All Users', icon: Users },
+      { key: 'audit', label: 'Audit & Security', icon: Lock },
+    ]
+  },
+  {
     label: 'Knowledge',
     items: [
-      { key: 'knowledge', label: 'AIT Facts & Entities', icon: BookOpen },
+      { key: 'kdb_categories', label: 'Knowledge Database', icon: Database },
+      { key: 'knowledge', label: 'Facts & Entities', icon: BookOpen },
       { key: 'website', label: 'Website Sync', icon: Globe },
       { key: 'documents', label: 'Documents', icon: FileText },
       { key: 'images', label: 'Image Library', icon: Image },
       { key: 'conflicts', label: 'Conflicts', icon: AlertTriangle, badge: 'conflicts' },
       { key: 'gaps', label: 'Knowledge Gaps', icon: GitMerge, badge: 'gaps' },
       { key: 'evaluation', label: 'Evaluation & Rollback', icon: Zap },
+    ]
+  },
+  {
+    label: 'AI System',
+    items: [
+      { key: 'ai', label: 'Providers & Models', icon: Cpu },
+    ]
+  },
+  {
+    label: 'Operations',
+    items: [
+      { key: 'automation', label: 'Automation & Jobs', icon: RefreshCw },
+      { key: 'alerts', label: 'Alerts & Incidents', icon: Bell },
+      { key: 'settings', label: 'Settings & Prompts', icon: Settings },
+    ]
+  }
+];
+
+const COLLEGE_ADMIN_NAV = [
+  {
+    label: 'Overview',
+    items: [
+      { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    ]
+  },
+  {
+    label: 'My College',
+    items: [
+      { key: 'smart_upload', label: 'Smart Upload', icon: UploadCloud },
+      { key: 'kdb_categories', label: 'Knowledge Database', icon: Database },
+      { key: 'knowledge', label: 'Facts & Entities', icon: BookOpen },
+      { key: 'website', label: 'Website Sync', icon: Globe },
+      { key: 'documents', label: 'Documents', icon: FileText },
+      { key: 'images', label: 'Image Library', icon: Image },
+      { key: 'conflicts', label: 'Conflicts', icon: AlertTriangle, badge: 'conflicts' },
+      { key: 'gaps', label: 'Knowledge Gaps', icon: GitMerge, badge: 'gaps' },
+      { key: 'change_requests', label: 'Change Requests', icon: GitMerge },
     ]
   },
   {
@@ -40,7 +89,7 @@ const NAV_SECTIONS = [
     ]
   },
   {
-    label: 'Operations & Engine',
+    label: 'Operations',
     items: [
       { key: 'automation', label: 'Automation & Jobs', icon: RefreshCw },
       { key: 'alerts', label: 'Alerts & Incidents', icon: Bell },
@@ -53,10 +102,25 @@ const NAV_SECTIONS = [
 export default function AdminLayout({ children, activeView, onNavChange, metrics }) {
   const { user, logout } = useAdminAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [collegeName, setCollegeName] = useState(null);
+
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const NAV_SECTIONS = isSuperAdmin ? SUPER_ADMIN_NAV : COLLEGE_ADMIN_NAV;
+
+  useEffect(() => {
+    if (!isSuperAdmin && user?.college_id) {
+      adminApi.getCurrentCollege()
+        .then(c => setCollegeName(c?.name || null))
+        .catch(() => {});
+    }
+  }, [user, isSuperAdmin]);
+
+  const displayName = collegeName || (isSuperAdmin ? 'Platform Admin' : 'College Admin');
 
   const badgeCounts = {
     conflicts: metrics?.counts?.conflicts || 0,
     gaps: metrics?.counts?.knowledge_gaps || 0,
+    pending: 0, // super admin pending badge — could load from API later
   };
 
   return (
@@ -92,9 +156,13 @@ export default function AdminLayout({ children, activeView, onNavChange, metrics
             <Shield size={18} color="#f08518" />
           </div>
           {!collapsed && (
-            <div>
-              <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2, color: '#fff' }}>AIT Admin</div>
-              <div style={{ fontSize: '0.7rem', color: '#f08518', fontWeight: 600 }}>Control Center</div>
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.85rem', lineHeight: 1.2, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                AI FAQ College Chat Bot
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#f08518', fontWeight: 600 }}>
+                {isSuperAdmin ? 'Super Admin Panel' : (collegeName ? `${collegeName} · College Admin` : 'College Admin Dashboard')}
+              </div>
             </div>
           )}
         </div>
@@ -138,7 +206,14 @@ export default function AdminLayout({ children, activeView, onNavChange, metrics
                   <button
                     key={item.key}
                     id={`nav-${item.key}`}
-                    onClick={() => onNavChange(item.key)}
+                    onClick={() => {
+                      // URL matches navigation (§2): Colleges uses /super-admin/colleges
+                      const target = item.key === 'colleges' ? '/super-admin/colleges' : '/';
+                      if (target !== window.location.pathname) {
+                        window.history.pushState({}, '', target);
+                      }
+                      onNavChange(item.key);
+                    }}
                     style={{
                       width: '100%', border: 'none', cursor: 'pointer',
                       background: isActive
@@ -241,10 +316,12 @@ export default function AdminLayout({ children, activeView, onNavChange, metrics
           position: 'sticky', top: 0, zIndex: 5
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>AIT</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>
+              {isSuperAdmin ? 'Platform' : (collegeName || 'Admin')}
+            </span>
             <span style={{ color: 'var(--text-dim)' }}>/</span>
             <span style={{ color: '#f08518', fontSize: '0.8rem', fontWeight: 600, textTransform: 'capitalize' }}>
-              {activeView}
+              {activeView.replace(/_/g, ' ')}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

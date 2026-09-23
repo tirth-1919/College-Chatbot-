@@ -54,21 +54,56 @@ class QuotaTracker:
 
     @classmethod
     def get_quota_summary(cls, db: Session) -> list:
+        """
+        Quota telemetry separated into distinct concepts:
+          - quota_status: VERIFIED (provider reported) | EXHAUSTED | UNKNOWN
+          - usage_label : 'PROVIDER QUOTA' | 'LOCAL ESTIMATE' | 'UNKNOWN'
+        Local request counters are NEVER presented as provider quota.
+        """
+        from backend.app.ai.provider_state import provider_state_manager, QuotaStatus
+
         quotas = db.query(AiQuota).all()
         results = []
         for q in quotas:
             model = q.model
+            source = q.source
+            runtime = None
+            if model:
+                runtime = provider_state_manager.snapshot(
+                    model.provider.provider_name if model.provider else "unknown",
+                    model.model_identifier,
+                )
+
+            if source == "PROVIDER_REPORTED":
+                quota_status = QuotaStatus.VERIFIED.value
+                usage_label = "PROVIDER QUOTA"
+            elif runtime and runtime.get("quota_status") == QuotaStatus.EXHAUSTED.value:
+                quota_status = QuotaStatus.EXHAUSTED.value
+                usage_label = "LOCAL ESTIMATE"
+            elif source in ("ESTIMATED", ""):
+                quota_status = QuotaStatus.UNKNOWN.value
+                usage_label = "LOCAL ESTIMATE"
+            else:
+                quota_status = QuotaStatus.UNKNOWN.value
+                usage_label = "UNKNOWN"
+
             results.append({
                 "id": q.id,
                 "model_identifier": model.model_identifier if model else "Unknown",
                 "model_name": model.display_name if model else "Unknown",
+                "provider_name": (model.provider.provider_name if model and model.provider else None),
                 "quota_type": q.quota_type,
-                "limit": q.limit_amount,
+                "quota_status": quota_status,
+                "usage_label": usage_label,
+                "limit": q.limit_amount if usage_label == "PROVIDER QUOTA" else None,
                 "used": q.used_amount,
-                "remaining": q.remaining_amount,
+                "remaining": q.remaining_amount if usage_label == "PROVIDER QUOTA" else None,
                 "reset_time": q.reset_time.isoformat() if q.reset_time else None,
-                "source": q.source,  # PROVIDER_REPORTED, ESTIMATED, UNKNOWN
-                "percentage_used": round((q.used_amount / q.limit_amount) * 100, 1) if q.limit_amount > 0 else 0,
+                "source": source,  # PROVIDER_REPORTED, ESTIMATED, UNKNOWN
+                "runtime_state": runtime.get("runtime_state") if runtime else None,
+                "cooldown_active": runtime.get("cooldown_active") if runtime else False,
+                "cooldown_until": runtime.get("cooldown_until") if runtime else None,
+                "percentage_used": round((q.used_amount / q.limit_amount) * 100, 1) if (q.limit_amount > 0 and usage_label == "PROVIDER QUOTA") else None,
                 "last_updated_at": q.last_updated_at.isoformat() if q.last_updated_at else None
             })
         return results

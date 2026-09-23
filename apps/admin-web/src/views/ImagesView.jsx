@@ -56,7 +56,7 @@ export default function ImagesView() {
       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:22 }}>
         <div>
           <h1 style={{ fontSize:'1.4rem',fontWeight:800,marginBottom:4 }}>Official Image Library</h1>
-          <p style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>{images.length} images · AIT campus media with full provenance tracking</p>
+          <p style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>{images.length} images · college campus media with full provenance tracking</p>
         </div>
         <div style={{ display:'flex',gap:10 }}>
           <select className="input-field" style={{ width:180 }} value={category} onChange={e => setCategory(e.target.value)}>

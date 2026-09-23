@@ -1,0 +1,137 @@
+SQLite migration check and table creation completed successfully.
+SQLite migration check and table creation completed successfully.
+[AIT] Demo student account seeded (credentials not printed).
+[AIT] Second demo account (College Admin) seeded.
+[AIT] Third demo account (Super Admin) seeded.
+Pre-seeded AI Providers, Model Registry, and Quotas successfully.
+Pre-seeded Feature Flags successfully.
+Pre-seeded System Prompt versions successfully.
+Pre-seeded verified AIT institutional knowledge and official media successfully!
+[SEED] Created 22 knowledge categories
+INFO:     127.0.0.1:64531 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56965 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53352 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61875 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62127 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59983 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50373 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59310 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51083 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51086 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51085 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51084 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51087 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51089 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51090 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51088 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51092 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51093 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51094 - "POST /api/v1/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:53378 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54591 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54592 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54594 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54593 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60862 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60861 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64510 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60860 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64509 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51814 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54972 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49418 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53860 - "POST /api/v1/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63511 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63513 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51501 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51509 - "POST /api/v1/colleges/register HTTP/1.1" 201 Created
+INFO:     127.0.0.1:51508 - "POST /api/v1/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49282 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53933 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59186 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59187 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59188 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63148 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63005 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63006 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57706 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57158 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63007 - "POST /api/v1/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59749 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59750 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59751 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59752 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59753 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59754 - "POST /api/v1/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52930 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54255 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61460 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57267 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62275 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51244 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62042 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58448 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56245 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49335 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63510 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61895 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63845 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56697 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52935 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52936 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52937 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52938 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52939 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59695 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52940 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62787 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56577 - "GET /api/v1/conversations/conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51505 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64297 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64392 - "GET /api/v1/college-context/me?conversation_id=conv-1790087650633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55827 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55826 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55829 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55828 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55830 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56549 - "POST /api/v1/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49733 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61351 - "GET /api/v1/college-context/me?conversation_id=conv-1790087713238 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62170 - "GET /api/v1/college-context/me?conversation_id=conv-1790087713238 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65471 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56497 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61174 - "GET /api/v1/college-context/me?conversation_id=conv-1790087713238 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53864 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53863 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53865 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53866 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59400 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51763 - "POST /api/v1/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:50700 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52311 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57264 - "GET /api/v1/college-context/me?conversation_id=conv-1790087738360 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50738 - "GET /api/v1/college-context/me?conversation_id=conv-1790087738360 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51457 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63843 - "GET /api/v1/college-context/me?conversation_id=conv-1790087738360 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55271 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55272 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58719 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58718 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58720 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58721 - "POST /api/v1/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55863 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59624 - "GET /api/v1/college-context/me?conversation_id=conv-1790087750289 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64470 - "GET /api/v1/college-context/me?conversation_id=conv-1790087750289 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62144 - "POST /api/v1/chat/stream HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:57743 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50682 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55443 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59765 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49522 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57848 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59984 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56966 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50394 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54246 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55457 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62714 - "GET / HTTP/1.1" 404 Not Found

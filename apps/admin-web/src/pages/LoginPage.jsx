@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { Shield, Lock, Eye, EyeOff, AlertCircle, KeyRound } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, AlertCircle, KeyRound, Search } from 'lucide-react';
 
 function MfaModal({ onSubmit, onCancel, loading }) {
   const [code, setCode] = useState('');
@@ -33,9 +33,7 @@ function MfaModal({ onSubmit, onCancel, loading }) {
           autoFocus
           onKeyDown={e => e.key === 'Enter' && code.length === 6 && onSubmit(code)}
         />
-        <p style={{ color: 'var(--text-dim)', fontSize: '0.75rem', textAlign: 'center', marginBottom: 20 }}>
-          Development mode: Use code <strong style={{ color: '#f08518' }}>123456</strong>
-        </p>
+
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn-secondary" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>
           <button className="btn-primary" style={{ flex: 1 }} onClick={() => onSubmit(code)} disabled={code.length !== 6 || loading}>
@@ -48,9 +46,9 @@ function MfaModal({ onSubmit, onCancel, loading }) {
 }
 
 export default function LoginPage() {
-  const { login, completeMfa, mfaChallenge } = useAdminAuth();
-  const [email, setEmail] = useState('admin@aitindia.in');
-  const [password, setPassword] = useState('Admin@AIT2026!');
+  const { login, completeMfa, cancelMfa, mfaChallenge } = useAdminAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -86,11 +84,12 @@ export default function LoginPage() {
       alignItems: 'center',
       justifyContent: 'center',
       background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(11,10,62,0.7) 0%, transparent 70%), var(--bg-primary)',
+      padding: '24px 16px'
     }}>
       {mfaChallenge && (
         <MfaModal
           onSubmit={handleMfa}
-          onCancel={() => setError('')}
+          onCancel={() => { setError(''); cancelMfa(); }}
           loading={loading}
         />
       )}
@@ -113,29 +112,29 @@ export default function LoginPage() {
         }} />
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1, width: 420 }}>
+      <div style={{ position: 'relative', zIndex: 1, width: 440, maxWidth: '100%' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
-            width: 72, height: 72, borderRadius: 16,
+            width: 68, height: 68, borderRadius: 16,
             background: 'linear-gradient(135deg, rgba(11,10,62,0.9), rgba(26,35,69,0.9))',
             border: '1px solid rgba(240,133,24,0.35)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 20px',
+            margin: '0 auto 16px',
             boxShadow: '0 0 30px rgba(240,133,24,0.15)'
           }}>
-            <Shield size={32} color="#f08518" />
+            <img src="/ai-faq-college-chat-bot-icon.svg" alt="AI FAQ College Chat Bot logo" style={{ width: 36, height: 36, objectFit: 'contain' }} />
           </div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, marginBottom: 8, letterSpacing: '-0.02em' }}>
-            AIT Admin Control Center
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, marginBottom: 6, letterSpacing: '-0.02em', color: '#fff' }}>
+            AI FAQ College Chat Bot
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            Authorized administrators only — Ahmedabad Institute of Technology
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            Institutional Administration & Governance Portal
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="glass-card" style={{ padding: 36 }}>
+        <div className="glass-card" style={{ padding: 32 }}>
           {error && (
             <div style={{
               background: 'rgba(239,68,68,0.1)',
@@ -157,13 +156,13 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: 18 }}>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Admin Email
+                Admin Email / Username
               </label>
               <input
                 id="admin-email"
                 className="input-field"
                 type="email"
-                placeholder="admin@aitindia.in"
+                placeholder="admin@yourcollege.edu"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
@@ -171,7 +170,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 22 }}>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Password
               </label>
@@ -213,17 +212,13 @@ export default function LoginPage() {
           </form>
 
           <div style={{
-            marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border-subtle)',
-            display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-dim)', fontSize: '0.8rem'
+            marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-subtle)',
+            display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-dim)', fontSize: '0.75rem'
           }}>
             <Shield size={13} />
-            <span>Multi-factor authentication, session tracking, and full audit logging active</span>
+            <span>Multi-tenant security isolation, MFA, and automated audit trails active</span>
           </div>
         </div>
-
-        <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.78rem', marginTop: 20 }}>
-          Default: admin@aitindia.in / Admin@AIT2026! · 2FA code: 123456
-        </p>
       </div>
     </div>
   );

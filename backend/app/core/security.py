@@ -14,6 +14,34 @@ def get_password_hash(password: str) -> str:
     salt = bcrypt.gensalt(rounds=12)
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
+def generate_secure_temporary_password(length: int = 16) -> str:
+    """Generates a cryptographically strong, policy-compliant temporary password."""
+    import secrets
+    import string
+    
+    uppers = string.ascii_uppercase
+    lowers = string.ascii_lowercase
+    digits = string.digits
+    symbols = "!@#$%^&*"
+    
+    # Ensure at least 2 of each required character group
+    password = [
+        secrets.choice(uppers),
+        secrets.choice(uppers),
+        secrets.choice(lowers),
+        secrets.choice(lowers),
+        secrets.choice(digits),
+        secrets.choice(digits),
+        secrets.choice(symbols),
+        secrets.choice(symbols),
+    ]
+    all_chars = uppers + lowers + digits + symbols
+    for _ in range(max(length - len(password), 0)):
+        password.append(secrets.choice(all_chars))
+    
+    secrets.SystemRandom().shuffle(password)
+    return "".join(password)
+
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     if expires_delta:
@@ -74,16 +102,15 @@ def generate_totp_code(secret: str, for_time: Optional[int] = None) -> str:
 
 def verify_totp_code(secret: str, code: str, window: int = 1) -> bool:
     """
-    Verifies a 6-digit code against the TOTP secret with drift tolerance (+/- window intervals).
-    Also supports bypass code '123456' for automated tests and development.
+    Verifies a 6-digit TOTP code against the secret with drift tolerance (+/- window intervals).
+    RFC 6238 compliant. No development bypass codes are permitted in any environment.
     """
     if not secret or not code:
         return False
     
     clean_code = str(code).strip()
-    # Permit dev/test override
-    if settings.ENVIRONMENT in ["development", "test"] and clean_code in ["123456", "000000"]:
-        return True
+    if len(clean_code) != 6 or not clean_code.isdigit():
+        return False
 
     now = int(time.time())
     for offset in range(-window, window + 1):

@@ -38,6 +38,7 @@ class CircuitBreaker:
         if info["state"] == CircuitState.OPEN and info["cooldown_until"]:
             if now >= info["cooldown_until"]:
                 info["state"] = CircuitState.HALF_OPEN
+                info["consecutive_failures"] = 0  # Reset failures on cooldown expiry
         
         return info
 
@@ -78,7 +79,7 @@ class CircuitBreaker:
         info["last_failure_type"] = failure_type
         info["last_error"] = str(error)
 
-        if failure_type in [FailureType.RATE_LIMIT_429, FailureType.AUTH_FAILURE] or info["consecutive_failures"] >= self.failure_threshold:
+        if info["consecutive_failures"] >= self.failure_threshold:
             info["state"] = CircuitState.OPEN
             info["cooldown_until"] = now + timedelta(seconds=cooldown)
         

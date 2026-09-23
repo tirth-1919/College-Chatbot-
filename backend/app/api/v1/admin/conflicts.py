@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ from backend.app.knowledge.conflict_detector import conflict_detector
 router = APIRouter(prefix="/conflicts", tags=["Admin Knowledge Conflicts"])
 
 class ConflictResolveRequest(BaseModel):
-    resolution_status: str  # RESOLVED_A, RESOLVED_B, SUPERSEDED, DISMISSED
+    resolution_status: Literal["RESOLVED_A", "RESOLVED_B", "SUPERSEDED", "DISMISSED"]
     resolution_notes: Optional[str] = ""
 
 @router.get("")
@@ -63,6 +63,12 @@ def resolve_conflict(
     current_user: User = Depends(require_permission(PERM_CONFLICTS_REVIEW)),
     db: Session = Depends(get_db)
 ):
+    existing = db.query(KnowledgeConflict).filter(KnowledgeConflict.id == conflict_id).first()
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conflict record not found")
+    if existing.resolution_status != "UNRESOLVED":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflict has already been resolved")
+
     resolved = conflict_detector.resolve_conflict(
         db=db,
         conflict_id=conflict_id,
@@ -70,9 +76,6 @@ def resolve_conflict(
         admin_id=current_user.id,
         notes=req.resolution_notes or ""
     )
-    if not resolved:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conflict record not found")
-
     log_admin_audit(db, current_user, "RESOLVE_KNOWLEDGE_CONFLICT", "CONFLICT", {
         "id": conflict_id,
         "status": req.resolution_status

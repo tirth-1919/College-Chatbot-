@@ -24,8 +24,11 @@ def list_users(
     db: Session = Depends(get_db)
 ):
     query = db.query(User)
+    # Phase 9: COLLEGE_ADMIN can only see their own college's users
+    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+        query = query.filter(User.college_id == current_user.college_id)
     if role_filter and role_filter != "ALL":
-        query = query.filter(User.role == role_filter)
+        query = query.filter(User.role == role_filter.upper())
     if search:
         s = f"%{search}%"
         query = query.filter((User.email.ilike(s)) | (User.full_name.ilike(s)))
@@ -37,9 +40,11 @@ def list_users(
             "email": u.email,
             "full_name": u.full_name,
             "role": u.role,
+            "college_id": u.college_id,
             "is_active": u.is_active,
             "is_verified": u.is_verified,
             "mfa_enabled": u.mfa_enabled,
+            "must_change_password": bool(u.must_change_password),
             "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
             "created_at": u.created_at.isoformat() if u.created_at else None
         }
@@ -58,7 +63,7 @@ def update_user_role(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     role_upper = req.role.upper()
-    if role_upper not in ["STUDENT", "ADMIN", "SUPER_ADMIN"]:
+    if role_upper not in ["STUDENT", "ADMIN", "COLLEGE_ADMIN", "SUPER_ADMIN"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role specified")
 
     old_role = target.role
@@ -80,7 +85,11 @@ def toggle_user_status(
     current_user: User = Depends(require_permission(PERM_USERS_MANAGE)),
     db: Session = Depends(get_db)
 ):
-    target = db.query(User).filter(User.id == user_id).first()
+    q = db.query(User).filter(User.id == user_id)
+    # College admins can only toggle status of users in their own college
+    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+        q = q.filter(User.college_id == current_user.college_id)
+    target = q.first()
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 

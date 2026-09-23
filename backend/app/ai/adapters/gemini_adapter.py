@@ -1,21 +1,68 @@
+import logging
 import os
 import time
 from typing import Dict, Any, List, Optional
+import asyncio
 from google import genai
 from google.genai import types
 from google.genai.errors import APIError
-
 from backend.app.ai.provider_base import BaseAIProvider, AIProviderResponse
 from backend.app.core.config import settings
+logger = logging.getLogger(__name__)
 
+class GeminiQuotaError(Exception):
+    # Quota/rate-limit errors are eligible for model failover.
+
+    def __init__(self, model: str, original: Exception):
+        super().__init__(f"Gemini quota/rate limit for model {model}")
+        self.model = model
+        self.original = original
+        self.status_code = 429
 class GeminiProvider(BaseAIProvider):
-    DEFAULT_MODEL = "gemini-3.6-flash"
+    DEFAULT_MODEL = "gemini-3.7-flash"
 
     def __init__(self, api_key: Optional[str] = None):
         super().__init__(provider_name="gemini")
         self.api_key = api_key or settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
         self._client: Optional[genai.Client] = None
+        self._cooldown_until: Dict[str, float] = {}
 
+    @staticmethod
+    def _configured_models() -> List[str]:
+        configured = getattr(settings, "GEMINI_MODELS", "")
+        models = [model.strip() for model in configured.split(",") if model.strip()]
+        return list(dict.fromkeys(models)) or [GeminiProvider.DEFAULT_MODEL]
+
+    @staticmethod
+    def _is_quota_error(error: Exception) -> bool:
+        status_code = getattr(error, "code", None) or getattr(error, "status_code", None)
+        text = str(error).upper()
+        return status_code == 429 or any(marker in text for marker in (
+            "RESOURCE_EXHAUSTED", "QUOTA_EXCEEDED", "RATE LIMIT", "RATE_LIMIT", "TOO MANY REQUESTS"
+        ))
+
+    def _available_models(self, requested_model: Optional[str]) -> List[str]:
+        configured = self._configured_models()
+        ordered = [requested_model] if requested_model else []
+        ordered.extend(configured)
+        now = time.monotonic()
+        return [
+            model for model in dict.fromkeys(ordered)
+            if self._cooldown_until.get(model, 0) <= now
+        ]
+
+    def _mark_quota_exhausted(self, model: str) -> None:
+        cooldown = max(0, int(getattr(settings, "GEMINI_MODEL_COOLDOWN_SECONDS", 300)))
+        self._cooldown_until[model] = time.monotonic() + cooldown
+    @staticmethod
+    def _raise_provider_error(error: Exception) -> None:
+        status_code = getattr(error, "code", None) or getattr(error, "status_code", None)
+        if status_code is not None:
+            try:
+                error.status_code = status_code
+            except Exception:
+                pass
+        raise error
     def _get_client(self) -> genai.Client:
         if not self.api_key:
             raise ValueError("Gemini API key is not configured")
@@ -37,10 +84,12 @@ class GeminiProvider(BaseAIProvider):
 
         client = self._get_client()
 
-        # Migrate obsolete model identifiers to verified working model
+        # The router is the single owner of cross-model/provider failover.  Do
+        # not rotate the configured chain here: doing so hides attempts from the
+        # router and can turn one candidate into ten sequential 60s waits.
         target_model = model_name or self.DEFAULT_MODEL
-        if "1.5" in target_model:
-            target_model = self.DEFAULT_MODEL
+        if self._cooldown_until.get(target_model, 0) > time.monotonic():
+            raise GeminiQuotaError(target_model, RuntimeError("Gemini model is cooling down"))
 
         start_time = time.time()
 
@@ -71,20 +120,22 @@ class GeminiProvider(BaseAIProvider):
                 system_instruction=system_instruction
             )
 
+        logger.info("Gemini model attempt: %s", target_model)
         try:
-            response = await client.aio.models.generate_content(
-                model=target_model,
-                contents=full_prompt,
-                config=config
+            response = await asyncio.wait_for(
+                client.aio.models.generate_content(model=target_model, contents=full_prompt, config=config),
+                timeout=max(1, min(
+                    int(getattr(settings, "GEMINI_REQUEST_TIMEOUT_SECONDS", 8)),
+                    int(getattr(settings, "AI_PROVIDER_INITIAL_TIMEOUT_SECONDS", 8)),
+                ))
             )
-        except APIError as e:
-            # Preserve status_code for circuit breaker tracking without leaking keys
-            status_code = getattr(e, "code", None) or getattr(e, "status_code", 500)
-            e.status_code = status_code
-            raise e
-        except Exception as e:
-            raise e
-
+            logger.info("Gemini model result: SUCCESS (%s)", target_model)
+        except Exception as error:
+            if not self._is_quota_error(error):
+                self._raise_provider_error(error)
+            self._mark_quota_exhausted(target_model)
+            logger.warning("Gemini model result: QUOTA_EXCEEDED (%s)", target_model)
+            raise GeminiQuotaError(target_model, error) from error
         latency = (time.time() - start_time) * 1000
         text = response.text if hasattr(response, "text") and response.text is not None else ""
 

@@ -10,8 +10,9 @@ from backend.app.core.database import get_db, SessionLocal
 from backend.app.core.config import settings
 from backend.app.models.admin_system import AiModelRegistry, AiUsageLog, KnowledgeConflict
 from backend.app.models.knowledge import KnowledgeGap
-from backend.app.models.user import UserSession
+from backend.app.models.user import UserSession, User
 from backend.app.ai.circuit_breaker import circuit_breaker
+from backend.app.core.permissions import get_current_admin_user
 
 router = APIRouter(prefix="/monitoring", tags=["Admin Live Monitoring"])
 
@@ -51,7 +52,11 @@ async def event_generator(request: Request):
         await asyncio.sleep(3)
 
 @router.get("/live-stream")
-async def live_monitoring_stream(request: Request):
+async def live_monitoring_stream(
+    request: Request,
+    current_user: User = Depends(get_current_admin_user)  # P1-14: admin auth required
+):
+    """Real-time SSE telemetry stream. Admin authentication required."""
     return StreamingResponse(
         event_generator(request),
         media_type="text/event-stream",

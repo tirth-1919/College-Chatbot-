@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 # Ensure backend package can be imported from root
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -31,6 +31,7 @@ from backend.app.api.v1.images import router as images_router
 from backend.app.api.v1.files import router as files_router
 from backend.app.api.v1.voice import router as voice_router
 from backend.app.api.v1.health import router as health_router
+from backend.app.api.v1.colleges import router as colleges_router
 
 # Initialize database schema and migrations
 run_migrations()
@@ -43,13 +44,13 @@ user_app = FastAPI(
     description="Dedicated User Application for Ahmedabad Institute of Technology AI Assistant"
 )
 
-# CORS configuration
+# P1-10 FIX: CORS with explicit allowed origins. Wildcard + credentials is a browser security violation.
 user_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
 )
 
 user_app.add_middleware(TraceAndSecurityMiddleware)
@@ -58,9 +59,10 @@ user_app.add_middleware(TraceAndSecurityMiddleware)
 os.makedirs(settings.IMAGE_STORAGE_DIR, exist_ok=True)
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-# Static media storage
+# Mount public images directory only (campus photos served statically)
 user_app.mount("/storage/images", StaticFiles(directory=settings.IMAGE_STORAGE_DIR), name="images")
-user_app.mount("/storage/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# P0-4 FIX: /storage/uploads is NOT publicly mounted.
+# Private user uploads are accessed via authenticated GET /api/v1/files/{file_id}/download
 
 # Mount User APIs under /api/v1
 user_app.include_router(health_router, prefix="/api/v1")
@@ -70,6 +72,7 @@ user_app.include_router(chat_router, prefix="/api/v1")
 user_app.include_router(images_router, prefix="/api/v1")
 user_app.include_router(files_router, prefix="/api/v1")
 user_app.include_router(voice_router, prefix="/api/v1")
+user_app.include_router(colleges_router, prefix="/api/v1")
 
 @user_app.on_event("startup")
 def user_startup():
@@ -96,7 +99,15 @@ if os.path.exists(user_dist_dir):
 
     @user_app.get("/{full_path:path}")
     async def serve_user_frontend(full_path: str):
-        file_path = os.path.join(user_dist_dir, full_path)
+        # Never let the SPA fallback expose dotfiles, source files, or paths
+        # outside the built frontend directory through the public user server.
+        requested_path = full_path.replace("\\", "/")
+        if any(part.startswith(".") for part in requested_path.split("/") if part):
+            return Response(status_code=404)
+        file_path = os.path.abspath(os.path.join(user_dist_dir, requested_path))
+        dist_root = os.path.abspath(user_dist_dir)
+        if not file_path.startswith(dist_root + os.sep) and file_path != dist_root:
+            return Response(status_code=404)
         if os.path.isfile(file_path):
             return FileResponse(file_path)
         return FileResponse(os.path.join(user_dist_dir, "index.html"))

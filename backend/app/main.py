@@ -20,13 +20,14 @@ app = FastAPI(
     description="Ahmedabad Institute of Technology (AIT) AI Assistant API"
 )
 
-# CORS configuration
+# P1-10 FIX: CORS must use explicit allowed origins. Wildcard + allow_credentials is a browser security violation.
+# Configure CORS_ORIGINS in .env to include your frontend URLs.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permits local dev frontends on any port
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
 )
 
 # Custom Security and Tracing Middleware
@@ -36,19 +37,26 @@ app.add_middleware(TraceAndSecurityMiddleware)
 os.makedirs(settings.IMAGE_STORAGE_DIR, exist_ok=True)
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-# Mount local storage as static files
+# Mount public images directory (only verified AIT campus images are stored here)
 app.mount("/storage/images", StaticFiles(directory=settings.IMAGE_STORAGE_DIR), name="images")
-app.mount("/storage/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# P0-4 FIX: /storage/uploads is NO LONGER publicly mounted.
+# Private user uploads are accessed via authenticated GET /api/v1/files/{file_id}/download
 
 # Include master API router
 app.include_router(api_v1_router)
 
 @app.on_event("startup")
 def startup_event():
+    from backend.app.scripts.migrate_sqlite import run_migrations
+    run_migrations()
     # Pre-seed verified AIT institutional knowledge and images if database is fresh
     db = SessionLocal()
     try:
         seed_initial_ait_knowledge(db)
+        from backend.app.scripts.seed_knowledge_categories import seed_knowledge_categories
+        created_cats = seed_knowledge_categories(db)
+        if created_cats:
+            print(f"[SEED] Created {created_cats} knowledge categories")
     finally:
         db.close()
 

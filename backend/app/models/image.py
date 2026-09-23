@@ -11,6 +11,7 @@ class AitImage(Base):
     __tablename__ = "ait_images"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
+    college_id = Column(String(36), ForeignKey("colleges.id", ondelete="CASCADE"), nullable=True, index=True)
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     category = Column(String(50), nullable=False, index=True)  # campus, building, classroom, lab, computer_lab, library, sports, canteen, event, faculty, logo

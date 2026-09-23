@@ -1,0 +1,95 @@
+
+Running 28 tests using 4 workers
+
+[1A[2K[1/28] [chromium] › e2e\registration-navigation.spec.js:3:3 › College Registration Navigation & Role Separation › test_clicking_register_college_opens_registration_form
+[1A[2K[2/28] [chromium] › e2e\student-journey.spec.js:18:1 › student authentication survives refresh, rejects bad login, and logs out
+[1A[2K[3/28] [mobile-chrome] › e2e\registration-navigation.spec.js:3:3 › College Registration Navigation & Role Separation › test_clicking_register_college_opens_registration_form
+[1A[2K[4/28] [mobile-chrome] › e2e\student-journey.spec.js:18:1 › student authentication survives refresh, rejects bad login, and logs out
+[1A[2K[5/28] [chromium] › e2e\student-journey.spec.js:52:1 › basic chat streams visible answers and persists them after refresh
+[1A[2K[6/28] [mobile-chrome] › e2e\student-journey.spec.js:52:1 › basic chat streams visible answers and persists them after refresh
+[1A[2K[7/28] [chromium] › e2e\registration-navigation.spec.js:38:3 › College Registration Navigation & Role Separation › test_college_registration_submission_creates_pending_request
+[1A[2K[8/28] [chromium] › e2e\student-journey.spec.js:63:1 › institutional facts match the verified database fixture and display source authority
+[1A[2K[9/28] [mobile-chrome] › e2e\student-journey.spec.js:63:1 › institutional facts match the verified database fixture and display source authority
+[1A[2K[10/28] [chromium] › e2e\student-journey.spec.js:78:1 › general and unverified institutional questions do not receive a false verified badge
+[1A[2K[11/28] [mobile-chrome] › e2e\student-journey.spec.js:78:1 › general and unverified institutional questions do not receive a false verified badge
+[1A[2K[12/28] [chromium] › e2e\student-journey.spec.js:88:1 › conversation persists, feedback sends once, and mobile composer remains usable
+[1A[2K[13/28] [mobile-chrome] › e2e\student-journey.spec.js:88:1 › conversation persists, feedback sends once, and mobile composer remains usable
+[1A[2K[14/28] [chromium] › e2e\registration-navigation.spec.js:76:3 › College Registration Navigation & Role Separation › test_college_admin_does_not_see_registration_creation
+[1A[2K[15/28] [chromium] › e2e\student-journey.spec.js:106:1 › multilingual and follow-up context remain visible in one student conversation
+[1A[2K[16/28] [mobile-chrome] › e2e\student-journey.spec.js:106:1 › multilingual and follow-up context remain visible in one student conversation
+[1A[2K[17/28] [chromium] › e2e\student-journey.spec.js:119:5 › document RAG: uploaded XLSX unique value is answered with User Document Context provenance › is not executable in this environment
+[1A[2K[18/28] [chromium] › e2e\student-journey.spec.js:119:5 › voice: microphone recognition and TTS playback › is not executable in this environment
+[1A[2K[19/28] [chromium] › e2e\student-journey.spec.js:119:5 › stop generation and retry › is not executable in this environment
+[1A[2K[20/28] [chromium] › e2e\student-journey.spec.js:119:5 › provider/key rotation, free-only policy, and admin changes without restart › is not executable in this environment
+[1A[2K[21/28] [chromium] › e2e\student-journey.spec.js:119:5 › rename and archive conversation actions › is not executable in this environment
+[1A[2K[22/28] [mobile-chrome] › e2e\student-journey.spec.js:119:5 › document RAG: uploaded XLSX unique value is answered with User Document Context provenance › is not executable in this environment
+[1A[2K[23/28] [mobile-chrome] › e2e\student-journey.spec.js:119:5 › voice: microphone recognition and TTS playback › is not executable in this environment
+[1A[2K[24/28] [mobile-chrome] › e2e\student-journey.spec.js:119:5 › stop generation and retry › is not executable in this environment
+[1A[2K[25/28] [mobile-chrome] › e2e\student-journey.spec.js:119:5 › provider/key rotation, free-only policy, and admin changes without restart › is not executable in this environment
+[1A[2K[26/28] [mobile-chrome] › e2e\student-journey.spec.js:119:5 › rename and archive conversation actions › is not executable in this environment
+[1A[2K  1) [mobile-chrome] › e2e\registration-navigation.spec.js:3:3 › College Registration Navigation & Role Separation › test_clicking_register_college_opens_registration_form 
+
+    [31mTest timeout of 120000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 120000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: /sign in/i }).first()[22m
+    [2m    - locator resolved to <button class="user-profile-badge">…</button>[22m
+    [2m  - attempting click action[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - element is outside of the viewport[22m
+    [2m    - retrying click action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - element is outside of the viewport[22m
+    [2m    - retrying click action[22m
+    [2m      - waiting 100ms[22m
+    [2m    203 × waiting for element to be visible, enabled and stable[22m
+    [2m        - element is visible, enabled and stable[22m
+    [2m        - scrolling into view if needed[22m
+    [2m        - done scrolling[22m
+    [2m        - element is outside of the viewport[22m
+    [2m      - retrying click action[22m
+    [2m        - waiting 500ms[22m
+
+
+       8 |     // 2. Open login modal
+       9 |     const signInBtn = page.getByRole('button', { name: /sign in/i }).first();
+    > 10 |     await signInBtn.click();
+         |                     ^
+      11 |
+      12 |     // 3. Find and click "Register Your College" link
+      13 |     const registerLink = page.getByRole('link', { name: /register your college/i });
+        at C:\Users\HP\OneDrive\Desktop\college chatbot\apps\user-web\e2e\registration-navigation.spec.js:10:21
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\registration-navigation-Co-cf08b-ege-opens-registration-form-mobile-chrome\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\registration-navigation-Co-cf08b-ege-opens-registration-form-mobile-chrome\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\registration-navigation-Co-cf08b-ege-opens-registration-form-mobile-chrome\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\registration-navigation-Co-cf08b-ege-opens-registration-form-mobile-chrome\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\registration-navigation-Co-cf08b-ege-opens-registration-form-mobile-chrome\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K[27/28] [mobile-chrome] › e2e\registration-navigation.spec.js:38:3 › College Registration Navigation & Role Separation › test_college_registration_submission_creates_pending_request
+[1A[2K[28/28] [mobile-chrome] › e2e\registration-navigation.spec.js:76:3 › College Registration Navigation & Role Separation › test_college_admin_does_not_see_registration_creation
+[1A[2K  1 failed
+    [mobile-chrome] › e2e\registration-navigation.spec.js:3:3 › College Registration Navigation & Role Separation › test_clicking_register_college_opens_registration_form 
+  22 skipped
+  5 passed (2.4m)

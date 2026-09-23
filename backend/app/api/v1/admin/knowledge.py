@@ -45,6 +45,9 @@ def list_entities(
     db: Session = Depends(get_db)
 ):
     query = db.query(AitEntity)
+    # Phase 9: SUPER_ADMIN can see all; COLLEGE_ADMIN scoped to own college
+    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+        query = query.filter(AitEntity.college_id == current_user.college_id)
     if category and category != "all":
         query = query.filter(AitEntity.category == category)
     if search:
@@ -83,7 +86,10 @@ def get_entity_details(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    entity = db.query(AitEntity).filter(AitEntity.id == entity_id).first()
+    q = db.query(AitEntity).filter(AitEntity.id == entity_id)
+    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+        q = q.filter(AitEntity.college_id == current_user.college_id)
+    entity = q.first()
     if not entity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found")
 
@@ -136,7 +142,8 @@ def create_entity(
         source_page=req.source_page or f"/{req.category}",
         authority=req.authority,
         is_verified=True,
-        content_hash=content_hash
+        content_hash=content_hash,
+        college_id=current_user.college_id  # Phase 9: stamp tenant
     )
     db.add(new_entity)
     db.flush()
@@ -164,7 +171,10 @@ def update_entity(
     current_user: User = Depends(require_permission(PERM_KNOWLEDGE_UPDATE)),
     db: Session = Depends(get_db)
 ):
-    entity = db.query(AitEntity).filter(AitEntity.id == entity_id).first()
+    q = db.query(AitEntity).filter(AitEntity.id == entity_id)
+    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+        q = q.filter(AitEntity.college_id == current_user.college_id)
+    entity = q.first()
     if not entity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found")
 

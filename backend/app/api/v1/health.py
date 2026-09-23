@@ -2,6 +2,7 @@ import os
 import time
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from backend.app.core.config import settings
 from backend.app.core.database import SessionLocal
 from backend.app.automation.engine import automation_engine
@@ -33,9 +34,11 @@ def get_readiness():
     # 1. Database check
     try:
         db = SessionLocal()
-        db.execute("SELECT 1" if "sqlite" in settings.DATABASE_URL else "SELECT 1")
-        db.close()
-        checks["database"] = {"status": "UP", "engine": "sqlite" if "sqlite" in settings.DATABASE_URL else "postgresql"}
+        try:
+            db.execute(text("SELECT 1"))  # P2-12 FIX: use sqlalchemy.text() for raw SQL
+            checks["database"] = {"status": "UP", "engine": "sqlite" if "sqlite" in settings.DATABASE_URL else "postgresql"}
+        finally:
+            db.close()  # P2-12 FIX: always close session
     except Exception as e:
         checks["database"] = {"status": "DOWN", "error": str(e)}
         is_ready = False

@@ -26,16 +26,29 @@ from backend.app.scripts.migrate_sqlite import run_migrations
 # Import Admin routers and health
 from backend.app.api.v1.admin import admin_master_router
 from backend.app.api.v1.health import router as health_router
+from backend.app.api.v1.colleges import router as colleges_router
 
 # Initialize database schema and migrations
 run_migrations()
 Base.metadata.create_all(bind=engine)
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db = SessionLocal()
+    try:
+        seed_initial_ait_knowledge(db)
+    finally:
+        db.close()
+    yield
+
 # Create dedicated Admin App
 admin_app = FastAPI(
     title=f"{settings.APP_NAME} — Admin Console",
     version=settings.APP_VERSION,
-    description="Dedicated Admin Management Application for Ahmedabad Institute of Technology AI Assistant"
+    description="Dedicated Admin Management Application for Ahmedabad Institute of Technology AI Assistant",
+    lifespan=lifespan
 )
 
 # CORS configuration
@@ -59,15 +72,8 @@ admin_app.mount("/storage/uploads", StaticFiles(directory=settings.UPLOAD_DIR), 
 
 # Mount Admin APIs under /api/v1
 admin_app.include_router(health_router, prefix="/api/v1")
+admin_app.include_router(colleges_router, prefix="/api/v1")
 admin_app.include_router(admin_master_router, prefix="/api/v1")
-
-@admin_app.on_event("startup")
-def admin_startup():
-    db = SessionLocal()
-    try:
-        seed_initial_ait_knowledge(db)
-    finally:
-        db.close()
 
 @admin_app.get("/health")
 def admin_health():

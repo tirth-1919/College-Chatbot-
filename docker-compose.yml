@@ -10,9 +10,10 @@ services:
     environment:
       - ENVIRONMENT=production
       - DEBUG=false
-      - DATABASE_URL=postgresql+psycopg2://ait_admin:ait_secure_pass_2026@postgres:5432/ait_db
+      - DATABASE_URL=postgresql+psycopg2://ait_admin:${POSTGRES_PASSWORD:-ait_secure_pass_2026}@postgres:5432/ait_db
       - REDIS_URL=redis://redis:6379/0
       - USE_REDIS=true
+      - ADMIN_BOOTSTRAP_PASSWORD=${ADMIN_BOOTSTRAP_PASSWORD:-}
     depends_on:
       - postgres
       - redis
@@ -33,6 +34,17 @@ services:
     depends_on:
       - backend
 
+  admin-web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.admin
+    container_name: ait_admin_web
+    restart: always
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ait_postgres
@@ -40,7 +52,7 @@ services:
     environment:
       POSTGRES_DB: ait_db
       POSTGRES_USER: ait_admin
-      POSTGRES_PASSWORD: ait_secure_pass_2026
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ait_secure_pass_2026}
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:

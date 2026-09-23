@@ -30,11 +30,18 @@ class AiModelRegistry(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     provider_id = Column(String(36), ForeignKey("ai_provider_configs.id", ondelete="CASCADE"), nullable=False, index=True)
-    model_identifier = Column(String(100), nullable=False, index=True)  # e.g. gemini-3.6-flash, gpt-4o-mini
+    model_identifier = Column(String(100), nullable=False, index=True)  # e.g. gemini-3.7-flash, gpt-4o-mini
     display_name = Column(String(100), nullable=False)
     is_enabled = Column(Boolean, default=True, nullable=False)
     priority = Column(Integer, default=1, nullable=False)
     
+    # Free-tier classification. One of:
+    #   FREE_TIER_ELIGIBLE  — provider metadata confirms zero cost
+    #   PAID                — provider metadata confirms a price
+    #   UNKNOWN             — no authoritative info (never claim free)
+    #   NOT_APPLICABLE      — local provider (e.g. Ollama)
+    free_tier_status = Column(String(30), default="UNKNOWN", nullable=False)
+
     # Capability Matrix
     supports_text = Column(Boolean, default=True, nullable=False)
     supports_vision = Column(Boolean, default=False, nullable=False)
@@ -86,6 +93,7 @@ class AiUsageLog(Base):
     __tablename__ = "ai_usage_logs"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
+    college_id = Column(String(36), nullable=True, index=True)
     user_id = Column(String(36), nullable=True, index=True)
     conversation_id = Column(String(36), nullable=True, index=True)
     request_id = Column(String(100), nullable=True, index=True)
@@ -102,10 +110,34 @@ class AiUsageLog(Base):
     fallback_from_model = Column(String(100), nullable=True)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
+class AiCredential(Base):
+    """Multi-credential registry (one provider may hold several API keys).
+
+    SECURITY: api_key_encrypted is encrypted at rest; the encryption key is
+    derived separately from SECRET_KEY. The raw key is NEVER returned by any
+    API — only masked_key (last 4 chars) is exposed.
+    """
+    __tablename__ = "ai_credentials"
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    provider_name = Column(String(50), nullable=False, index=True)  # gemini, groq, ...
+    label = Column(String(100), nullable=True)                      # "Gemini Production Key 2"
+    api_key_encrypted = Column(Text, nullable=False)                # encrypted at rest
+    masked_key = Column(String(20), nullable=False, default="")    # "••••••••ABCD"
+    priority = Column(Integer, default=1, nullable=False)           # lower = tried first
+    is_enabled = Column(Boolean, default=True, nullable=False)
+    # FREE_TIER_ELIGIBLE | PAID | UNKNOWN | NOT_APPLICABLE
+    free_tier_status = Column(String(30), default="UNKNOWN", nullable=False)
+    is_valid = Column(Boolean, default=True, nullable=False)        # last test result
+    last_tested_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
 class KnowledgeConflict(Base):
     __tablename__ = "knowledge_conflicts"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
+    college_id = Column(String(36), nullable=True, index=True)
     topic = Column(String(255), nullable=False, index=True)
     source_a = Column(String(500), nullable=False)  # e.g., Website: https://www.aitindia.in/departments/bca
     source_b = Column(String(500), nullable=False)  # e.g., Database Entity: BCA Fees

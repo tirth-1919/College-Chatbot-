@@ -1,5 +1,5 @@
 from typing import List, Optional, Callable
-from fastapi import Depends, HTTPException, status, Header, Request
+from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from backend.app.core.database import get_db
 from backend.app.core.security import decode_token
@@ -43,21 +43,30 @@ ALL_ADMIN_PERMISSIONS = [
     PERM_SYSTEM_CONFIGURE, PERM_BACKUP_MANAGE
 ]
 
+from backend.app.models.college import College
+
+# Standard Roles
+ROLE_SUPER_ADMIN = "SUPER_ADMIN"
+ROLE_COLLEGE_ADMIN = "COLLEGE_ADMIN"
+ROLE_STUDENT = "STUDENT"
+
 def get_current_admin_user(
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Validates token and ensures user has an active administrative role (ADMIN or SUPER_ADMIN).
-    Rejects unauthorized student users with HTTP 403.
+    Validates token and ensures user has an active administrative role (SUPER_ADMIN or COLLEGE_ADMIN).
+    Rejects unauthorized students and validates that the college is not suspended.
     """
-    if not authorization or not authorization.startswith("Bearer "):
+    raw_token = None
+    if authorization and authorization.startswith("Bearer "):
+        raw_token = authorization.split(" ")[1]
+    if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication token required"
         )
-    token = authorization.split(" ")[1]
-    payload = decode_token(token)
+    payload = decode_token(raw_token)
     if not payload or "sub" not in payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -72,11 +81,30 @@ def get_current_admin_user(
         )
     
     user_role = (user.role or "").upper()
-    if user_role not in ["ADMIN", "SUPER_ADMIN"]:
+    if user_role not in ["ADMIN", "COLLEGE_ADMIN", "SUPER_ADMIN"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Administrator privileges required."
         )
+    
+    # If user belongs to a college, check college suspension status
+    if user.college_id and user_role != "SUPER_ADMIN":
+        college = db.query(College).filter(College.id == user.college_id).first()
+        if not college:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="College record not found."
+            )
+        if college.status == "SUSPENDED":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="College account is suspended. Contact platform administrator."
+            )
+        if college.status in ["REJECTED", "ARCHIVED"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"College account status is {college.status}. Access denied."
+            )
     
     return user
 
@@ -89,6 +117,30 @@ def require_super_admin(current_user: User = Depends(get_current_admin_user)) ->
         )
     return current_user
 
+def require_college_admin(current_user: User = Depends(get_current_admin_user)) -> User:
+    """Ensures caller is at least a COLLEGE_ADMIN or SUPER_ADMIN."""
+    role = (current_user.role or "").upper()
+    if role not in ["COLLEGE_ADMIN", "ADMIN", "SUPER_ADMIN"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Action restricted to College Administrators."
+        )
+    return current_user
+
+def verify_tenant_access(current_user: User, target_college_id: Optional[str]) -> None:
+    """
+    Enforces strict tenant isolation.
+    SUPER_ADMIN has platform-wide visibility.
+    COLLEGE_ADMIN and STUDENT are strictly confined to their own college.
+    """
+    if (current_user.role or "").upper() == "SUPER_ADMIN":
+        return
+    if not current_user.college_id or current_user.college_id != target_college_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Cannot access another college's resources."
+        )
+
 def require_permission(permission: str) -> Callable:
     """Dependency factory checking if admin has the requested permission."""
     def dependency(current_user: User = Depends(get_current_admin_user)) -> User:
@@ -97,8 +149,8 @@ def require_permission(permission: str) -> Callable:
             return current_user
         
         user_perms = current_user.permissions or []
-        # Normal ADMIN has ALL_ADMIN_PERMISSIONS by default unless explicitly restricted
-        if permission in user_perms or permission in ALL_ADMIN_PERMISSIONS:
+        allowed_permissions = ALL_ADMIN_PERMISSIONS if current_user.permissions is None else user_perms
+        if "*" in allowed_permissions or permission in allowed_permissions:
             return current_user
         
         raise HTTPException(
@@ -114,11 +166,14 @@ def log_admin_audit(
     resource: str,
     details: Optional[dict] = None,
     ip_address: Optional[str] = None,
-    status_str: str = "SUCCESS"
+    status_str: str = "SUCCESS",
+    college_id: Optional[str] = None
 ):
-    """Immutable audit trail logger for admin operations."""
+    """Immutable audit trail logger for admin operations, recording college_id."""
+    cid = college_id or (user.college_id if user else None)
     audit = AuditLog(
         user_id=user.id if user else None,
+        college_id=cid,
         action=action,
         resource=resource,
         status=status_str,

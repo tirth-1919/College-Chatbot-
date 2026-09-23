@@ -52,8 +52,11 @@ class AutomationEngine:
 
         existing = db.query(DistributedLock).filter(DistributedLock.lock_key == lock_key).first()
         if existing:
-            # Check if expired
-            if existing.expires_at < now:
+            # Check if expired (normalize naive/aware datetimes from SQLite)
+            existing_expiry = existing.expires_at
+            if existing_expiry.tzinfo is None:
+                existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+            if existing_expiry < now:
                 existing.owner = self.worker_id
                 existing.acquired_at = now
                 existing.expires_at = expires_at

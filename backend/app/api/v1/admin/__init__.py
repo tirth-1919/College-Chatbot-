@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from backend.app.api.v1.admin.auth import router as auth_router
 from backend.app.api.v1.admin.dashboard import router as dashboard_router
 from backend.app.api.v1.admin.knowledge import router as knowledge_router
+from backend.app.api.v1.admin.knowledge_categories import router as knowledge_categories_router
 from backend.app.api.v1.admin.website import router as website_router
 from backend.app.api.v1.admin.documents import router as documents_router
 from backend.app.api.v1.admin.images import router as images_router
@@ -16,12 +17,16 @@ from backend.app.api.v1.admin.automation import router as automation_router
 from backend.app.api.v1.admin.alerts import router as alerts_router
 from backend.app.api.v1.admin.evaluation import router as evaluation_router
 from backend.app.api.v1.admin.maintenance import router as maintenance_router
+from backend.app.api.v1.admin.colleges import router as colleges_router
+from backend.app.api.v1.admin.smart_upload import router as smart_upload_router
+from backend.app.api.v1.admin.change_requests import router as change_requests_router
 
 admin_master_router = APIRouter(prefix="/admin")
 
 admin_master_router.include_router(auth_router)
 admin_master_router.include_router(dashboard_router)
 admin_master_router.include_router(knowledge_router)
+admin_master_router.include_router(knowledge_categories_router)
 admin_master_router.include_router(website_router)
 admin_master_router.include_router(documents_router)
 admin_master_router.include_router(images_router)
@@ -36,4 +41,7 @@ admin_master_router.include_router(automation_router)
 admin_master_router.include_router(alerts_router)
 admin_master_router.include_router(evaluation_router)
 admin_master_router.include_router(maintenance_router)
+admin_master_router.include_router(colleges_router)
+admin_master_router.include_router(smart_upload_router)
+admin_master_router.include_router(change_requests_router)
 

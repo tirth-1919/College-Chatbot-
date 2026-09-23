@@ -10,3 +10,11 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+# One-time bootstrap file written on first admin creation - contains sensitive credentials
+.admin_bootstrap.txt
+# Local migration tracking
+alembic.ini.local
+# Local ngrok configuration and credentials (never commit these)
+.ngrok/
+ngrok.yml
+ngrok.yaml

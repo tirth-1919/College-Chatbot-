@@ -20,8 +20,10 @@ function DiffBlock({ labelA, valueA, labelB, valueB }) {
 export default function ConflictsView() {
   const [conflicts, setConflicts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('UNRESOLVED');
   const [scanning, setScanning] = useState(false);
+  const [resolvingId, setResolvingId] = useState(null);
+  const [actionError, setActionError] = useState('');
   const [expanded, setExpanded] = useState(null);
 
   const load = () => {
@@ -41,8 +43,16 @@ export default function ConflictsView() {
 
   const handleResolve = async (id, resolution) => {
     const notes = prompt('Resolution notes (optional):') || '';
-    await adminApi.resolveConflict(id, { resolution_status: resolution, resolution_notes: notes });
-    load();
+    setActionError('');
+    setResolvingId(id);
+    try {
+      await adminApi.resolveConflict(id, { resolution_status: resolution, resolution_notes: notes });
+      load();
+    } catch (error) {
+      setActionError(error.message || 'Unable to resolve the conflict.');
+    } finally {
+      setResolvingId(null);
+    }
   };
 
   return (
@@ -61,6 +71,8 @@ export default function ConflictsView() {
           </button>
         </div>
       </div>
+
+      {actionError && <div className="glass-card" role="alert" style={{ padding:'10px 14px',marginBottom:14,color:'#ef4444' }}>{actionError}</div>}
 
       {loading ? (
         <div style={{ textAlign:'center',padding:60,color:'var(--text-muted)' }}>
@@ -120,10 +132,10 @@ export default function ConflictsView() {
                     { label:'Mark Superseded', val:'SUPERSEDED', color:'#10b981' },
                     { label:'Dismiss', val:'DISMISSED', color:'#64748b' },
                   ].map(({ label, val, color }) => (
-                    <button key={val} onClick={() => handleResolve(c.id, val)} style={{
+                    <button key={val} onClick={() => handleResolve(c.id, val)} disabled={resolvingId === c.id} style={{
                       padding:'6px 14px', borderRadius:6, border:`1px solid ${color}40`, cursor:'pointer',
-                      background:`${color}18`, color, fontSize:'0.8rem', fontWeight:600, fontFamily:'var(--font-sans)'
-                    }}>{label}</button>
+                      background:`${color}18`, color, fontSize:'0.8rem', fontWeight:600, fontFamily:'var(--font-sans)', opacity:resolvingId === c.id ? 0.6 : 1
+                    }}>{resolvingId === c.id ? 'Resolving...' : label}</button>
                   ))}
                 </div>
               )}

@@ -10,7 +10,7 @@ export function ImageViewerModal({ image, onClose }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ color: 'var(--ait-emerald)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
-              <ShieldCheck size={16} /> Verified Official AIT Photo
+              <ShieldCheck size={16} /> Verified Official College Photo
             </span>
             <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>• {image.category}</span>
           </div>

@@ -1,0 +1,1728 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\playwright.config.js",
+    "rootDir": "C:/Users/HP/OneDrive/Desktop/college chatbot/apps/user-web/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\global-teardown.mjs",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/acceptance-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/HP/OneDrive/Desktop/college chatbot/apps/user-web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/HP/OneDrive/Desktop/college chatbot/apps/user-web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "C:/Users/HP/OneDrive/Desktop/college chatbot/apps/user-web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "mobile-chrome",
+        "name": "mobile-chrome",
+        "testDir": "C:/Users/HP/OneDrive/Desktop/college chatbot/apps/user-web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.57.0",
+    "workers": 4,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "student-journey.spec.js",
+      "file": "student-journey.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "student authentication survives refresh, rejects bad login, and logs out",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 7204,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:15.723Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-student-au-b1cfc-ects-bad-login-and-logs-out-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-student-au-b1cfc-ects-bad-login-and-logs-out-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-student-au-b1cfc-ects-bad-login-and-logs-out-chromium\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-student-au-b1cfc-ects-bad-login-and-logs-out-chromium\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-67ceac7a51ec974501a8",
+          "file": "student-journey.spec.js",
+          "line": 18,
+          "column": 1
+        },
+        {
+          "title": "basic chat streams visible answers and persists them after refresh",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 7569,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:25.700Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-basic-chat-e88cf-persists-them-after-refresh-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-basic-chat-e88cf-persists-them-after-refresh-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-basic-chat-e88cf-persists-them-after-refresh-chromium\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-basic-chat-e88cf-persists-them-after-refresh-chromium\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-ed8c35718facdbdd7bb0",
+          "file": "student-journey.spec.js",
+          "line": 52,
+          "column": 1
+        },
+        {
+          "title": "institutional facts match the verified database fixture and display source authority",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 7337,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:37.151Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-institutio-afe97-nd-display-source-authority-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-institutio-afe97-nd-display-source-authority-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-institutio-afe97-nd-display-source-authority-chromium\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-institutio-afe97-nd-display-source-authority-chromium\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-01bc9c0ebf980fe58863",
+          "file": "student-journey.spec.js",
+          "line": 63,
+          "column": 1
+        },
+        {
+          "title": "general and unverified institutional questions do not receive a false verified badge",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 7,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 7007,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:47.386Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-general-an-0feab-eive-a-false-verified-badge-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-general-an-0feab-eive-a-false-verified-badge-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-general-an-0feab-eive-a-false-verified-badge-chromium\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-general-an-0feab-eive-a-false-verified-badge-chromium\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-abde1668d0ce302ef6d0",
+          "file": "student-journey.spec.js",
+          "line": 78,
+          "column": 1
+        },
+        {
+          "title": "conversation persists, feedback sends once, and mobile composer remains usable",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 6964,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:57.224Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-conversati-c7e1b-ile-composer-remains-usable-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-conversati-c7e1b-ile-composer-remains-usable-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-conversati-c7e1b-ile-composer-remains-usable-chromium\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-conversati-c7e1b-ile-composer-remains-usable-chromium\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-74d8ed36cbaf0c22cf0a",
+          "file": "student-journey.spec.js",
+          "line": 88,
+          "column": 1
+        },
+        {
+          "title": "multilingual and follow-up context remain visible in one student conversation",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 6675,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:59:07.031Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-multilingu-ea65c-in-one-student-conversation-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-multilingu-ea65c-in-one-student-conversation-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-multilingu-ea65c-in-one-student-conversation-chromium\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-multilingu-ea65c-in-one-student-conversation-chromium\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-19ff6fc7bcdb815ea993",
+          "file": "student-journey.spec.js",
+          "line": 106,
+          "column": 1
+        },
+        {
+          "title": "student authentication survives refresh, rejects bad login, and logs out",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chrome",
+              "projectName": "mobile-chrome",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "failed",
+                  "duration": 7093,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:15.767Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-student-au-b1cfc-ects-bad-login-and-logs-out-mobile-chrome\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-student-au-b1cfc-ects-bad-login-and-logs-out-mobile-chrome\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-student-au-b1cfc-ects-bad-login-and-logs-out-mobile-chrome\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-student-au-b1cfc-ects-bad-login-and-logs-out-mobile-chrome\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-3f7d21e93552ebc2da99",
+          "file": "student-journey.spec.js",
+          "line": 18,
+          "column": 1
+        },
+        {
+          "title": "basic chat streams visible answers and persists them after refresh",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chrome",
+              "projectName": "mobile-chrome",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 1,
+                  "status": "failed",
+                  "duration": 7483,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:25.673Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-basic-chat-e88cf-persists-them-after-refresh-mobile-chrome\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-basic-chat-e88cf-persists-them-after-refresh-mobile-chrome\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-basic-chat-e88cf-persists-them-after-refresh-mobile-chrome\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-basic-chat-e88cf-persists-them-after-refresh-mobile-chrome\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-f6fe4c5e8c0082a35274",
+          "file": "student-journey.spec.js",
+          "line": 52,
+          "column": 1
+        },
+        {
+          "title": "institutional facts match the verified database fixture and display source authority",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chrome",
+              "projectName": "mobile-chrome",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 1,
+                  "status": "failed",
+                  "duration": 7126,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:36.964Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-institutio-afe97-nd-display-source-authority-mobile-chrome\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-institutio-afe97-nd-display-source-authority-mobile-chrome\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-institutio-afe97-nd-display-source-authority-mobile-chrome\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-institutio-afe97-nd-display-source-authority-mobile-chrome\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-aebc7310164b292bd855",
+          "file": "student-journey.spec.js",
+          "line": 63,
+          "column": 1
+        },
+        {
+          "title": "general and unverified institutional questions do not receive a false verified badge",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chrome",
+              "projectName": "mobile-chrome",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 1,
+                  "status": "failed",
+                  "duration": 6697,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:46.864Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-general-an-0feab-eive-a-false-verified-badge-mobile-chrome\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-general-an-0feab-eive-a-false-verified-badge-mobile-chrome\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-general-an-0feab-eive-a-false-verified-badge-mobile-chrome\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-general-an-0feab-eive-a-false-verified-badge-mobile-chrome\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-b09b6543385b54ece1e9",
+          "file": "student-journey.spec.js",
+          "line": 78,
+          "column": 1
+        },
+        {
+          "title": "conversation persists, feedback sends once, and mobile composer remains usable",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chrome",
+              "projectName": "mobile-chrome",
+              "results": [
+                {
+                  "workerIndex": 8,
+                  "parallelIndex": 1,
+                  "status": "failed",
+                  "duration": 6741,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:58:56.488Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-conversati-c7e1b-ile-composer-remains-usable-mobile-chrome\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-conversati-c7e1b-ile-composer-remains-usable-mobile-chrome\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-conversati-c7e1b-ile-composer-remains-usable-mobile-chrome\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-conversati-c7e1b-ile-composer-remains-usable-mobile-chrome\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-d813221d8c84fbead451",
+          "file": "student-journey.spec.js",
+          "line": 88,
+          "column": 1
+        },
+        {
+          "title": "multilingual and follow-up context remain visible in one student conversation",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile-chrome",
+              "projectName": "mobile-chrome",
+              "results": [
+                {
+                  "workerIndex": 10,
+                  "parallelIndex": 1,
+                  "status": "failed",
+                  "duration": 6850,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71",
+                    "location": {
+                      "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                      "column": 71,
+                      "line": 10
+                    },
+                    "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m   page\u001b[33m.\u001b[39m__browserFailures \u001b[33m=\u001b[39m browserFailures\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'AI-Powered Colleges Chatbot'\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\n \u001b[90m 13 |\u001b[39m test\u001b[33m.\u001b[39mafterEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 71,
+                        "line": 10
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('AI-Powered Colleges Chatbot').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('AI-Powered Colleges Chatbot').first()\u001b[22m\n\n\n   8 |   page.__browserFailures = browserFailures;\n   9 |   await page.goto('/');\n> 10 |   await expect(page.getByText('AI-Powered Colleges Chatbot').first()).toBeVisible();\n     |                                                                       ^\n  11 | });\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:10:71"
+                    },
+                    {
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "column": 105,
+                        "line": 14
+                      },
+                      "message": "Error: Browser console errors, uncaught exceptions, or 5xx responses\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"console: Failed to load resource: the server responded with a status of 404 (Not Found)\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  12 |\n  13 | test.afterEach(async ({ page }) => {\n> 14 |   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);\n     |                                                                                                         ^\n  15 | });\n  16 |\n  17 | test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {\n    at C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js:14:105"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T14:59:05.765Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-multilingu-ea65c-in-one-student-conversation-mobile-chrome\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-multilingu-ea65c-in-one-student-conversation-mobile-chrome\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-multilingu-ea65c-in-one-student-conversation-mobile-chrome\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\test-results\\student-journey-multilingu-ea65c-in-one-student-conversation-mobile-chrome\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                    "column": 71,
+                    "line": 10
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "d918c76a77bf165e3b6e-0c65c93cc0ff055c4ade",
+          "file": "student-journey.spec.js",
+          "line": 106,
+          "column": 1
+        }
+      ],
+      "suites": [
+        {
+          "title": "document RAG: uploaded XLSX unique value is answered with User Document Context provenance",
+          "file": "student-journey.spec.js",
+          "line": 117,
+          "column": 8,
+          "specs": [
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "Requires a deterministic local provider fixture before this can be marked PASS.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:14.184Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "Requires a deterministic local provider fixture before this can be marked PASS.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-573f4ab077805787ca2c",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            },
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "Requires a deterministic local provider fixture before this can be marked PASS.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:13.239Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "Requires a deterministic local provider fixture before this can be marked PASS.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-eb7dd16b53cea7ddee4d",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            }
+          ]
+        },
+        {
+          "title": "voice: microphone recognition and TTS playback",
+          "file": "student-journey.spec.js",
+          "line": 117,
+          "column": 8,
+          "specs": [
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "NOT TESTABLE in standard CI without a controlled microphone and audio device.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:14.184Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "NOT TESTABLE in standard CI without a controlled microphone and audio device.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-5aa3c067a0b495b38880",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            },
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "NOT TESTABLE in standard CI without a controlled microphone and audio device.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:13.239Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "NOT TESTABLE in standard CI without a controlled microphone and audio device.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-7449faaee70fe64d7c35",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            }
+          ]
+        },
+        {
+          "title": "stop generation and retry",
+          "file": "student-journey.spec.js",
+          "line": 117,
+          "column": 8,
+          "specs": [
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "Requires a controlled slow/failing provider fixture; do not mutate a live provider to test it.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:14.185Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "Requires a controlled slow/failing provider fixture; do not mutate a live provider to test it.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-68a012ba6db338a7908d",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            },
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "Requires a controlled slow/failing provider fixture; do not mutate a live provider to test it.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:13.239Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "Requires a controlled slow/failing provider fixture; do not mutate a live provider to test it.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-990c2e49088ee04be07f",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            }
+          ]
+        },
+        {
+          "title": "provider/key rotation, free-only policy, and admin changes without restart",
+          "file": "student-journey.spec.js",
+          "line": 117,
+          "column": 8,
+          "specs": [
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "Requires an isolated admin test environment and non-production provider credentials.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:14.185Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "Requires an isolated admin test environment and non-production provider credentials.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-454458ba631f786fff36",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            },
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "Requires an isolated admin test environment and non-production provider credentials.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:13.239Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "Requires an isolated admin test environment and non-production provider credentials.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-b1de235c2249679d2ab7",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            }
+          ]
+        },
+        {
+          "title": "rename and archive conversation actions",
+          "file": "student-journey.spec.js",
+          "line": 117,
+          "column": 8,
+          "specs": [
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "FAIL: the student UI currently exposes pin and delete but no rename or archive control.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:14.185Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "FAIL: the student UI currently exposes pin and delete but no rename or archive control.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-5ec49d4dff4b2d93b4a3",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            },
+            {
+              "title": "is not executable in this environment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "fixme",
+                      "description": "FAIL: the student UI currently exposes pin and delete but no rename or archive control.",
+                      "location": {
+                        "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                        "line": 118,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T14:59:13.240Z",
+                      "annotations": [
+                        {
+                          "type": "fixme",
+                          "description": "FAIL: the student UI currently exposes pin and delete but no rename or archive control.",
+                          "location": {
+                            "file": "C:\\Users\\HP\\OneDrive\\Desktop\\college chatbot\\apps\\user-web\\e2e\\student-journey.spec.js",
+                            "line": 118,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d918c76a77bf165e3b6e-b6b47f6f510dcb05d47c",
+              "file": "student-journey.spec.js",
+              "line": 119,
+              "column": 5
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-22T14:58:13.640Z",
+    "duration": 60588.908,
+    "expected": 0,
+    "skipped": 10,
+    "unexpected": 12,
+    "flaky": 0
+  }
+}

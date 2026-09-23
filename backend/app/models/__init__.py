@@ -1,7 +1,9 @@
 from backend.app.core.database import Base
+from backend.app.models.college import College, ChangeRequest, Notification, WebsiteSyncHistory
 from backend.app.models.user import User, UserSession
 from backend.app.models.conversation import Conversation, Message, MessageAttachment
 from backend.app.models.knowledge import AitEntity, AitKnowledgeVersion, WebsiteSnapshot, KnowledgeGap
+from backend.app.models.knowledge_categories import KnowledgeCategory, KnowledgeRecord
 from backend.app.models.document import Document, DocumentChunk
 from backend.app.models.image import AitImage, ImageProvenance
 from backend.app.models.audit import AuditLog, SecurityEvent
@@ -30,6 +32,10 @@ from backend.app.models.automation import (
 
 __all__ = [
     "Base",
+    "College",
+    "ChangeRequest",
+    "Notification",
+    "WebsiteSyncHistory",
     "User",
     "UserSession",
     "Conversation",
@@ -39,6 +45,8 @@ __all__ = [
     "AitKnowledgeVersion",
     "WebsiteSnapshot",
     "KnowledgeGap",
+    "KnowledgeCategory",
+    "KnowledgeRecord",
     "Document",
     "DocumentChunk",
     "AitImage",

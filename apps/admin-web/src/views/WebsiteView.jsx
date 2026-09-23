@@ -31,7 +31,7 @@ export default function WebsiteView() {
       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:22 }}>
         <div>
           <h1 style={{ fontSize:'1.4rem',fontWeight:800,marginBottom:4 }}>Website Synchronization</h1>
-          <p style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>Automated aitindia.in crawler · Change detection · Hash comparison</p>
+          <p style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>Automated college website crawler · Change detection · Hash comparison</p>
         </div>
         <button className="btn-primary" onClick={handleSync} disabled={syncing}>
           <RefreshCw size={15} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
@@ -70,7 +70,7 @@ export default function WebsiteView() {
         <div className="data-table-container">
           <table className="data-table">
             <thead>
-              <tr><th>URL</th><th>Title</th><th>Hash</th><th>Status</th><th>Last Crawled</th></tr>
+              <tr><th>URL</th><th>Title</th><th>Hash</th><th>Status</th><th>Extraction</th><th>Index</th><th>Verification</th><th>Last Crawled</th></tr>
             </thead>
             <tbody>
               {snapshots.map(s => (
@@ -92,6 +92,9 @@ export default function WebsiteView() {
                       HTTP {s.status_code}
                     </span>
                   </td>
+                  <td style={{ fontSize:'0.72rem', color: s.extraction_status === 'EXTRACTED' ? '#34d399' : '#fca5a5' }}>{s.extraction_status || '—'}</td>
+                  <td style={{ fontSize:'0.72rem', color: s.indexing_status === 'INDEXED' ? '#34d399' : '#fca5a5' }}>{s.indexing_status || '—'}{s.chunk_count ? ` (${s.chunk_count} sections)` : ''}</td>
+                  <td style={{ fontSize:'0.72rem', color: s.source_verification === 'Official College Website' ? '#34d399' : '#fca5a5' }}>{s.source_verification || '—'}</td>
                   <td style={{ color:'var(--text-dim)',fontSize:'0.8rem' }}>
                     {s.last_crawled_at ? new Date(s.last_crawled_at).toLocaleString() : '—'}
                   </td>

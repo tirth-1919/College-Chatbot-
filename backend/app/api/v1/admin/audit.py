@@ -15,16 +15,15 @@ def list_audit_logs(
     current_user: User = Depends(require_permission(PERM_AUDIT_READ)),
     db: Session = Depends(get_db)
 ):
-    logs = (
-        db.query(AuditLog)
-        .order_by(AuditLog.created_at.desc())
-        .limit(limit)
-        .all()
-    )
+    q = db.query(AuditLog)
+    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+        q = q.filter(AuditLog.college_id == current_user.college_id)
+    logs = q.order_by(AuditLog.created_at.desc()).limit(limit).all()
     return [
         {
             "id": l.id,
             "user_id": l.user_id,
+            "college_id": l.college_id,
             "action": l.action,
             "resource": l.resource,
             "status": l.status,

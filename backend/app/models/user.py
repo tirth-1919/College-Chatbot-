@@ -25,9 +25,15 @@ class User(Base):
     oauth_provider = Column(String(50), nullable=True)  # e.g., 'google'
     oauth_id = Column(String(255), nullable=True)
     last_login_at = Column(DateTime, nullable=True)
+    college_id = Column(String(36), ForeignKey("colleges.id", ondelete="SET NULL"), nullable=True, index=True)
+    # Persistent user-side college PREFERENCE (Part A §4): the college the user
+    # normally asks about. Distinct from User.college_id (tenant/admin linkage).
+    default_college_id = Column(String(36), ForeignKey("colleges.id", ondelete="SET NULL"), nullable=True, index=True)
+    must_change_password = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
+    college = relationship("College", back_populates="users", foreign_keys=[college_id])
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")

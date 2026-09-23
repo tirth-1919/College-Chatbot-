@@ -51,6 +51,14 @@ class ContextManager:
 
         last_context_text = f"{last_user_msg or ''} {last_asst_msg or ''}".lower()
 
+        # An explicit subject/topic in a new question takes precedence over
+        # prior conversation context. Context is only for genuine ellipses.
+        explicit_topic = re.search(
+            r"\b(anti[- ]?ragging|sports|library|internal complaint|canteen|academic|student grievance|iqac|intake|catalog|courses?|programs?|fees?|tuition|faculty|who teaches|dbms)\b",
+            query_lower,
+        )
+        has_explicit_subject = bool(explicit_topic)
+
         def detect_topic(text: str) -> Optional[str]:
             t = text.lower()
             if any(w in t for w in ["placement", "placements", "package", "recruiter", "tpo", "recruiters"]):
@@ -67,6 +75,8 @@ class ContextManager:
                 return "LAB"
             if any(w in t for w in ["campus", "ground", "sports", "canteen", "cafeteria"]):
                 return "CAMPUS"
+            if any(w in t for w in ["committee", "council", "squad", "cell", "iqac", "grievance"]):
+                return "COMMITTEE"
             return None
 
         # Prioritize previous user's query intent, then assistant answer content
@@ -124,10 +134,41 @@ class ContextManager:
                     "context_applied": True
                 }
 
-        # 4. Case C: Pronoun coreference ("who teaches it?", "where is her office?", "tell me about it")
+        # 4. Case C: Committee follow-up context ("list all members", "who is the chairman", etc.)
+        if last_topic == "COMMITTEE" and not has_explicit_subject:
+            # Extract committee name from previous context only for an
+            # elliptical follow-up such as "list all members".
+            committee_match = re.search(r"\b(ANTI-RAGGING SQUAD|SPORTS COMMITTEE|LIBRARY COMMITTEE|INTERNAL COMPLAINT COMMITTEE|Canteen Committee|Academic Council|Student Grievance|IQAC)\b", last_context_text, re.IGNORECASE)
+            if committee_match:
+                committee_name = committee_match.group(1)
+
+                # Follow-up patterns for committees
+                if re.search(r"\b(list\s+all\s+members|members|who\s+are\s+the\s+members)\b", query_lower):
+                    return {
+                        "resolved_query": f"List all members of the {committee_name} at AIT",
+                        "inferred_intent": "AIT_COMMITTEE",
+                        "inferred_topic": committee_name,
+                        "context_applied": True
+                    }
+                elif re.search(r"\b(who\s+is\s+the\s+chairman|chairman|who\s+is\s+the\s+head|head)\b", query_lower):
+                    return {
+                        "resolved_query": f"Who is the Chairman of the {committee_name} at AIT",
+                        "inferred_intent": "AIT_COMMITTEE",
+                        "inferred_topic": committee_name,
+                        "context_applied": True
+                    }
+                elif re.search(r"\b(tell\s+me\s+about|about|details)\b", query_lower):
+                    return {
+                        "resolved_query": f"Tell me about the {committee_name} at AIT",
+                        "inferred_intent": "AIT_COMMITTEE",
+                        "inferred_topic": committee_name,
+                        "context_applied": True
+                    }
+
+        # 5. Case D: Pronoun coreference ("who teaches it?", "where is her office?", "tell me about it")
         resolved = query_clean
         pronoun_match = re.search(r"\b(her|his|its|their|she|he|it)\b", query_lower)
-        if pronoun_match:
+        if pronoun_match and not has_explicit_subject:
             pronoun = pronoun_match.group(1)
 
             # Check if pronoun refers to a faculty member

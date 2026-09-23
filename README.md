@@ -59,6 +59,34 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
+## 🌐 Public Development Access with ngrok
+ngrok is optional and exposes only the current user-facing AIT application on port `8000`. The admin application remains a separate process on port `8001` and is not tunneled by default. Ngrok does not change the AI pipeline, authentication, or server-side RBAC.
+
+1. Start the user application with the existing launcher:
+   ```powershell
+   python user.py
+   ```
+   The user application serves the built React frontend when `apps/user-web/dist` exists, at `http://localhost:8000`.
+2. In another PowerShell terminal, run:
+   ```powershell
+   ./start-ngrok.ps1
+   ```
+   The script checks `http://localhost:8000/health`, detects the HTTPS tunnel URL, and keeps ngrok attached to the terminal.
+3. Open the displayed temporary `https://xxxxx.ngrok.app` URL. The public health URL is the same URL with `/health` appended.
+4. Press `Ctrl+C` to stop the tunnel.
+
+For optional all-in-one public startup, which reuses `user.py` and then starts the tunnel:
+```powershell
+./start-public.ps1
+```
+
+Install and authenticate the official ngrok agent once per machine:
+```powershell
+winget install ngrok -s msstore
+ngrok config add-authtoken "<YOUR_AUTHTOKEN>"
+```
+The token is stored by ngrok in the user's local configuration and must never be added to source code, `.env`, or Git. The public URL is temporary unless a reserved ngrok domain is configured with the optional `NGROK_DOMAIN` environment variable. Existing login, authentication, and RBAC rules still apply. Use public access only for development/testing and do not share secrets.
+
 ## 🧪 Automated Testing
 Run the automated test suite covering all 11 core verification scenarios:
 ```bash

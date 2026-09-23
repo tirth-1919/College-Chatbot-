@@ -155,7 +155,7 @@ export function Composer({ onSendMessage, isStreaming, onStopStreaming }) {
         <textarea
           ref={textareaRef}
           className="composer-textarea"
-          placeholder={uploading ? "Securing and uploading document..." : "Ask AIT Assistant in English, Gujarati, Hindi (e.g. BCA fees, DBMS faculty, library photo)..."}
+          placeholder={uploading ? "Securing and uploading document..." : "Ask anything about your college..."}
           value={text}
           onChange={handleTextChange}
           onKeyDown={handleKeyDown}

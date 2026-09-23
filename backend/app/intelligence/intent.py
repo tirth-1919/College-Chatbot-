@@ -34,7 +34,7 @@ class IntentString(str):
 
 class IntentClassifier:
     """
-    Robust Intent Classifier for AIT AI Assistant supporting Section 4 required intents:
+    Robust Intent Classifier for AI-Powered Colleges Chatbot supporting Section 4 required intents:
     GREETING, GENERAL_CONVERSATION, AIT_GENERAL, COURSES, FEES, ADMISSION, ADMISSION_DATES,
     ELIGIBILITY, PLACEMENT, FACULTY, SUBJECT, ACADEMICS, EXAM, RESULT, CAMPUS, FACILITIES,
     LAB, LIBRARY, EVENT, CONTACT, LOCATION, DOCUMENTS, SCHOLARSHIP, HOSTEL, TRANSPORT,
@@ -70,7 +70,7 @@ class IntentClassifier:
             r"\b(eligibility|criteria|qualification|cutoff|percentage|merit|eligible)\b"
         ],
         "COURSES": [
-            r"\b(course|courses|program|programs|degree|degrees|branch|branches|offered|curriculum|stream)\b"
+            r"\b(course|courses|program|programs|degree|degrees|branch|branches|offered|curriculum|stream|catalog|academic catalog)\b"
         ],
         "PLACEMENT": [
             r"\b(placement|placements|package|packages|company|companies|recruiter|recruiters|tpo|highest package|average package|drive|placed|placement kaisa|placement ketlu)\b"
@@ -89,6 +89,9 @@ class IntentClassifier:
         ],
         "FACILITIES": [
             r"\b(facility|facilities|canteen|cafeteria|sports|ground|auditorium|wifi|amenities)\b"
+        ],
+        "AIT_COMMITTEE": [
+            r"\b(committee|council|anti[- ]ragging|iqac|internal complaint|grievance redressal|training and placement|staff welfare)\b"
         ],
         "CAMPUS": [
             r"\b(campus|infrastructure|building|area|environment|campus kaisa)\b"
@@ -115,7 +118,7 @@ class IntentClassifier:
             r"\b(contact|phone|email|helpline|number|mobile|telephone|call)\b"
         ],
         "LOCATION": [
-            r"\b(location|address|where is|map|reach|route|directions|kaha hai|kya aavelu)\b"
+            r"\b(location|address|where('s| is)?|where\b|map|reach|route|directions|kaha hai|kya aavelu)\b"
         ],
         "AIT_GENERAL": [
             r"\b(about ait|ait college|ahmedabad institute of technology|overview|history|accreditation|gtu affiliated)\b"
@@ -174,19 +177,35 @@ class IntentClassifier:
                     "topic": [top for top in cls.EDUCATIONAL_TOPICS if re.search(rf"\b{re.escape(top)}\b", text_lower)]
                 }
 
-        # 5. Check Institutional Domain Intents
+        # 5. Committee names are more specific than generic facility words
+        # such as sports, chairman, or committee. Classify them first so a
+        # named committee cannot fall into FACILITIES.
+        if re.search(r"\b(sports\s+committee|anti[- ]?ragging\s+squad|academic\s+council|internal\s+complaint|student\s+grievance|iqac)\b", text_lower):
+            return {"intent": IntentString("AIT_COMMITTEE"), "confidence": 0.98}
+
+        # 6. Check Institutional Domain Intents.
+        # AIT_COMMITTEE requires an explicit AIT/college signal: "UN Security
+        # Council" or "student council of another university" must not be
+        # classified as an AIT governance question.
         for intent_name, patterns in cls.INTENT_PATTERNS.items():
             if intent_name == "IMAGE_REQUEST":
                 continue
             for pattern in patterns:
                 if re.search(pattern, text_lower):
+                    if intent_name == "AIT_COMMITTEE":
+                        has_ait_signal = bool(re.search(
+                            r"\b(ait|ahmedabad institute|your college|the college|institute)\b",
+                            text_lower,
+                        ))
+                        if not has_ait_signal:
+                            continue
                     return {"intent": IntentString(intent_name), "confidence": 0.9}
 
-        # 6. Check for Course Names (e.g. "BCA", "MCA", "B.Tech CSE")
+        # 7. Check for Course Names (e.g. "BCA", "MCA", "B.Tech CSE")
         if any(re.search(rf"\b{c}\b", text_lower) for c in ["bca", "mca", "bba", "mba", "cse", "btech", "b.tech", "it"]):
             return {"intent": IntentString("COURSES"), "confidence": 0.85}
 
-        # 7. Fallback check for general educational verb
+        # 8. Fallback check for general educational verb
         if has_educational_verb:
             return {"intent": IntentString("GENERAL_EDUCATIONAL"), "confidence": 0.80}
 

@@ -59,6 +59,12 @@ class SSEStreamManager:
             elif b_type == "provenance":
                 yield cls.format_sse("provenance_metadata", block)
                 await asyncio.sleep(0.02)
+            elif b_type in ("college_switch_prompt", "suggested_action"):
+                # FIX: interactive blocks were silently dropped, so the [Switch]
+                # button never rendered during a live session (§22/§61). Stream
+                # them under their own typed event names.
+                yield cls.format_sse(b_type, block)
+                await asyncio.sleep(0.02)
 
         # 5. message_complete
         yield cls.format_sse("message_complete", {

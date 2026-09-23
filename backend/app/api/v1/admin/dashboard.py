@@ -25,17 +25,27 @@ def get_dashboard_metrics(
 ):
     """
     Returns authentic system metrics and telemetry from the backend database.
+    COLLEGE_ADMIN: scoped to their college. SUPER_ADMIN: platform-wide.
     """
-    total_entities = db.query(AitEntity).count()
-    verified_images = db.query(AitImage).filter(AitImage.verified == True).count()
-    total_documents = db.query(Document).count()
-    total_users = db.query(User).count()
-    total_conversations = db.query(Conversation).count()
+    cid = current_user.college_id
+    is_super = current_user.role == "SUPER_ADMIN"
+
+    def _cs(q, model):
+        """Apply college scope to query if not super admin and model has college_id."""
+        if not is_super and cid and hasattr(model, "college_id"):
+            return q.filter(model.college_id == cid)
+        return q
+
+    total_entities = _cs(db.query(AitEntity), AitEntity).count()
+    verified_images = _cs(db.query(AitImage).filter(AitImage.verified == True), AitImage).count()
+    total_documents = _cs(db.query(Document), Document).count()
+    total_users = _cs(db.query(User), User).count()
+    total_conversations = _cs(db.query(Conversation), Conversation).count()
     total_messages = db.query(Message).count()
 
-    unresolved_gaps = db.query(KnowledgeGap).filter(KnowledgeGap.resolved == False).count()
+    unresolved_gaps = _cs(db.query(KnowledgeGap).filter(KnowledgeGap.resolved == False), KnowledgeGap).count()
     unresolved_conflicts = db.query(KnowledgeConflict).filter(KnowledgeConflict.resolution_status == "UNRESOLVED").count()
-    total_snapshots = db.query(WebsiteSnapshot).count()
+    total_snapshots = _cs(db.query(WebsiteSnapshot), WebsiteSnapshot).count()
 
     active_models = db.query(AiModelRegistry).filter(AiModelRegistry.is_enabled == True).all()
     circuit_healthy = sum(1 for m in active_models if m.health_status == "HEALTHY")
@@ -43,7 +53,10 @@ def get_dashboard_metrics(
 
     # Recent AI usage (last 24h)
     one_day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
-    recent_logs = db.query(AiUsageLog).filter(AiUsageLog.timestamp >= one_day_ago).all()
+    ai_usage_q = db.query(AiUsageLog).filter(AiUsageLog.timestamp >= one_day_ago)
+    if not is_super and cid and hasattr(AiUsageLog, "college_id"):
+        ai_usage_q = ai_usage_q.filter(AiUsageLog.college_id == cid)
+    recent_logs = ai_usage_q.all()
     ai_requests_24h = len(recent_logs)
     ai_failures_24h = sum(1 for l in recent_logs if not l.success)
     ai_failovers_24h = sum(1 for l in recent_logs if l.failover_occurred)
@@ -52,9 +65,25 @@ def get_dashboard_metrics(
         if recent_logs else 142.5
     )
 
+    # College branding for UI
+    college_info = None
+    if cid:
+        from backend.app.models.college import College
+        college = db.query(College).filter(College.id == cid).first()
+        if college:
+            college_info = {
+                "id": college.id,
+                "name": college.name,
+                "assistant_name": college.assistant_name or "AI Assistant",
+                "primary_color": college.primary_color or "#0b0a3e",
+                "logo_url": college.logo_url,
+                "status": college.status,
+            }
+
     return {
-        "institution": "Ahmedabad Institute of Technology",
-        "official_domain": "https://www.aitindia.in",
+        "institution": college_info["name"] if college_info else "Platform (All Colleges)",
+        "college": college_info,
+        "is_super_admin": is_super,
         "environment": "production-ready",
         "system_health": "OPTIMAL" if circuit_open == 0 else "DEGRADED",
         "counts": {

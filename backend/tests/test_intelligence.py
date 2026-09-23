@@ -22,6 +22,24 @@ def test_multilingual_language_detection():
     res_gu = language_engine.detect_language("કોલેજ માં લાયબ્રેરી છે?")
     assert res_gu["language"] == "gu"
 
+def test_general_questions_are_not_greetings():
+    for greeting in ["hy", "hello", "hey", "hi"]:
+        assert intent_classifier.classify_intent(greeting)["intent"] in ["GREETING", "UNKNOWN"]
+
+    for question in [
+        "What is machine learning?",
+        "what is machine learning",
+        "WHAT IS MACHINE LEARNING?",
+        "what is artificial intelligence?",
+        "Explain machine learning simply.",
+        "What is Python?",
+    ]:
+        assert intent_classifier.classify_intent(question)["intent"] == "general_educational"
+        entities = entity_extractor.extract_entities(question)
+        from backend.app.knowledge.source_router import source_router
+        assert source_router.route_query(question, intent_classifier.classify_intent(question), entities) == "general_educational"
+
+
 def test_intent_classification():
     # Fee lookup
     assert intent_classifier.classify_intent("What are the BCA fees?")["intent"] == "fee_lookup"

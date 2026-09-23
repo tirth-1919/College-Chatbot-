@@ -36,7 +36,7 @@ export default function DocumentsView() {
   const loadChunks = async (id) => {
     if (chunks[id]) { setChunks(c => { const n={...c}; delete n[id]; return n; }); return; }
     const res = await adminApi.getDocumentChunks(id);
-    setChunks(c => ({ ...c, [id]: res }));
+    setChunks(c => ({ ...c, [id]: res?.chunks || [] }));
   };
 
   return (
@@ -44,7 +44,7 @@ export default function DocumentsView() {
       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:22 }}>
         <div>
           <h1 style={{ fontSize:'1.4rem',fontWeight:800,marginBottom:4 }}>Document Management</h1>
-          <p style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>RAG-indexed files · Automatic chunking and vector embedding</p>
+          <p style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>Authoritative AIT documents · Verified RAG search index</p>
         </div>
         <div>
           <input type="file" accept=".pdf,.doc,.docx,.txt,.md" onChange={handleUpload} style={{ display:'none' }} id="doc-upload" />
@@ -76,11 +76,11 @@ export default function DocumentsView() {
                   <FileText size={18} color="#818cf8" />
                 </div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:600,marginBottom:3 }}>{d.original_filename}</div>
+                  <div style={{ fontWeight:600,marginBottom:3 }}>{d.title}</div>
                   <div style={{ display:'flex',gap:16,fontSize:'0.78rem',color:'var(--text-dim)',flexWrap:'wrap' }}>
-                    <span>{(d.file_size_bytes/1024).toFixed(0)} KB</span>
+                    <span style={{ textTransform:'uppercase' }}>{d.doc_type}</span>
                     <span>{d.chunk_count} chunks</span>
-                    <span style={{ fontFamily:'var(--font-mono)' }}>{d.content_type}</span>
+                    <span style={{ color:'var(--text-muted)' }}>{d.visibility}</span>
                     <span>{d.created_at ? new Date(d.created_at).toLocaleDateString() : '—'}</span>
                   </div>
                 </div>
@@ -91,8 +91,8 @@ export default function DocumentsView() {
                       {chunks[d.id] ? 'Hide' : 'Chunks'}
                     </button>
                   )}
-                  <span className={`badge ${d.indexed ? 'badge-healthy' : 'badge-warning'}`} style={{ fontSize:'0.7rem' }}>
-                    {d.indexed ? 'INDEXED' : 'PENDING'}
+                  <span className={`badge ${d.chunk_count > 0 ? 'badge-healthy' : 'badge-warning'}`} style={{ fontSize:'0.7rem' }}>
+                    {d.chunk_count > 0 ? 'INDEXED' : 'PENDING'}
                   </span>
                   <button className="btn-danger" style={{ padding:'6px 12px' }} onClick={() => handleDelete(d.id)}>
                     <Trash2 size={14} />
@@ -111,10 +111,10 @@ export default function DocumentsView() {
                         <div style={{ display:'flex',gap:12,marginBottom:6,fontSize:'0.72rem',color:'var(--text-dim)' }}>
                           <span>Chunk {c.chunk_index}</span>
                           <span>{c.chunk_size} chars</span>
-                          {c.page_number && <span>Page {c.page_number}</span>}
+                          {c.has_embedding && <span style={{ color: '#10b981' }}>Embedded</span>}
                         </div>
                         <div style={{ fontSize:'0.82rem',color:'var(--text-muted)',lineHeight:1.5 }}>
-                          {c.content_preview}
+                          {c.content_preview || c.content?.slice(0, 200)}
                         </div>
                       </div>
                     ))}
