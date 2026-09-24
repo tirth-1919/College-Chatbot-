@@ -1,14 +1,14 @@
-import os
+﻿import os
 from pydantic import field_validator, model_validator, ValidationError
 from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
-    # Application Info — permanent platform identity (multi-college).
+    # Application Info â€” permanent platform identity (multi-college).
     # This is the PRODUCT name, independent of any college tenant.
-    APP_NAME: str = "AI-Powered Colleges Chatbot"
+    APP_NAME: str = "AI FAQ College Chat Bot"
     APP_VERSION: str = "1.0.0"
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     # DEBUG may be set machine-wide to non-boolean values (e.g. DEBUG=release).
     # The validator below normalizes valid boolean strings and safely treats any
     # unrecognized value as False (production behaviour) instead of crashing startup.
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
                 return True
             if text in ("0", "false", "no", "off"):
                 return False
-            # Unrecognized value (e.g. "release"): do not crash — assume not debug
+            # Unrecognized value (e.g. "release"): do not crash â€” assume not debug
             return False
         return bool(value)
 
@@ -73,14 +73,14 @@ class Settings(BaseSettings):
         return self
 
     # Institution Info
-    INSTITUTION_NAME: str = "Ahmedabad Institute of Technology"
-    INSTITUTION_SHORT_NAME: str = "AIT"
-    INSTITUTION_URL: str = "https://www.aitindia.in"
+    INSTITUTION_NAME: str = "Multi-College Platform"
+    INSTITUTION_SHORT_NAME: str = "AI FAQ"
+    INSTITUTION_URL: str = ""
 
     # Security & Auth
     # Development fallback ONLY: never accepted in production (see the
     # validate_production_secrets model validator, which rejects startup).
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "ait-ai-super-secret-key-change-in-production-2026")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -168,7 +168,7 @@ class Settings(BaseSettings):
 def load_settings_safe() -> Settings:
     """Load Settings and convert validation failures into a sanitized
     startup error. Pydantic's ValidationError repr embeds the offending
-    input value (e.g. SECRET_KEY) in its context — never expose that in
+    input value (e.g. SECRET_KEY) in its context â€” never expose that in
     logs. Only the validation message is surfaced."""
     try:
         return Settings()
@@ -178,3 +178,4 @@ def load_settings_safe() -> Settings:
 
 
 settings = load_settings_safe()
+
