@@ -1,0 +1,1542 @@
+........................................................FFFFFF.......... [ 25%]
+........................................................................ [ 51%]
+...............x................................FFFFFF.................. [ 77%]
+...............................................................          [100%]
+================================== FAILURES ===================================
+___________________ test_categories_created_during_approval ___________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001AA0A9D6F90>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD04D0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001AA0A84F390>
+parameters = [('test-college-1', 'Test University', 'TU1', 'test-university', 'admin@test-university.edu', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0A8F9240>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-1', 'Test University', 'TU1', 'test-university', 'admin@test-university.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD04D0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: colleges.official_website
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+db = <sqlalchemy.orm.session.Session object at 0x000001AA0A5B4230>
+
+    def test_categories_created_during_approval(db: Session):
+        """
+        When a college is approved, categories should be auto-created for that college.
+        """
+        # Create a test college
+        college = College(
+            id="test-college-1",
+            name="Test University",
+            code="TU1",
+            slug="test-university",
+            official_email="admin@test-university.edu",
+            status="ACTIVE",
+            registration_status="APPROVED"
+        )
+        db.add(college)
+>       db.commit()
+
+backend\tests\test_college_provisioning.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2035: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1316: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1290: in _prepare_impl
+    self.session.flush()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4353: in flush
+    self._flush(objects)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4488: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4449: in _flush
+    flush_context.execute()
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:465: in execute
+    rec.execute(self)
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:94: in save_obj
+    _emit_insert_statements(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1049: in _emit_insert_statements
+    result = connection.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0A8F9240>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-1', 'Test University', 'TU1', 'test-university', 'admin@test-university.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD04D0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: colleges.official_website
+E       [SQL: INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, university_affiliation, contact_person, contact_email, contact_phone, logo_url, auth_document_path, description, additional_info, status, registration_status, application_id, rejection_reason, review_notes, timezone, assistant_name, welcome_message, primary_color, secondary_color, accent_color, supported_languages, max_users, max_storage_mb, max_documents, max_ai_requests_per_day, subdomain, custom_domain, connection_status, website_last_checked_at, website_last_success_at, website_last_failure_at, website_http_status, website_pages_indexed, website_error_message, knowledge_last_updated_at, verified_records_count, rag_documents_count, broken_sources_count, created_at, updated_at, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('test-college-1', 'Test University', 'TU1', 'test-university', 'admin@test-university.edu', None, None, None, None, None, 'India', None, None, None, None, None, None, None, None, 'ACTIVE', 'APPROVED', 'COL-2026-AA79E9', None, None, 'Asia/Kolkata', 'AI Assistant', None, '#0b0a3e', '#1a2345', '#f08518', '["en", "gu", "hi"]', 1000, 5120, 500, 10000, None, None, 'NOT_CONNECTED', None, None, None, None, 0, None, None, 0, 0, 0, '2026-09-24 10:06:35.549619', '2026-09-24 10:06:35.549625', None, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+_____________ test_multiple_colleges_can_have_same_category_keys ______________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001AA0AA434D0>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAB6150>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001AA0A84F390>
+parameters = [('test-college-a', 'College A', 'COLA', 'college-a', 'admin@college-a.edu', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0BCFC440>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-a', 'College A', 'COLA', 'college-a', 'admin@college-a.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAB6150>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: colleges.official_website
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+db = <sqlalchemy.orm.session.Session object at 0x000001AA0A573A70>
+
+    def test_multiple_colleges_can_have_same_category_keys(db: Session):
+        """
+        Multiple colleges should be able to have categories with the same keys
+        (e.g., both can have "fees", "faculty", "courses").
+        """
+        # Create College A
+        college_a = College(
+            id="test-college-a",
+            name="College A",
+            code="COLA",
+            slug="college-a",
+            official_email="admin@college-a.edu",
+            status="ACTIVE",
+            registration_status="APPROVED"
+        )
+        db.add(college_a)
+>       db.commit()
+
+backend\tests\test_college_provisioning.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2035: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1316: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1290: in _prepare_impl
+    self.session.flush()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4353: in flush
+    self._flush(objects)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4488: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4449: in _flush
+    flush_context.execute()
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:465: in execute
+    rec.execute(self)
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:94: in save_obj
+    _emit_insert_statements(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1049: in _emit_insert_statements
+    result = connection.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0BCFC440>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-a', 'College A', 'COLA', 'college-a', 'admin@college-a.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAB6150>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: colleges.official_website
+E       [SQL: INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, university_affiliation, contact_person, contact_email, contact_phone, logo_url, auth_document_path, description, additional_info, status, registration_status, application_id, rejection_reason, review_notes, timezone, assistant_name, welcome_message, primary_color, secondary_color, accent_color, supported_languages, max_users, max_storage_mb, max_documents, max_ai_requests_per_day, subdomain, custom_domain, connection_status, website_last_checked_at, website_last_success_at, website_last_failure_at, website_http_status, website_pages_indexed, website_error_message, knowledge_last_updated_at, verified_records_count, rag_documents_count, broken_sources_count, created_at, updated_at, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('test-college-a', 'College A', 'COLA', 'college-a', 'admin@college-a.edu', None, None, None, None, None, 'India', None, None, None, None, None, None, None, None, 'ACTIVE', 'APPROVED', 'COL-2026-B505AF', None, None, 'Asia/Kolkata', 'AI Assistant', None, '#0b0a3e', '#1a2345', '#f08518', '["en", "gu", "hi"]', 1000, 5120, 500, 10000, None, None, 'NOT_CONNECTED', None, None, None, None, 0, None, None, 0, 0, 0, '2026-09-24 10:06:38.351328', '2026-09-24 10:06:38.351335', None, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+___________________ test_category_uniqueness_within_college ___________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001AA0AA431D0>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0A8F3B90>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001AA0A84F390>
+parameters = [('test-college-unique', 'Unique Test College', 'UTC', 'unique-test', 'admin@unique-test.edu', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0B853540>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-unique', 'Unique Test College', 'UTC', 'unique-test', 'admin@unique-test.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0A8F3B90>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: colleges.official_website
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+db = <sqlalchemy.orm.session.Session object at 0x000001AA0A7F2D50>
+
+    def test_category_uniqueness_within_college(db: Session):
+        """
+        Within a single college, category keys must be unique.
+        Attempting to create duplicate categories for the same college should fail.
+        """
+        college = College(
+            id="test-college-unique",
+            name="Unique Test College",
+            code="UTC",
+            slug="unique-test",
+            official_email="admin@unique-test.edu",
+            status="ACTIVE",
+            registration_status="APPROVED"
+        )
+        db.add(college)
+>       db.commit()
+
+backend\tests\test_college_provisioning.py:130: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2035: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1316: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1290: in _prepare_impl
+    self.session.flush()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4353: in flush
+    self._flush(objects)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4488: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4449: in _flush
+    flush_context.execute()
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:465: in execute
+    rec.execute(self)
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:94: in save_obj
+    _emit_insert_statements(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1049: in _emit_insert_statements
+    result = connection.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0B853540>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-unique', 'Unique Test College', 'UTC', 'unique-test', 'admin@unique-test.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0A8F3B90>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: colleges.official_website
+E       [SQL: INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, university_affiliation, contact_person, contact_email, contact_phone, logo_url, auth_document_path, description, additional_info, status, registration_status, application_id, rejection_reason, review_notes, timezone, assistant_name, welcome_message, primary_color, secondary_color, accent_color, supported_languages, max_users, max_storage_mb, max_documents, max_ai_requests_per_day, subdomain, custom_domain, connection_status, website_last_checked_at, website_last_success_at, website_last_failure_at, website_http_status, website_pages_indexed, website_error_message, knowledge_last_updated_at, verified_records_count, rag_documents_count, broken_sources_count, created_at, updated_at, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('test-college-unique', 'Unique Test College', 'UTC', 'unique-test', 'admin@unique-test.edu', None, None, None, None, None, 'India', None, None, None, None, None, None, None, None, 'ACTIVE', 'APPROVED', 'COL-2026-5F0CE8', None, None, 'Asia/Kolkata', 'AI Assistant', None, '#0b0a3e', '#1a2345', '#f08518', '["en", "gu", "hi"]', 1000, 5120, 500, 10000, None, None, 'NOT_CONNECTED', None, None, None, None, 0, None, None, 0, 0, 0, '2026-09-24 10:06:39.816046', '2026-09-24 10:06:39.816050', None, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+_______________ test_different_colleges_duplicate_keys_allowed ________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001AA0A564650>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAB6150>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001AA0A84D6D0>
+parameters = [('test-college-dup-1', 'College One', 'C1', 'college-one', 'admin@college-one.edu', None, ...), ('test-college-dup-2', 'College Two', 'C2', 'college-two', 'admin@college-two.edu', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1938: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0B9BF440>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = [('test-college-dup-1', 'College One', 'C1', 'college-one', 'admin@college-one.edu', None, ...), ('test-college-dup-2', 'College Two', 'C2', 'college-two', 'admin@college-two.edu', None, ...)]
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAB6150>
+
+    def do_executemany(self, cursor, statement, parameters, context=None):
+>       cursor.executemany(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: colleges.official_website
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:949: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+db = <sqlalchemy.orm.session.Session object at 0x000001AA0A5B6D50>
+
+    def test_different_colleges_duplicate_keys_allowed(db: Session):
+        """
+        Different colleges CAN have categories with the same key.
+        This is the core multi-tenant requirement.
+        """
+        # College 1
+        college1 = College(
+            id="test-college-dup-1",
+            name="College One",
+            code="C1",
+            slug="college-one",
+            official_email="admin@college-one.edu",
+            status="ACTIVE"
+        )
+        db.add(college1)
+    
+        # College 2
+        college2 = College(
+            id="test-college-dup-2",
+            name="College Two",
+            code="C2",
+            slug="college-two",
+            official_email="admin@college-two.edu",
+            status="ACTIVE"
+        )
+        db.add(college2)
+>       db.commit()
+
+backend\tests\test_college_provisioning.py:186: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2035: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1316: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1290: in _prepare_impl
+    self.session.flush()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4353: in flush
+    self._flush(objects)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4488: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4449: in _flush
+    flush_context.execute()
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:465: in execute
+    rec.execute(self)
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:94: in save_obj
+    _emit_insert_statements(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1049: in _emit_insert_statements
+    result = connection.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1938: in _exec_single_context
+    self.dialect.do_executemany(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0B9BF440>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = [('test-college-dup-1', 'College One', 'C1', 'college-one', 'admin@college-one.edu', None, ...), ('test-college-dup-2', 'College Two', 'C2', 'college-two', 'admin@college-two.edu', None, ...)]
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAB6150>
+
+    def do_executemany(self, cursor, statement, parameters, context=None):
+>       cursor.executemany(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: colleges.official_website
+E       [SQL: INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, university_affiliation, contact_person, contact_email, contact_phone, logo_url, auth_document_path, description, additional_info, status, registration_status, application_id, rejection_reason, review_notes, timezone, assistant_name, welcome_message, primary_color, secondary_color, accent_color, supported_languages, max_users, max_storage_mb, max_documents, max_ai_requests_per_day, subdomain, custom_domain, connection_status, website_last_checked_at, website_last_success_at, website_last_failure_at, website_http_status, website_pages_indexed, website_error_message, knowledge_last_updated_at, verified_records_count, rag_documents_count, broken_sources_count, created_at, updated_at, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: [('test-college-dup-1', 'College One', 'C1', 'college-one', 'admin@college-one.edu', None, None, None, None, None, 'India', None, None, None, None, None, None, None, None, 'ACTIVE', 'PENDING', 'COL-2026-53E3C4', None, None, 'Asia/Kolkata', 'AI Assistant', None, '#0b0a3e', '#1a2345', '#f08518', '["en", "gu", "hi"]', 1000, 5120, 500, 10000, None, None, 'NOT_CONNECTED', None, None, None, None, 0, None, None, 0, 0, 0, '2026-09-24 10:06:41.954967', '2026-09-24 10:06:41.954971', None, None), ('test-college-dup-2', 'College Two', 'C2', 'college-two', 'admin@college-two.edu', None, None, None, None, None, 'India', None, None, None, None, None, None, None, None, 'ACTIVE', 'PENDING', 'COL-2026-C8DD2D', None, None, 'Asia/Kolkata', 'AI Assistant', None, '#0b0a3e', '#1a2345', '#f08518', '["en", "gu", "hi"]', 1000, 5120, 500, 10000, None, None, 'NOT_CONNECTED', None, None, None, None, 0, None, None, 0, 0, 0, '2026-09-24 10:06:41.954989', '2026-09-24 10:06:41.954990', None, None)]]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:949: IntegrityError
+______________________ test_category_seeding_idempotent _______________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001AA0A819610>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD1CD0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001AA0A89BB10>
+parameters = [('test-college-idem', 'Idempotent Test College', 'ITC', 'idempotent-test', 'admin@idempotent-test.edu', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0AC184C0>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-idem', 'Idempotent Test College', 'ITC', 'idempotent-test', 'admin@idempotent-test.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD1CD0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: colleges.official_website
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+db = <sqlalchemy.orm.session.Session object at 0x000001AA0A661A90>
+
+    def test_category_seeding_idempotent(db: Session):
+        """
+        Running category seeding multiple times for the same college should be safe.
+        """
+        college = College(
+            id="test-college-idem",
+            name="Idempotent Test College",
+            code="ITC",
+            slug="idempotent-test",
+            official_email="admin@idempotent-test.edu",
+            status="ACTIVE"
+        )
+        db.add(college)
+>       db.commit()
+
+backend\tests\test_college_provisioning.py:235: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2035: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1316: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1290: in _prepare_impl
+    self.session.flush()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4353: in flush
+    self._flush(objects)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4488: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4449: in _flush
+    flush_context.execute()
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:465: in execute
+    rec.execute(self)
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:94: in save_obj
+    _emit_insert_statements(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1049: in _emit_insert_statements
+    result = connection.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA0AC184C0>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-idem', 'Idempotent Test College', 'ITC', 'idempotent-test', 'admin@idempotent-test.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD1CD0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: colleges.official_website
+E       [SQL: INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, university_affiliation, contact_person, contact_email, contact_phone, logo_url, auth_document_path, description, additional_info, status, registration_status, application_id, rejection_reason, review_notes, timezone, assistant_name, welcome_message, primary_color, secondary_color, accent_color, supported_languages, max_users, max_storage_mb, max_documents, max_ai_requests_per_day, subdomain, custom_domain, connection_status, website_last_checked_at, website_last_success_at, website_last_failure_at, website_http_status, website_pages_indexed, website_error_message, knowledge_last_updated_at, verified_records_count, rag_documents_count, broken_sources_count, created_at, updated_at, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('test-college-idem', 'Idempotent Test College', 'ITC', 'idempotent-test', 'admin@idempotent-test.edu', None, None, None, None, None, 'India', None, None, None, None, None, None, None, None, 'ACTIVE', 'PENDING', 'COL-2026-2A400A', None, None, 'Asia/Kolkata', 'AI Assistant', None, '#0b0a3e', '#1a2345', '#f08518', '["en", "gu", "hi"]', 1000, 5120, 500, 10000, None, None, 'NOT_CONNECTED', None, None, None, None, 0, None, None, 0, 0, 0, '2026-09-24 10:06:43.385430', '2026-09-24 10:06:43.385433', None, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+_____________________ test_categories_contain_college_id ______________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001AA0A8F2ED0>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD3110>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001AA0A89BB10>
+parameters = [('test-college-cid', 'College ID Test', 'CID', 'college-id-test', 'admin@college-id-test.edu', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA08E9AA40>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-cid', 'College ID Test', 'CID', 'college-id-test', 'admin@college-id-test.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD3110>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: colleges.official_website
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+db = <sqlalchemy.orm.session.Session object at 0x000001AA0A573A70>
+
+    def test_categories_contain_college_id(db: Session):
+        """
+        Every category created during college approval must have the correct college_id.
+        """
+        college = College(
+            id="test-college-cid",
+            name="College ID Test",
+            code="CID",
+            slug="college-id-test",
+            official_email="admin@college-id-test.edu",
+            status="ACTIVE"
+        )
+        db.add(college)
+>       db.commit()
+
+backend\tests\test_college_provisioning.py:267: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2035: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1316: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1290: in _prepare_impl
+    self.session.flush()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4353: in flush
+    self._flush(objects)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4488: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4449: in _flush
+    flush_context.execute()
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:465: in execute
+    rec.execute(self)
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:94: in save_obj
+    _emit_insert_statements(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1049: in _emit_insert_statements
+    result = connection.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x000001AA055E6A50>
+cursor = <sqlite3.Cursor object at 0x000001AA08E9AA40>
+statement = 'INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, u..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('test-college-cid', 'College ID Test', 'CID', 'college-id-test', 'admin@college-id-test.edu', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000001AA0AAD3110>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: colleges.official_website
+E       [SQL: INSERT INTO colleges (id, name, code, slug, official_email, official_website, phone, address, city, state, country, university_affiliation, contact_person, contact_email, contact_phone, logo_url, auth_document_path, description, additional_info, status, registration_status, application_id, rejection_reason, review_notes, timezone, assistant_name, welcome_message, primary_color, secondary_color, accent_color, supported_languages, max_users, max_storage_mb, max_documents, max_ai_requests_per_day, subdomain, custom_domain, connection_status, website_last_checked_at, website_last_success_at, website_last_failure_at, website_http_status, website_pages_indexed, website_error_message, knowledge_last_updated_at, verified_records_count, rag_documents_count, broken_sources_count, created_at, updated_at, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('test-college-cid', 'College ID Test', 'CID', 'college-id-test', 'admin@college-id-test.edu', None, None, None, None, None, 'India', None, None, None, None, None, None, None, None, 'ACTIVE', 'PENDING', 'COL-2026-FEA5B5', None, None, 'Asia/Kolkata', 'AI Assistant', None, '#0b0a3e', '#1a2345', '#f08518', '["en", "gu", "hi"]', 1000, 5120, 500, 10000, None, None, 'NOT_CONNECTED', None, None, None, None, 0, None, None, 0, 0, 0, '2026-09-24 10:06:44.749677', '2026-09-24 10:06:44.749681', None, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+___________________ test_config_platform_name_is_permanent ____________________
+
+    def test_config_platform_name_is_permanent():
+        """The central configuration carries the immutable platform name (§20)."""
+>       assert settings.APP_NAME == PLATFORM_NAME
+E       AssertionError: assert 'AI FAQ College Chat Bot' == 'AI-Powered Colleges Chatbot'
+E         
+E         - AI-Powered Colleges Chatbot
+E         + AI FAQ College Chat Bot
+
+backend\tests\test_platform_branding.py:76: AssertionError
+______________ test_config_platform_name_independent_of_college _______________
+
+client = <starlette.testclient.TestClient object at 0x000001AA0AE5F850>
+
+    def test_config_platform_name_independent_of_college(client):
+        """Config default name is the platform name regardless of any tenant."""
+>       assert settings.APP_NAME == PLATFORM_NAME
+E       AssertionError: assert 'AI FAQ College Chat Bot' == 'AI-Powered Colleges Chatbot'
+E         
+E         - AI-Powered Colleges Chatbot
+E         + AI FAQ College Chat Bot
+
+backend\tests\test_platform_branding.py:81: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+[MIGRATION] Table knowledge_categories columns before backfill: ['id', 'name', 'key', 'description', 'icon', 'display_order', 'status', 'college_id', 'created_by', 'updated_by', 'created_at', 'updated_at']
+[MIGRATION] Table knowledge_records columns before backfill: ['id', 'category_id', 'course_id', 'course', 'academic_year', 'title', 'field_name', 'value', 'description', 'metadata', 'source_type', 'source_url', 'source_title', 'verified', 'verified_by', 'verified_at', 'valid_from', 'valid_until', 'status', 'created_by', 'updated_by', 'created_at', 'updated_at', 'college_id']
+[MIGRATION] Table ait_entities columns before backfill: ['id', 'category', 'name', 'code', 'details', 'source_url', 'source_page', 'authority', 'is_verified', 'content_hash', 'created_at', 'updated_at', 'verified_at', 'academic_year', 'college_id', 'source_type', 'is_official']
+[MIGRATION] Table ait_knowledge_versions columns before backfill: ['id', 'entity_id', 'version', 'payload', 'status', 'content_hash', 'created_at', 'college_id']
+[MIGRATION] Table website_snapshots columns before backfill: ['id', 'url', 'title', 'content_hash', 'text_content', 'status_code', 'last_crawled_at', 'created_at', 'college_id']
+[MIGRATION] Table knowledge_gaps columns before backfill: ['id', 'user_query', 'detected_intent', 'missing_entity', 'occurred_at', 'resolved', 'college_id', 'dedup_key', 'conversation_id', 'message_id', 'status', 'occurrence_count', 'first_seen_at', 'last_seen_at', 'sample_answer', 'reason', 'category', 'course', 'academic_year', 'priority', 'resolved_at', 'resolved_by']
+[MIGRATION] Table documents columns before backfill: ['id', 'user_id', 'title', 'doc_type', 'source_url', 'content_hash', 'created_at', 'visibility', 'college_id']
+[MIGRATION] Table document_chunks columns before backfill: ['id', 'document_id', 'chunk_index', 'content', 'embedding_json', 'metadata_', 'created_at', 'college_id']
+[MIGRATION] Table conversations columns before backfill: ['id', 'user_id', 'title', 'is_pinned', 'is_archived', 'summary', 'created_at', 'updated_at', 'college_id']
+[MIGRATION] Backfilled 1 rows in conversations with AIT college_id.
+[MIGRATION] Table ait_images columns before backfill: ['id', 'title', 'description', 'category', 'image_url', 'thumbnail_url', 'source_url', 'source_page', 'source_type', 'source_domain', 'official_source', 'verified', 'verification_status', 'content_hash', 'width', 'height', 'license_basis', 'retrieved_at', 'created_at', 'updated_at', 'last_verified_at', 'college_id']
+[MIGRATION] Table audit_logs columns before backfill: ['id', 'trace_id', 'user_id', 'action', 'resource', 'status', 'details', 'ip_address', 'created_at', 'college_id']
+[MIGRATION] Table security_events columns before backfill: ['id', 'event_type', 'severity', 'ip_address', 'user_id', 'payload', 'created_at', 'college_id']
+[MIGRATION] Table ai_usage_logs columns before backfill: ['id', 'user_id', 'conversation_id', 'request_id', 'provider_name', 'model_identifier', 'input_tokens', 'output_tokens', 'total_tokens', 'latency_ms', 'http_status', 'success', 'error_type', 'failover_occurred', 'fallback_from_model', 'timestamp', 'college_id']
+[MIGRATION] Backfilled 6 rows in ai_usage_logs with AIT college_id.
+[MIGRATION] Table knowledge_conflicts columns before backfill: ['id', 'topic', 'source_a', 'source_b', 'value_a', 'value_b', 'detected_discrepancy', 'resolution_status', 'resolved_by', 'resolution_notes', 'created_at', 'resolved_at', 'college_id']
+SQLite migration check and table creation completed successfully.
+[PLATFORM] Platform infrastructure initialization complete.
+_________________ test_health_endpoint_returns_platform_name __________________
+
+client = <starlette.testclient.TestClient object at 0x000001AA0AE5F850>
+
+    def test_health_endpoint_returns_platform_name(client):
+        r = client.get("/api/v1/health")
+        assert r.status_code == 200, r.text
+        data = r.json()
+>       assert data.get("app") == PLATFORM_NAME
+E       AssertionError: assert 'AI FAQ College Chat Bot' == 'AI-Powered Colleges Chatbot'
+E         
+E         - AI-Powered Colleges Chatbot
+E         + AI FAQ College Chat Bot
+
+backend\tests\test_platform_branding.py:90: AssertionError
+_____________________ test_openapi_title_is_platform_name _____________________
+
+client = <starlette.testclient.TestClient object at 0x000001AA0AE5F850>
+
+    def test_openapi_title_is_platform_name(client):
+        r = client.get("/openapi.json")
+        assert r.status_code == 200
+>       assert r.json().get("info", {}).get("title") == PLATFORM_NAME
+E       AssertionError: assert 'AI FAQ College Chat Bot' == 'AI-Powered Colleges Chatbot'
+E         
+E         - AI-Powered Colleges Chatbot
+E         + AI FAQ College Chat Bot
+
+backend\tests\test_platform_branding.py:98: AssertionError
+___________ test_platform_name_not_dynamically_derived_from_college ___________
+
+client = <starlette.testclient.TestClient object at 0x000001AA0AE5F850>
+
+    def test_platform_name_not_dynamically_derived_from_college(client):
+        """No runtime path may rebuild the app name from college data (§6).
+    
+        Colleges with entirely different names exist in this DB, but the exposed
+        platform metadata stays identical for all of them (§22).
+        """
+        from backend.app.models.college import College
+        # Sanity: three differently-named tenants exist; the invariant on settings holds
+>       assert settings.APP_NAME == PLATFORM_NAME
+E       AssertionError: assert 'AI FAQ College Chat Bot' == 'AI-Powered Colleges Chatbot'
+E         
+E         - AI-Powered Colleges Chatbot
+E         + AI FAQ College Chat Bot
+
+backend\tests\test_platform_branding.py:109: AssertionError
+_______________ test_platform_name_not_a_forbidden_legacy_name ________________
+
+    def test_platform_name_not_a_forbidden_legacy_name():
+        """Guard against regressions to college-specific product names (§1/§23)."""
+        assert settings.APP_NAME not in FORBIDDEN_NAMES
+>       assert settings.APP_NAME == PLATFORM_NAME
+E       AssertionError: assert 'AI FAQ College Chat Bot' == 'AI-Powered Colleges Chatbot'
+E         
+E         - AI-Powered Colleges Chatbot
+E         + AI FAQ College Chat Bot
+
+backend\tests\test_platform_branding.py:115: AssertionError
+============================== warnings summary ===============================
+backend\app\core\config.py:6
+  C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\core\config.py:6: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class Settings(BaseSettings):
+
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv\Lib\site-packages\starlette\testclient.py:53
+  C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+backend\app\main.py:48
+  C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\main.py:48: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+.venv\Lib\site-packages\fastapi\applications.py:4681
+.venv\Lib\site-packages\fastapi\applications.py:4681
+  C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\applications.py:4681: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+user.py:79
+  C:\Users\HP\OneDrive\Desktop\college chatbot\user.py:79: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @user_app.on_event("startup")
+
+backend/tests/test_conversations.py::test_blank_conversation_title_is_rejected
+  C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py:1100: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    result = context.run(func, *args)
+
+backend/tests/test_production_startup.py::test_production_startup_super_admin_requires_password
+  C:\Users\HP\OneDrive\Desktop\college chatbot\backend\tests\test_production_startup.py:148: RuntimeWarning: ADMIN_BOOTSTRAP_PASSWORD is not set. No super-admin will be auto-created. Set this env var to bootstrap the admin account on first run, or create manually.
+    seed_platform_infrastructure(db)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_college_provisioning.py::test_categories_created_during_approval
+FAILED backend/tests/test_college_provisioning.py::test_multiple_colleges_can_have_same_category_keys
+FAILED backend/tests/test_college_provisioning.py::test_category_uniqueness_within_college
+FAILED backend/tests/test_college_provisioning.py::test_different_colleges_duplicate_keys_allowed
+FAILED backend/tests/test_college_provisioning.py::test_category_seeding_idempotent
+FAILED backend/tests/test_college_provisioning.py::test_categories_contain_college_id
+FAILED backend/tests/test_platform_branding.py::test_config_platform_name_is_permanent
+FAILED backend/tests/test_platform_branding.py::test_config_platform_name_independent_of_college
+FAILED backend/tests/test_platform_branding.py::test_health_endpoint_returns_platform_name
+FAILED backend/tests/test_platform_branding.py::test_openapi_title_is_platform_name
+FAILED backend/tests/test_platform_branding.py::test_platform_name_not_dynamically_derived_from_college
+FAILED backend/tests/test_platform_branding.py::test_platform_name_not_a_forbidden_legacy_name
+12 failed, 266 passed, 1 xfailed, 9 warnings in 137.52s (0:02:17)

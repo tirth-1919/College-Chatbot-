@@ -12,6 +12,23 @@ def run_migrations():
     import backend.app.models
     Base.metadata.create_all(bind=engine)
 
+    # Run category uniqueness migration (cross-database compatible)
+    from backend.app.core.database import SessionLocal
+    from backend.app.migrations.fix_category_uniqueness import migrate_category_uniqueness
+    from backend.app.migrations.repair_category_datetime_shift import repair_knowledge_categories
+    from backend.app.migrations.repair_colleges_nullability import repair_colleges_nullability
+    db = SessionLocal()
+    try:
+        # Repair column-shifted rows BEFORE any other migration touches the
+        # table, so SQLAlchemy can load rows without raising ValueError.
+        repair_knowledge_categories(db)
+        repair_colleges_nullability(db)
+        migrate_category_uniqueness(db)
+    except Exception as e:
+        print(f"[MIGRATION] Category uniqueness migration error: {e}")
+    finally:
+        db.close()
+
     if not settings.DATABASE_URL.startswith("sqlite"):
         return
 
@@ -213,6 +230,11 @@ def run_migrations():
     for tbl in backfill_tables:
         cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{tbl}'")
         if cursor.fetchone():
+            # Check actual columns before UPDATE
+            cursor.execute(f"PRAGMA table_info({tbl})")
+            cols_info = cursor.fetchall()
+            print(f"[MIGRATION] Table {tbl} columns before backfill: {[c[1] for c in cols_info]}")
+            
             cursor.execute(f"UPDATE {tbl} SET college_id = ? WHERE college_id IS NULL", (AIT_TENANT_ID,))
             updated_count = cursor.rowcount
             if updated_count > 0:

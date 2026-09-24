@@ -155,11 +155,15 @@ def test_full_approve_workflow(client, env):
 # ──────────────── Rejection path ─────────────
 
 def test_reject_leaves_production_untouched(client, env):
+    current_fee = env["fee_record"].details.get("fee")
     resp = client.post("/api/v1/admin/change-requests/", headers=_headers(env["ait_admin"]), json={
         "entity_type": "FEES", "entity_id": env["fee_record"].id, "action": "UPDATE",
-        "old_value": {"fee": "35000"}, "new_value": {"fee": "99999"},
+        "old_value": {"fee": current_fee}, "new_value": {"fee": "99999"},
         "reason": "Bad data",
     })
+
+    assert resp.status_code == 201, resp.text
+
     cr = resp.json()
 
     resp = client.post(f"/api/v1/admin/change-requests/{cr['id']}/reject",
@@ -176,7 +180,7 @@ def test_reject_leaves_production_untouched(client, env):
     env["db"].expire_all()
     record = env["db"].query(type(env["fee_record"])).filter_by(id=env["fee_record"].id).first()
     if record.details:
-        assert record.details.get("fee") == "35000", "Rejected change must not apply"
+        assert record.details.get("fee") == current_fee, "Rejected change must not apply"
 
 
 # ──────────────── Role isolation & tampering ─────────

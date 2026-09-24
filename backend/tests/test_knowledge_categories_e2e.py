@@ -12,12 +12,46 @@ from backend.app.core.permissions import get_current_admin_user
 from backend.app.models.user import User
 from backend.app.models.knowledge import AitEntity
 
-# Override admin auth for test
-admin_user = User(id="test-admin", email="admin@test.local", full_name="Test Admin", role="SUPER_ADMIN", is_active=True)
+# Override admin auth for test — admin is bound to the explicit test college
+# (set below after the college row exists).
+
+client = TestClient(app, raise_server_exceptions=True)
+db = SessionLocal()
+
+# Create test college and seed categories for E2E test (idempotent)
+from backend.app.models.college import College
+from backend.app.scripts.seed_knowledge_categories import seed_knowledge_categories
+
+test_college = db.query(College).filter(College.code == "E2ETEST").first()
+print(f"[E2E TEST] Queried for existing college: {test_college}")
+
+if not test_college:
+    test_college = College(
+        id="e2e-test-college",
+        name="E2E Test College",
+        code="E2ETEST",
+        slug="e2e-test",
+        official_email="admin@e2etest.edu",
+        official_website="https://e2etest.edu",
+        status="ACTIVE",
+        registration_status="APPROVED"
+    )
+    db.add(test_college)
+    db.commit()
+    db.refresh(test_college)
+    print(f"[E2E TEST] Created test college: {test_college.id}")
+
+# Always seed: the seeder is idempotent, so this repairs the category set if
+# the college existed but was never seeded (e.g. by an earlier test run).
+cats_created = seed_knowledge_categories(db, college_id=test_college.id)
+print(f"[E2E TEST] Seeded {cats_created} categories for college {test_college.id}")
+
+admin_user = User(
+    id="test-admin", email="admin@test.local", full_name="Test Admin",
+    role="SUPER_ADMIN", is_active=True, college_id=test_college.id,
+)
 app.dependency_overrides[get_current_admin_user] = lambda: admin_user
 
-client = TestClient(app, raise_server_exceptions=False)
-db = SessionLocal()
 ok = fail = 0
 
 def run_checks():
@@ -31,11 +65,22 @@ def check(name, cond):
     print(("PASS  " if cond else "FAIL  ") + name)
     ok, fail = ok + (1 if cond else 0), fail + (0 if cond else 1)
 
+def expect_json(r):
+    """Diagnose non-JSON responses instead of failing cryptically."""
+    if r.headers.get("content-type", "").startswith("application/json"):
+        return r.json()
+    print("STATUS:", r.status_code)
+    print("CONTENT-TYPE:", r.headers.get("content-type"))
+    print("BODY:", repr(r.text[:2000]))
+    raise AssertionError(f"Expected JSON response, got content-type={r.headers.get('content-type')!r}")
+
 # --- Categories ---
 r = client.get("/api/v1/admin/knowledge-db/categories")
-check("list categories 200", r.status_code == 200 and r.json()["total"] >= 22)
-cats = {c["key"]: c for c in r.json()["items"]}
-sch = cats["scholarships"]
+check("list categories 200", r.status_code == 200 and expect_json(r)["total"] >= 22)
+cats = {c["key"]: c for c in expect_json(r)["items"]}
+sch = cats.get("scholarships")
+if not sch:
+    print("WARN: scholarships category not found, available:", list(cats.keys())[:10])
 
 r = client.post("/api/v1/admin/knowledge-db/categories", json={"name": "Hostel", "key": "hostel", "description": "AIT hostel information", "display_order": 23})
 check("create category (future category test)", r.status_code == 200)

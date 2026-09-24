@@ -1,0 +1,135 @@
+warning: in the working copy of 'backend/app/api/v1/admin/colleges.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/app/main.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/app/models/knowledge_categories.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/app/scripts/migrate_sqlite.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/tests/conftest.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/backend/app/api/v1/admin/colleges.py b/backend/app/api/v1/admin/colleges.py[m
+[1mindex 58a8e2f..729e7a2 100644[m
+[1m--- a/backend/app/api/v1/admin/colleges.py[m
+[1m+++ b/backend/app/api/v1/admin/colleges.py[m
+[36m@@ -511,10 +511,14 @@[m [mdef approve_college([m
+     db.refresh(college)[m
+     db.refresh(admin_user)[m
+ [m
+[32m+[m[32m    # Seed knowledge categories for this college[m
+[32m+[m[32m    categories_created = seed_knowledge_categories(db, college_id=college.id)[m
+[32m+[m[41m    [m
+     log_admin_audit(db, current_user, "COLLEGE_APPROVED", "COLLEGE", {[m
+         "college_id": college.id,[m
+         "college_name": college.name,[m
+[31m-        "admin_email": admin_user.email[m
+[32m+[m[32m        "admin_email": admin_user.email,[m
+[32m+[m[32m        "categories_created": categories_created[m
+     })[m
+ [m
+     return {[m
+[36m@@ -527,7 +531,8 @@[m [mdef approve_college([m
+             "role": "COLLEGE_ADMIN",[m
+             "college_id": college.id,[m
+             "college_name": college.name,[m
+[31m-        }[m
+[32m+[m[32m        },[m
+[32m+[m[32m        "categories_created": categories_created[m
+     }[m
+ [m
+ [m
+[1mdiff --git a/backend/app/main.py b/backend/app/main.py[m
+[1mindex 05e7ba5..4589bcd 100644[m
+[1m--- a/backend/app/main.py[m
+[1m+++ b/backend/app/main.py[m
+[36m@@ -6,7 +6,7 @@[m [mfrom backend.app.core.config import settings[m
+ from backend.app.core.database import Base, engine, SessionLocal[m
+ from backend.app.core.middleware import TraceAndSecurityMiddleware[m
+ from backend.app.api.v1.router import api_v1_router[m
+[31m-from backend.app.scripts.seed_ait_data import seed_initial_ait_knowledge[m
+[32m+[m[32mfrom backend.app.scripts.seed_platform_infrastructure import seed_platform_infrastructure[m
+ from backend.app.scripts.migrate_sqlite import run_migrations[m
+ [m
+ # Run column migrations if needed and initialize database schema[m
+[36m@@ -49,14 +49,11 @@[m [mapp.include_router(api_v1_router)[m
+ def startup_event():[m
+     from backend.app.scripts.migrate_sqlite import run_migrations[m
+     run_migrations()[m
+[31m-    # Pre-seed verified AIT institutional knowledge and images if database is fresh[m
+[32m+[m[32m    # Seed platform-level infrastructure only (multi-college safe)[m
+[32m+[m[32m    # Does NOT seed AIT-specific tenant data[m
+     db = SessionLocal()[m
+     try:[m
+[31m-        seed_initial_ait_knowledge(db)[m
+[31m-        from backend.app.scripts.seed_knowledge_categories import seed_knowledge_categories[m
+[31m-        created_cats = seed_knowledge_categories(db)[m
+[31m-        if created_cats:[m
+[31m-            print(f"[SEED] Created {created_cats} knowledge categories")[m
+[32m+[m[32m        seed_platform_infrastructure(db)[m
+     finally:[m
+         db.close()[m
+ [m
+[1mdiff --git a/backend/app/models/knowledge_categories.py b/backend/app/models/knowledge_categories.py[m
+[1mindex 5edd8a5..4860b76 100644[m
+[1m--- a/backend/app/models/knowledge_categories.py[m
+[1m+++ b/backend/app/models/knowledge_categories.py[m
+[36m@@ -23,8 +23,10 @@[m [mclass KnowledgeCategory(Base):[m
+     __tablename__ = "knowledge_categories"[m
+ [m
+     id = Column(String(36), primary_key=True, default=generate_uuid)[m
+[31m-    name = Column(String(120), nullable=False, unique=True, index=True)[m
+[31m-    key = Column(String(80), nullable=False, unique=True, index=True)[m
+[32m+[m[32m    # Note: uniqueness is enforced at (college_id, name) and (college_id, key) level[m
+[32m+[m[32m    # via database constraints, not global uniqueness[m
+[32m+[m[32m    name = Column(String(120), nullable=False, index=True)[m
+[32m+[m[32m    key = Column(String(80), nullable=False, index=True)[m
+     description = Column(Text, nullable=True)[m
+     icon = Column(String(50), nullable=True)  # emoji or icon name[m
+     display_order = Column(Integer, default=0, nullable=False)[m
+[1mdiff --git a/backend/app/scripts/migrate_sqlite.py b/backend/app/scripts/migrate_sqlite.py[m
+[1mindex f71afca..1955496 100644[m
+[1m--- a/backend/app/scripts/migrate_sqlite.py[m
+[1m+++ b/backend/app/scripts/migrate_sqlite.py[m
+[36m@@ -12,6 +12,17 @@[m [mdef run_migrations():[m
+     import backend.app.models[m
+     Base.metadata.create_all(bind=engine)[m
+ [m
+[32m+[m[32m    # Run category uniqueness migration (cross-database compatible)[m
+[32m+[m[32m    from backend.app.core.database import SessionLocal[m
+[32m+[m[32m    from backend.app.migrations.fix_category_uniqueness import migrate_category_uniqueness[m
+[32m+[m[32m    db = SessionLocal()[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        migrate_category_uniqueness(db)[m
+[32m+[m[32m    except Exception as e:[m
+[32m+[m[32m        print(f"[MIGRATION] Category uniqueness migration error: {e}")[m
+[32m+[m[32m    finally:[m
+[32m+[m[32m        db.close()[m
+[32m+[m
+     if not settings.DATABASE_URL.startswith("sqlite"):[m
+         return[m
+ [m
+[1mdiff --git a/backend/tests/conftest.py b/backend/tests/conftest.py[m
+[1mindex 0fa358b..db282a1 100644[m
+[1m--- a/backend/tests/conftest.py[m
+[1m+++ b/backend/tests/conftest.py[m
+[36m@@ -6,3 +6,14 @@[m [mvariable. The application Settings now normalize unrecognized DEBUG values[m
+ safely (backend/app/core/config.py), so no environment mangling is required[m
+ here any more. This file is kept for future shared test fixtures.[m
+ """[m
+[32m+[m[32mimport pytest[m
+[32m+[m[32mfrom sqlalchemy.orm import Session[m
+[32m+[m[32mfrom backend.app.core.database import SessionLocal[m
+[32m+[m
+[32m+[m
+[32m+[m[32m@pytest.fixture(scope="function")[m
+[32m+[m[32mdef db():[m
+[32m+[m[32m    """Create a fresh database session for each test."""[m
+[32m+[m[32m    session = SessionLocal()[m
+[32m+[m[32m    yield session[m
+[32m+[m[32m    session.close()[m
+[1mdiff --git a/test-results/.last-run.json b/test-results/.last-run.json[m
+[1mdeleted file mode 100644[m
+[1mindex 5fca3f8..0000000[m
+[1m--- a/test-results/.last-run.json[m
+[1m+++ /dev/null[m
+[36m@@ -1,4 +0,0 @@[m
+[31m-{[m
+[31m-  "status": "failed",[m
+[31m-  "failedTests": [][m
+[31m-}[m
+\ No newline at end of file[m

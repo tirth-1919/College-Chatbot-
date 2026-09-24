@@ -4,9 +4,10 @@ from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
-    # Application Info â€” permanent platform identity (multi-college).
+    # Application Info — permanent platform identity (multi-college).
     # This is the PRODUCT name, independent of any college tenant.
-    APP_NAME: str = "AI FAQ College Chat Bot"
+    # Permanent per Platform Name Fix §21-§24: never college-specific.
+    APP_NAME: str = "AI-Powered Colleges Chatbot"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     # DEBUG may be set machine-wide to non-boolean values (e.g. DEBUG=release).
@@ -72,7 +73,32 @@ class Settings(BaseSettings):
                 )
         return self
 
-    # Institution Info
+    def _ensure_development_secret(self):
+        """Development-only fallback so a dev server never signs tokens with an
+        empty key. Production keeps the strict validator above. Persistent per
+        machine so sessions survive restarts; dev-only, never used in prod."""
+        if self.ENVIRONMENT.lower() in ("production", "prod"):
+            return
+        if not (self.SECRET_KEY or "").strip():
+            fallback_dir = os.path.join(os.path.expanduser("~"), ".ait_assistant")
+            os.makedirs(fallback_dir, exist_ok=True)
+            fallback_file = os.path.join(fallback_dir, "dev_secret_key")
+            try:
+                if os.path.exists(fallback_file):
+                    with open(fallback_file, "r") as f:
+                        fallback = f.read().strip()
+                else:
+                    import secrets as _secrets
+                    fallback = _secrets.token_urlsafe(48)
+                    with open(fallback_file, "w") as f:
+                        f.write(fallback)
+            except OSError:
+                fallback = "insecure-development-fallback-key-do-not-use-in-prod"
+            object.__setattr__(self, "SECRET_KEY", fallback)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._ensure_development_secret()
     INSTITUTION_NAME: str = "Multi-College Platform"
     INSTITUTION_SHORT_NAME: str = "AI FAQ"
     INSTITUTION_URL: str = ""

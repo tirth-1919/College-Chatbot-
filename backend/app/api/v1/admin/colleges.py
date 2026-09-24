@@ -511,10 +511,14 @@ def approve_college(
     db.refresh(college)
     db.refresh(admin_user)
 
+    # Seed knowledge categories for this college
+    categories_created = seed_knowledge_categories(db, college_id=college.id)
+    
     log_admin_audit(db, current_user, "COLLEGE_APPROVED", "COLLEGE", {
         "college_id": college.id,
         "college_name": college.name,
-        "admin_email": admin_user.email
+        "admin_email": admin_user.email,
+        "categories_created": categories_created
     })
 
     return {
@@ -527,7 +531,8 @@ def approve_college(
             "role": "COLLEGE_ADMIN",
             "college_id": college.id,
             "college_name": college.name,
-        }
+        },
+        "categories_created": categories_created
     }
 
 

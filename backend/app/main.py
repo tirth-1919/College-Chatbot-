@@ -6,7 +6,7 @@ from backend.app.core.config import settings
 from backend.app.core.database import Base, engine, SessionLocal
 from backend.app.core.middleware import TraceAndSecurityMiddleware
 from backend.app.api.v1.router import api_v1_router
-from backend.app.scripts.seed_ait_data import seed_initial_ait_knowledge
+from backend.app.scripts.seed_platform_infrastructure import seed_platform_infrastructure
 from backend.app.scripts.migrate_sqlite import run_migrations
 
 # Run column migrations if needed and initialize database schema
@@ -49,14 +49,11 @@ app.include_router(api_v1_router)
 def startup_event():
     from backend.app.scripts.migrate_sqlite import run_migrations
     run_migrations()
-    # Pre-seed verified AIT institutional knowledge and images if database is fresh
+    # Seed platform-level infrastructure only (multi-college safe)
+    # Does NOT seed AIT-specific tenant data
     db = SessionLocal()
     try:
-        seed_initial_ait_knowledge(db)
-        from backend.app.scripts.seed_knowledge_categories import seed_knowledge_categories
-        created_cats = seed_knowledge_categories(db)
-        if created_cats:
-            print(f"[SEED] Created {created_cats} knowledge categories")
+        seed_platform_infrastructure(db)
     finally:
         db.close()
 

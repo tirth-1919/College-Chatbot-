@@ -235,6 +235,10 @@ def list_categories(
 ):
     from sqlalchemy import func as sa_func
     query = db.query(KnowledgeCategory)
+    # Tenant scoping: college-bound admins only see their own college's
+    # categories. Platform-level SUPER_ADMINs without a college see all.
+    if getattr(current_user, "college_id", None):
+        query = query.filter(KnowledgeCategory.college_id == current_user.college_id)
     if search:
         s = f"%{search}%"
         query = query.filter(or_(KnowledgeCategory.name.ilike(s), KnowledgeCategory.key.ilike(s)))
@@ -261,15 +265,22 @@ def create_category(
     current_user: User = Depends(require_permission(PERM_KNOWLEDGE_CREATE)),
     db: Session = Depends(get_db),
 ):
-    dup = db.query(KnowledgeCategory).filter(
+    dup_q = db.query(KnowledgeCategory).filter(
         or_(KnowledgeCategory.key == req.key, KnowledgeCategory.name == req.name)
-    ).first()
+    )
+    # Tenant-scoped uniqueness: the same key may exist for different colleges
+    # (matches the (college_id, name) / (college_id, key) DB constraints).
+    admin_college_id = getattr(current_user, "college_id", None)
+    if admin_college_id:
+        dup_q = dup_q.filter(KnowledgeCategory.college_id == admin_college_id)
+    dup = dup_q.first()
     if dup:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail=f"A category with this {'key' if dup.key == req.key else 'name'} already exists")
     cat = KnowledgeCategory(
         name=req.name.strip(), key=req.key, description=req.description,
         icon=req.icon, display_order=req.display_order, status=req.status,
+        college_id=getattr(current_user, "college_id", None),
         created_by=current_user.id, updated_by=current_user.id,
     )
     db.add(cat)
@@ -286,7 +297,11 @@ def get_category(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ):
-    cat = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id).first()
+    q = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id)
+    # Tenant isolation: College Admin can only view their college's categories
+    if getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeCategory.college_id == current_user.college_id)
+    cat = q.first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
     return {
@@ -306,7 +321,11 @@ def update_category(
     current_user: User = Depends(require_permission(PERM_KNOWLEDGE_UPDATE)),
     db: Session = Depends(get_db),
 ):
-    cat = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id).first()
+    q = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id)
+    # Tenant isolation: College Admin can only update their college's categories
+    if getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeCategory.college_id == current_user.college_id)
+    cat = q.first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
     if req.name is not None:
@@ -337,7 +356,11 @@ def delete_category(
     current_user: User = Depends(require_permission(PERM_KNOWLEDGE_DELETE)),
     db: Session = Depends(get_db),
 ):
-    cat = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id).first()
+    q = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id)
+    # Tenant isolation: College Admin can only delete their college's categories
+    if getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeCategory.college_id == current_user.college_id)
+    cat = q.first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
     count = db.query(KnowledgeRecord).filter(KnowledgeRecord.category_id == category_id).count()
@@ -370,7 +393,11 @@ def list_records(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ):
-    cat = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id).first()
+    q = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id)
+    # Tenant isolation: College Admin can only list records in their college's categories
+    if getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeCategory.college_id == current_user.college_id)
+    cat = q.first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
     q = db.query(KnowledgeRecord).filter(KnowledgeRecord.category_id == category_id)
@@ -428,10 +455,15 @@ def create_record(
     cat = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
+    # Tenant isolation: verify college admin can only create records in their college's categories
+    if current_user.role != "SUPER_ADMIN" and getattr(current_user, "college_id", None):
+        if cat.college_id != current_user.college_id:
+            raise HTTPException(status_code=403, detail="Cannot create records in another college's category")
     if cat.status != "ACTIVE":
         raise HTTPException(status_code=400, detail="Cannot add records to an inactive category")
     rec = KnowledgeRecord(
         category_id=category_id,
+        college_id=cat.college_id,  # CRITICAL FIX: inherit college_id from category
         title=req.title.strip(),
         field_name=req.field_name, value=req.value, description=req.description,
         metadata_json=req.metadata, course=req.course, academic_year=req.academic_year,
@@ -458,7 +490,11 @@ def get_record(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ):
-    rec = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id).first()
+    q = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id)
+    # Tenant isolation: College Admin can only view their college's records
+    if current_user.role != "SUPER_ADMIN" and getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeRecord.college_id == current_user.college_id)
+    rec = q.first()
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
     data = rec.to_dict()
@@ -473,7 +509,11 @@ def update_record(
     current_user: User = Depends(require_permission(PERM_KNOWLEDGE_UPDATE)),
     db: Session = Depends(get_db),
 ):
-    rec = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id).first()
+    q = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id)
+    # Tenant isolation: College Admin can only update their college's records
+    if current_user.role != "SUPER_ADMIN" and getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeRecord.college_id == current_user.college_id)
+    rec = q.first()
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
     data = req.model_dump(exclude_unset=True)
@@ -501,7 +541,11 @@ def delete_record(
     current_user: User = Depends(require_permission(PERM_KNOWLEDGE_DELETE)),
     db: Session = Depends(get_db),
 ):
-    rec = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id).first()
+    q = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id)
+    # Tenant isolation: College Admin can only delete their college's records
+    if current_user.role != "SUPER_ADMIN" and getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeRecord.college_id == current_user.college_id)
+    rec = q.first()
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
     cat_key = rec.category.key if rec.category else None
@@ -521,7 +565,11 @@ def delete_record(
 
 def _record_action(record_id: str, current_user, db, action: str, new_status: str = None,
                    verify: bool = None):
-    rec = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id).first()
+    q = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id)
+    # Tenant isolation: College Admin can only modify their college's records
+    if current_user.role != "SUPER_ADMIN" and getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeRecord.college_id == current_user.college_id)
+    rec = q.first()
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
     if new_status is not None:
@@ -546,11 +594,17 @@ def duplicate_record(
     current_user: User = Depends(require_permission(PERM_KNOWLEDGE_CREATE)),
     db: Session = Depends(get_db),
 ):
-    rec = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id).first()
+    q = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id)
+    # Tenant isolation: College Admin can only duplicate their college's records
+    if current_user.role != "SUPER_ADMIN" and getattr(current_user, "college_id", None):
+        q = q.filter(KnowledgeRecord.college_id == current_user.college_id)
+    rec = q.first()
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
     clone = KnowledgeRecord(
-        category_id=rec.category_id, course=rec.course, academic_year=rec.academic_year,
+        category_id=rec.category_id, 
+        college_id=rec.college_id,  # CRITICAL FIX: preserve college_id in duplicate
+        course=rec.course, academic_year=rec.academic_year,
         title=f"{rec.title} (Copy)", field_name=rec.field_name, value=rec.value,
         description=rec.description, metadata_json=rec.metadata_json,
         source_type=rec.source_type, source_url=rec.source_url, source_title=rec.source_title,

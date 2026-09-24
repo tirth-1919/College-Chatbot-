@@ -23,8 +23,10 @@ class KnowledgeCategory(Base):
     __tablename__ = "knowledge_categories"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    name = Column(String(120), nullable=False, unique=True, index=True)
-    key = Column(String(80), nullable=False, unique=True, index=True)
+    # Note: uniqueness is enforced at (college_id, name) and (college_id, key) level
+    # via database constraints, not global uniqueness
+    name = Column(String(120), nullable=False, index=True)
+    key = Column(String(80), nullable=False, index=True)
     description = Column(Text, nullable=True)
     icon = Column(String(50), nullable=True)  # emoji or icon name
     display_order = Column(Integer, default=0, nullable=False)
