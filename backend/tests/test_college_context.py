@@ -9,7 +9,7 @@ Covers:
 """
 import uuid
 from datetime import datetime, timezone
-
+from unittest.mock import Mock
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -111,6 +111,23 @@ def test_resolve_unknown_never_guesses(env):
     assert res["status"] == "NOT_FOUND"
     assert res["college_id"] is None
 
+def test_resolve_empty_database_returns_not_found_without_index_error():
+    from backend.app.chat.college_context import college_context_manager
+    empty_colleges = Mock()
+    empty_colleges.filter.return_value = empty_colleges
+    empty_colleges.all.return_value = []
+    empty_aliases = Mock()
+    empty_aliases.filter.return_value = empty_aliases
+    empty_aliases.all.return_value = []
+    db = Mock()
+    db.query.side_effect = [empty_colleges, empty_colleges, empty_aliases]
+
+    res = college_context_manager.resolve(db, "Zzzqwx Nonexistent University")
+
+    assert res == {
+        "status": "NOT_FOUND", "college_id": None, "college": None,
+        "confidence": 0.0, "candidates": [],
+    }
 
 # ──────────────── §56-§60: User flow through chat API ────────────
 

@@ -142,6 +142,10 @@ class CollegeContextManager:
             scored.append((score, c))
         scored.sort(key=lambda x: x[0], reverse=True)
 
+        if not scored:
+            return {"status": "NOT_FOUND", "college_id": None, "college": None,
+                    "confidence": 0.0, "candidates": []}
+
         top_score, top_college = scored[0]
         if top_score >= CONFIDENT_THRESHOLD:
             return cls._resolved(top_college, round(top_score, 3))
