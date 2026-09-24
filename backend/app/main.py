@@ -57,6 +57,17 @@ def startup_event():
     finally:
         db.close()
 
+@app.get("/")
+def root_check():
+    """Basic service information for deployment smoke checks."""
+    return {
+        "status": "healthy",
+        "service": settings.APP_NAME,
+        "message": "API is running. See /docs for the interactive API documentation.",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
 @app.get("/health")
 def health_check():
     return {

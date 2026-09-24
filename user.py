@@ -84,6 +84,16 @@ def user_startup():
     finally:
         db.close()
 
+@user_app.get("/")
+def user_root():
+    return {
+        "status": "healthy",
+        "service": "user-application",
+        "message": "User application is running.",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
 @user_app.get("/health")
 def user_health():
     return {
