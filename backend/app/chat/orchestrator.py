@@ -329,7 +329,7 @@ class ChatOrchestrator:
                     # WebsiteSnapshot so future similar queries resolve via
                     # query_website_snapshots() instead of repeating the full
                     # live discovery crawl.
-                    self._persist_live_snapshot(db, page, college_id=college_id)
+                    cls._persist_live_snapshot(db, page, college_id=college_id)
 
             # 5. Search approved institutional RAG, but do not let lower-priority
             # document evidence override a verified DB or official-site hit.

@@ -229,8 +229,15 @@ export const apiClient = {
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || 'Streaming failed');
+      let message = 'Streaming failed';
+      try {
+        const err = await response.json();
+        message = err.detail || message;
+      } catch {
+        const text = await response.text();
+        if (text) message = text;
+      }
+      throw new Error(message);
     }
 
     const reader = response.body.getReader();

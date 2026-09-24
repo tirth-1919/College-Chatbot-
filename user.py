@@ -145,3 +145,4 @@ if __name__ == "__main__":
         subprocess.Popen(["npm", "run", "dev"], cwd=user_web_dir, shell=True)
 
     uvicorn.run(user_app, host=args.host, port=args.port)
+
