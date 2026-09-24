@@ -145,11 +145,19 @@ export default function App() {
         body: JSON.stringify({ conversation_id: currentId, college_id: targetCollegeId })
       });
       if (!res.ok) return false;
+      const payload = await res.json();
       // Backend is authoritative (§22/§61/§67): reload the conversation and
-      // college context from the DATABASE after the persisted switch.
+      // college context from the DATABASE after the persisted switch. The
+      // post-switch onboarding message was persisted server-side, so the
+      // switch prompt disappears (§8) and refresh keeps the new tenant (§9).
       await loadCollegeCtx(currentId);
       const data = await apiClient.getConversation(currentId);
       setMessages(data?.messages || []);
+      // §14: NEVER auto-answer on switch. The persisted assistant message only
+      // confirms the connection and asks what the user wants to know.
+      if (payload?.knowledge && window.__CollegeSwitchDebug) {
+        window.__CollegeSwitchDebug(payload); // test hook, no-op in production
+      }
       loadConversations();
       return true;
     } catch (e) {

@@ -248,6 +248,139 @@ def test_rag_tenant_isolated(env):
     assert not any("omega" in r["content"] for r in ait_res)
 
 
+# ──────────────── §1-§12/§14/§15: Final college-switch behavior ────────────
+
+def test_switch_reports_knowledge_and_persists_onboarding(client, env):
+    """§1-§4/§11/§12/§14: [Switch] persists conversation.college_id only,
+    runs the TENANT-SCOPED knowledge check, and persists a post-switch
+    onboarding message — never an auto-answer. Default college untouched."""
+    db = env["db"]
+    conv_id = f"conv-{uuid.uuid4().hex[:8]}"
+    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "message": "hello"})
+    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "message": "AIT"})
+
+    res = client.post("/api/v1/college-context/switch", headers=_headers(env["user"]),
+                      json={"conversation_id": conv_id, "college_id": "rcti-1"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["conversation_switched"] is True
+    k = data["knowledge"]
+    # rcti-1 has a verified DEMO entity -> knowledge available, no fallback
+    assert k["knowledge_available"] is True
+    assert k["verified_database_available"] is True
+    assert k["fallback_to_gemini"] is False
+    assert "official_website_available" in k and "rag_available" in k
+
+    from backend.app.models.conversation import Conversation, Message
+    conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
+    db.refresh(conv)
+    assert conv.college_id == "rcti-1"
+    db.refresh(env["user"])
+    assert env["user"].default_college_id is None, "switch never changes the default"
+
+    last = [m for m in db.query(Message).filter(Message.conversation_id == conv_id,
+           Message.sender == "assistant").all()][-1]
+    assert "You're now connected to R.C. Technical Institute" in last.content
+    assert "What information would you like to know about R.C. Technical Institute?" in last.content
+
+
+def test_switch_without_knowledge_allows_gemini_fallback(client, env):
+    """§4/§5: a college with NO verified knowledge still switches; the
+    onboarding message offers the clearly-labeled Gemini fallback."""
+    from backend.app.models.college import College
+    db = env["db"]
+    empty = College(id="empty-1", name="Bare College of Zero Knowledge",
+                    code="BCZK", slug="bczk", status="ACTIVE")
+    db.add(empty)
+    db.commit()
+
+    conv_id = f"conv-{uuid.uuid4().hex[:8]}"
+    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "message": "hello"})
+    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "message": "AIT"})
+
+    res = client.post("/api/v1/college-context/switch", headers=_headers(env["user"]),
+                      json={"conversation_id": conv_id, "college_id": "empty-1"})
+    assert res.status_code == 200
+    k = res.json()["knowledge"]
+    assert k["knowledge_available"] is False
+    assert k["fallback_to_gemini"] is True
+    assert k["verified_database_available"] is False
+    assert k["official_website_available"] is False
+    assert k["rag_available"] is False
+
+    from backend.app.models.conversation import Conversation, Message
+    conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
+    db.refresh(conv)
+    # Conversation STILL switched (§5: no knowledge != no switch)
+    assert conv.college_id == "empty-1"
+    last = [m for m in db.query(Message).filter(Message.conversation_id == conv_id,
+           Message.sender == "assistant").all()][-1]
+    assert "You're now connected to Bare College of Zero Knowledge" in last.content
+    assert "not been verified by the college" in last.content
+
+
+def test_switch_refresh_persistence_and_no_default_change(client, env):
+    """§9/§10: conversation.college_id is authoritative and survives a
+    reload-from-backend; the user's default college is never modified."""
+    db = env["db"]
+    db.refresh(env["user"])
+    conv_id = f"conv-{uuid.uuid4().hex[:8]}"
+    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "message": "hello"})
+    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "message": "AIT"})
+    client.post("/api/v1/college-context/switch", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "college_id": "rcti-1"})
+
+    # 'Refresh' = re-read state from the backend exactly like the frontend does
+    res = client.get(f"/api/v1/college-context/me?conversation_id={conv_id}",
+                     headers=_headers(env["user"]))
+    assert res.status_code == 200
+    state = res.json()
+    assert state["conversation_college"]["id"] == "rcti-1"
+    from backend.app.models.conversation import Conversation
+    conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
+    db.refresh(conv)
+    assert conv.college_id == "rcti-1"
+    db.refresh(env["user"])
+    # §10: default college unchanged by the switch
+    assert env["user"].default_college_id is None
+
+
+def test_after_switch_next_question_uses_new_tenant(client, env):
+    """§6/§7: after AIT -> RCTI switch, the next question must use the RCTI
+    tenant (no AIT leakage) instead of asking which college again."""
+    db = env["db"]
+    conv_id = f"conv-{uuid.uuid4().hex[:8]}"
+    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "message": "hello"})
+    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "message": "AIT"})
+    client.post("/api/v1/college-context/switch", headers=_headers(env["user"]),
+                json={"conversation_id": conv_id, "college_id": "rcti-1"})
+
+    # Next question goes through the normal orchestrator with RCTI context:
+    # it must NOT produce another college-name/onboarding or AIT-switch reply.
+    res = client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                      json={"conversation_id": conv_id, "message": "Where is the college?"})
+    assert res.status_code == 200
+    from backend.app.models.conversation import Conversation, Message
+    conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
+    db.refresh(conv)
+    assert conv.college_id == "rcti-1"
+    last = [m for m in db.query(Message).filter(Message.conversation_id == conv_id,
+           Message.sender == "assistant").all()][-1]
+    combined = (last.content or "").lower()
+    assert "which college information do you want" not in combined
+    assert "would you like to switch" not in combined
+    # §7: no AIT answer leakage for an RCTI question
+    assert "ahmedabad institute of technology" not in combined
+
+
 def test_demo_provenance_not_official(env):
     """§44/§79: DEMO records carry non-official authority."""
     from backend.app.knowledge.database import knowledge_db

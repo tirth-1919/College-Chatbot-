@@ -73,6 +73,19 @@ def run_migrations():
     add_col("colleges", "review_notes", "TEXT")
     add_col("colleges", "description", "TEXT")
 
+    # Connection health tracking (production multi-college requirements)
+    add_col("colleges", "connection_status", "VARCHAR(30) DEFAULT 'NOT_CONNECTED'")
+    add_col("colleges", "website_last_checked_at", "DATETIME")
+    add_col("colleges", "website_last_success_at", "DATETIME")
+    add_col("colleges", "website_last_failure_at", "DATETIME")
+    add_col("colleges", "website_http_status", "INTEGER")
+    add_col("colleges", "website_pages_indexed", "INTEGER DEFAULT 0")
+    add_col("colleges", "website_error_message", "TEXT")
+    add_col("colleges", "knowledge_last_updated_at", "DATETIME")
+    add_col("colleges", "verified_records_count", "INTEGER DEFAULT 0")
+    add_col("colleges", "rag_documents_count", "INTEGER DEFAULT 0")
+    add_col("colleges", "broken_sources_count", "INTEGER DEFAULT 0")
+
     # Inspect sessions columns
     add_col("sessions", "device_info", "VARCHAR(255)")
     add_col("sessions", "is_revoked", "BOOLEAN DEFAULT 0")

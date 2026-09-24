@@ -55,6 +55,20 @@ class College(Base):
     subdomain = Column(String(100), unique=True, index=True, nullable=True)
     custom_domain = Column(String(255), unique=True, index=True, nullable=True)
 
+    # Connection Health & Verification (Production Multi-College Requirements)
+    # These fields track whether a college has usable verified knowledge infrastructure
+    connection_status = Column(String(30), default="NOT_CONNECTED", index=True)  # CONNECTED_VERIFIED, CONNECTED_PARTIAL, REGISTERED_PENDING_SETUP, NOT_CONNECTED
+    website_last_checked_at = Column(DateTime, nullable=True)
+    website_last_success_at = Column(DateTime, nullable=True)
+    website_last_failure_at = Column(DateTime, nullable=True)
+    website_http_status = Column(Integer, nullable=True)
+    website_pages_indexed = Column(Integer, default=0)
+    website_error_message = Column(Text, nullable=True)
+    knowledge_last_updated_at = Column(DateTime, nullable=True)
+    verified_records_count = Column(Integer, default=0)
+    rag_documents_count = Column(Integer, default=0)
+    broken_sources_count = Column(Integer, default=0)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     created_by = Column(String(36), nullable=True)
@@ -106,6 +120,19 @@ class College(Base):
             },
             "subdomain": self.subdomain,
             "custom_domain": self.custom_domain,
+            "connection_health": {
+                "connection_status": self.connection_status,
+                "website_last_checked_at": self.website_last_checked_at.isoformat() if self.website_last_checked_at else None,
+                "website_last_success_at": self.website_last_success_at.isoformat() if self.website_last_success_at else None,
+                "website_last_failure_at": self.website_last_failure_at.isoformat() if self.website_last_failure_at else None,
+                "website_http_status": self.website_http_status,
+                "website_pages_indexed": self.website_pages_indexed,
+                "website_error_message": self.website_error_message,
+                "knowledge_last_updated_at": self.knowledge_last_updated_at.isoformat() if self.knowledge_last_updated_at else None,
+                "verified_records_count": self.verified_records_count,
+                "rag_documents_count": self.rag_documents_count,
+                "broken_sources_count": self.broken_sources_count,
+            },
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

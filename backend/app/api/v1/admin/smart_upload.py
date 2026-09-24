@@ -1,7 +1,15 @@
 """
-Smart Upload & Knowledge Staging Pipeline
-Enables College Admins to upload documents, spreadsheets, and archives with automatic
-content classification and field extraction before publishing to production RAG.
+Smart Upload & Knowledge Staging Pipeline — Production Hardened.
+
+Multi-tenant by construction:
+  - College Admin uploads are always scoped to ``current_user.college_id``;
+    any client-supplied ``college_id`` that differs is rejected with 403.
+  - Super Admin MUST explicitly pass a target ``college_id``; there is no
+    implicit first-college / default-tenant fallback.
+  - Approve / reject / submit lookups are tenant-scoped: a College Admin
+    touching another college's record gets a 404 (existence not leaked).
+  - Approve is Super-Admin-only for protected knowledge (College Admin can
+    only submit for approval). No record is published on RAG failure.
 """
 import io
 import os
@@ -9,7 +17,7 @@ import re
 import uuid
 import zipfile
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
@@ -19,8 +27,29 @@ from backend.app.models.user import User
 from backend.app.models.college import College, StagedUploadRecord
 from backend.app.models.knowledge_categories import KnowledgeCategory, KnowledgeRecord
 from backend.app.knowledge.rag import rag_engine
+from backend.app.utils.tenancy import (
+    get_tenant_scoped_staged_record,
+    get_tenant_category,
+)
 
 router = APIRouter(prefix="/smart-upload", tags=["Smart Upload"])
+
+# ---------------------------------------------------------------------------
+# Limits & configuration
+# ---------------------------------------------------------------------------
+MAX_ARCHIVE_SIZE = 100 * 1024 * 1024        # 100 MB max archive size
+MAX_ARCHIVE_ENTRIES = 200                    # max extracted files per archive
+MAX_ENTRY_UNCOMPRESSED = 25 * 1024 * 1024    # 25 MB max per extracted file
+MAX_TOTAL_UNCOMPRESSED = 200 * 1024 * 1024   # 200 MB total extracted size
+
+MAX_TEXT_CHARS = 100_000
+
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt", ".md",
+    ".json", ".pptx", ".png", ".jpg", ".jpeg", ".webp", ".zip",
+}
+
+STATUS_NEEDS_REVIEW = "NEEDS_REVIEW"
 
 
 def _classify_content(filename: str, text: str) -> dict:

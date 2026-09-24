@@ -157,11 +157,22 @@ def colleges_stats(
 ):
     """§16/§34: dynamic, database-driven counts — new colleges appear automatically."""
     counts = {"TOTAL": 0, "ACTIVE": 0, "PENDING": 0, "SUSPENDED": 0, "REJECTED": 0}
+    connection_counts = {"CONNECTED_VERIFIED": 0, "CONNECTED_PARTIAL": 0, "REGISTERED_PENDING_SETUP": 0, "NOT_CONNECTED": 0}
+    
     for (status_,) in db.query(College.status).all():
         key = (status_ or "PENDING").upper()
         counts[key] = counts.get(key, 0) + 1
         counts["TOTAL"] += 1
-    return counts
+    
+    # Connection status counts
+    for (conn_status,) in db.query(College.connection_status).all():
+        key = conn_status or "NOT_CONNECTED"
+        connection_counts[key] = connection_counts.get(key, 0) + 1
+    
+    return {
+        "registration_status": counts,
+        "connection_status": connection_counts,
+    }
 
 
 @router.get("/pending", summary="List pending college registrations (SUPER_ADMIN only)")
@@ -871,6 +882,120 @@ def college_feedback(
             }
             for f in items
         ],
+    }
+
+
+
+
+# ─── Connection Health Endpoints (Production Multi-College Requirements) ──────
+
+@router.get("/{college_id}/connection-health", summary="Get college connection health (SUPER_ADMIN only)")
+def get_college_connection_health(
+    college_id: str,
+    current_user: User = Depends(require_super_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns comprehensive connection health status for a college.
+    Shows whether the college has usable verified knowledge infrastructure.
+    """
+    from backend.app.services.connection_health import connection_health_service
+    
+    college = _get_college_or_404(db, college_id)
+    health = connection_health_service.calculate_connection_status(db, college)
+    
+    return {
+        "college_id": college.id,
+        "college_name": college.name,
+        "college_code": college.code,
+        "college_status": college.status,
+        "connection_status": health["connection_status"],
+        "knowledge_health": health["knowledge_health"],
+        "official_website": college.official_website,
+        "website": {
+            "configured": bool(college.official_website),
+            "reachable": health["website_reachable"],
+            "pages_indexed": health["website_pages_indexed"],
+            "last_checked_at": college.website_last_checked_at.isoformat() if college.website_last_checked_at else None,
+            "last_success_at": college.website_last_success_at.isoformat() if college.website_last_success_at else None,
+            "last_failure_at": college.website_last_failure_at.isoformat() if college.website_last_failure_at else None,
+            "http_status": college.website_http_status,
+            "error_message": college.website_error_message,
+        },
+        "knowledge": {
+            "verified_db_records": health["verified_db_records"],
+            "rag_documents": health["rag_documents"],
+            "total_sources": health["total_knowledge_sources"],
+            "last_updated_at": college.knowledge_last_updated_at.isoformat() if college.knowledge_last_updated_at else None,
+        },
+        "issues": health["issues"],
+        "broken_sources_count": college.broken_sources_count,
+    }
+
+
+@router.post("/{college_id}/connection-health/refresh", summary="Refresh college connection health (SUPER_ADMIN only)")
+def refresh_college_connection_health(
+    college_id: str,
+    current_user: User = Depends(require_super_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Recalculates and updates connection health status for a college.
+    """
+    from backend.app.services.connection_health import connection_health_service
+    
+    college = _get_college_or_404(db, college_id)
+    health = connection_health_service.update_college_health(db, college)
+    
+    log_admin_audit(db, current_user, "CONNECTION_HEALTH_REFRESHED", "COLLEGE", {
+        "college_id": college_id,
+        "connection_status": health["connection_status"],
+        "knowledge_health": health["knowledge_health"],
+    })
+    
+    return {
+        "message": f"Connection health refreshed for {college.name}",
+        "connection_status": health["connection_status"],
+        "knowledge_health": health["knowledge_health"],
+        "total_knowledge_sources": health["total_knowledge_sources"],
+        "issues": health["issues"],
+    }
+
+
+@router.post("/{college_id}/website/check", summary="Check college website health (SUPER_ADMIN only)")
+async def check_college_website(
+    college_id: str,
+    current_user: User = Depends(require_super_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Performs actual HTTP health check of the college's official website.
+    Updates website health fields in the college record.
+    """
+    from backend.app.services.connection_health import connection_health_service
+    
+    college = _get_college_or_404(db, college_id)
+    
+    if not college.official_website:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No official website configured for this college"
+        )
+    
+    result = await connection_health_service.check_website_health(db, college)
+    
+    log_admin_audit(db, current_user, "WEBSITE_HEALTH_CHECKED", "COLLEGE", {
+        "college_id": college_id,
+        "website": college.official_website,
+        "reachable": result["reachable"],
+        "http_status": result.get("http_status"),
+    })
+    
+    return {
+        "college_id": college.id,
+        "college_name": college.name,
+        "website": college.official_website,
+        "result": result,
     }
 
 

@@ -14,6 +14,60 @@ test.afterEach(async ({ page }) => {
   expect(page.__browserFailures || [], 'Browser console errors, uncaught exceptions, or 5xx responses').toEqual([]);
 });
 
+// ── College-switch final behavior (spec §1-§15) ─────────────────────────────
+// Flow: AIT conversation → mention RCTI → switch prompt → [Switch] →
+// conversation.college_id = RCTI in the DB → persisted onboarding assistant
+// message (NO auto-answer) → switch prompt gone → default college unchanged.
+// Tenant isolation is verified server-side (no AIT data after the switch).
+test('college switch persists conversation tenant, asks onboarding, and keeps default', async ({ page }) => {
+  test.skip(!liveEnabled, 'Set AIT_E2E_ENABLE_LIVE=1 only against a dedicated E2E instance.');
+  await signup(page);
+
+  // 1. Establish the AIT context in this conversation
+  await sendAndWaitForAnswer(page, 'AIT');
+
+  // 2. Mention RCTI → the backend issues the college_switch_prompt block
+  const answer = await sendAndWaitForAnswer(page, 'What about R.C. Technical Institute?');
+  await expect(answer).toContainText(/Would you like to switch this conversation/i);
+  const switchButton = answer.getByRole('button', { name: 'Switch', exact: true });
+  await expect(switchButton).toBeVisible();
+
+  // Capture the current assistant count so we can locate the onboarding message
+  const priorAssistants = await page.locator('.message-row.assistant').count();
+
+  // 3. Click [Switch] → POST /api/v1/user/college-context/switch happens
+  //    through the UI; the switch prompt must disappear (§8).
+  await switchButton.click();
+  await expect(switchButton).toBeHidden({ timeout: 30_000 });
+
+  // 4. The persisted onboarding message replaces the prompt (§12/§14):
+  //    "You're now connected to R.C. Technical Institute. What information
+  //    would you like to know about R.C. Technical Institute?" — NO auto-answer.
+  const onboarding = page.locator('.message-row.assistant').nth(priorAssistants);
+  await expect(onboarding).toContainText(/You're now connected to R\.?C\.? Technical Institute/i, { timeout: 30_000 });
+  await expect(onboarding).toContainText(/What information would you like to know about/i);
+  await expect(onboarding).not.toContainText(/BCA|fee|located|principal/i);
+
+  // 5. Refresh persistence (§9): the backend still reports RCTI for this conv
+  const convId = await page.evaluate(() => window.location.pathname);
+  const state = await page.evaluate(async () => {
+    const token = localStorage.getItem('ait_auth_token');
+    const list = await fetch('/api/v1/conversations', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
+    const current = list[0];
+    const ctx = await fetch(`/api/v1/college-context/me?conversation_id=${current.id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
+    return { conv: current, ctx };
+  });
+  expect(state.ctx.conversation_college).toBeTruthy();
+  expect(state.ctx.conversation_college.code).toBe('RCTI');
+  expect(state.ctx.default_college === null || state.ctx.default_college.code !== 'RCTI').toBeTruthy();
+
+  // 6. Next question uses the new tenant automatically (§6): no re-prompt,
+  //    no re-onboarding.
+  const next = await sendAndWaitForAnswer(page, 'Where is the college?');
+  await expect(next).not.toContainText(/Which college information do you want/i);
+  await expect(next).not.toContainText(/Would you like to switch this conversation/i);
+});
+
 test('student authentication survives refresh, rejects bad login, and logs out', async ({ page }) => {
   const credentials = await signup(page);
   await page.reload();

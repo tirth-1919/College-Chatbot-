@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.database import get_db
 from backend.app.api.v1.auth import get_current_user
 from backend.app.models.user import User
-from backend.app.models.conversation import Conversation
+from backend.app.models.conversation import Conversation, Message
 from backend.app.chat.college_context import (
     college_context_manager, ONBOARDING_QUESTION, AMBIGUOUS_THRESHOLD
 )
@@ -157,6 +157,66 @@ def resolve_college(
     }
 
 
+from backend.app.models.college import College
+
+
+def _knowledge_snapshot(db: Session, college) -> dict:
+    """§10/§11: knowledge-availability check for a target college — TENANT-SCOPED
+    (college_id = this college only). 'College exists' or 'official_website
+    filled' is NOT enough: only actual verified records, snapshots, or approved
+    documents count as usable knowledge. Reuses ConnectionHealthService (no
+    duplicated logic) plus the onboarding fields the UI needs after a switch."""
+    from backend.app.services.connection_health import connection_health_service
+    h = connection_health_service.calculate_connection_status(db, college)
+    knowledge_available = h["total_knowledge_sources"] > 0
+    return {
+        "connection_status": h["connection_status"],
+        "knowledge_available": knowledge_available,
+        "official_website_available": bool(h["website_pages_indexed"] > 0),
+        "verified_database_available": bool(h["verified_db_records"] > 0),
+        "rag_available": bool(h["rag_documents"] > 0),
+        "fallback_to_gemini": not knowledge_available,
+        "knowledge_health": h["knowledge_health"],
+    }
+
+
+def _post_switch_onboarding(db: Session, conv: Conversation, college: College,
+                            knowledge: dict) -> Message:
+    """Persist the post-switch assistant onboarding message (§3/§4/§12/§14):
+    the switch itself NEVER auto-answers an invented question — it confirms the
+    connection and asks what the user wants to know. The next question is
+    answered with conversation.college_id = this college (authoritative)."""
+    import uuid as _uuid
+    if knowledge["knowledge_available"]:
+        reply = (
+            f"🤖 You're now connected to {college.name}.\n\n"
+            f"What information would you like to know about {college.name}?"
+        )
+    else:
+        reply = (
+            f"🤖 You're now connected to {college.name}.\n\n"
+            "I don't currently have verified college information available "
+            f"for {college.name}. I can still answer using general Gemini "
+            "knowledge, but this information has not been verified by the college."
+        )
+    msg = Message(
+        id=str(_uuid.uuid4()),
+        conversation_id=conv.id,
+        sender="assistant",
+        content=reply,
+        blocks=[{"type": "text", "content": reply}],
+        grounding_status="conversational",
+        provenance={
+            "college_context": "SWITCHED",
+            "college_id": college.id,
+            "knowledge_available": knowledge["knowledge_available"],
+            "fallback_to_gemini": knowledge["fallback_to_gemini"],
+        },
+    )
+    db.add(msg)
+    return msg
+
+
 @router.post("/switch")
 def switch_conversation_college(
     req: SwitchRequest,
@@ -188,31 +248,28 @@ def switch_conversation_college(
         raise HTTPException(status_code=400, detail="college_name or college_id required")
 
     college_context_manager.set_conversation_college(db, conv, college.id)
-    # §10: 'college exists' is not 'college connected' — verify the target
-    # college actually has connectable content (official website or verified
-    # knowledge) before claiming the switch succeeded.
-    from sqlalchemy import func as _func
-    from backend.app.models.knowledge import WebsiteSnapshot, AitEntity
-    has_snapshots = db.query(_func.count()).select_from(WebsiteSnapshot).filter(
-        WebsiteSnapshot.college_id == college.id
-    ).scalar() or 0
-    has_entities = db.query(_func.count()).select_from(AitEntity).filter(
-        AitEntity.college_id == college.id,
-        AitEntity.is_verified == True,
-    ).scalar() or 0
-    connected = bool(has_snapshots) or bool(has_entities) or bool(college.official_website)
+
+    # §3/§11: switch succeeds regardless of knowledge state — but the UI needs
+    # a structured TENANT-SCOPED knowledge-availability snapshot to decide the
+    # post-switch onboarding message (knowledge case vs Gemini-fallback case).
+    knowledge = _knowledge_snapshot(db, college)
+    _post_switch_onboarding(db, conv, college, knowledge)
+    db.commit()
+
     log_admin_audit(db, user=current_user, action="COLLEGE_CONTEXT_SWITCHED",
               resource="college_context", status_str="SUCCESS", college_id=college.id)
     return {
         "status": "RESOLVED",
         "college": _college_dict(college),
-        "connected": connected,
+        "conversation_switched": True,
+        "knowledge": knowledge,
         "message": (
-            f"🤖 This conversation now uses {college.name}."
-            if connected else
-            f"🤖 Switched to {college.name}, but I couldn't verify connected "
-            "information for it — answers will be clearly labeled as "
-            "unverified until the college's official data is connected."
+            f"🤖 You're now connected to {college.name}."
+            if knowledge["knowledge_available"] else
+            f"🤖 Switched to {college.name}, but I don't currently have "
+            "verified college information available for it. I can still "
+            "answer using general Gemini knowledge, but this information "
+            "has not been verified by the college."
         ),
     }
 

@@ -10,6 +10,7 @@ from backend.app.core.permissions import get_current_admin_user, require_permiss
 from backend.app.models.knowledge import AitEntity, AitKnowledgeVersion
 from backend.app.models.user import User
 from backend.app.knowledge.semantic_cache import semantic_cache
+from backend.app.utils.tenancy import ensure_same_college, resolve_target_college_id
 
 router = APIRouter(prefix="/knowledge", tags=["Admin Knowledge Management"])
 
@@ -133,23 +134,26 @@ def create_entity(
     db: Session = Depends(get_db)
 ):
     content_hash = hashlib.sha256(str(req.details).encode("utf-8")).hexdigest()
+    # §32/§7: never trust a request-supplied tenant — College Admin is scoped
+    # to own college; Super Admin must have selected a target college.
+    tenant_id = resolve_target_college_id(current_user, None, required=True)
     new_entity = AitEntity(
         category=req.category,
         name=req.name,
         code=req.code,
         details=req.details,
-        source_url=req.source_url,
-        source_page=req.source_page or f"/{req.category}",
-        authority=req.authority,
-        is_verified=True,
+        # §33: heuristically entered data is NOT officially verified.
+        is_verified=False,
         content_hash=content_hash,
-        college_id=current_user.college_id  # Phase 9: stamp tenant
+        college_id=tenant_id
     )
     db.add(new_entity)
     db.flush()
 
+    # §14: a version always inherits its parent entity's tenant.
     v1 = AitKnowledgeVersion(
         entity_id=new_entity.id,
+        college_id=tenant_id,
         version=1,
         payload=req.details,
         status=req.status,
@@ -171,12 +175,10 @@ def update_entity(
     current_user: User = Depends(require_permission(PERM_KNOWLEDGE_UPDATE)),
     db: Session = Depends(get_db)
 ):
-    q = db.query(AitEntity).filter(AitEntity.id == entity_id)
-    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
-        q = q.filter(AitEntity.college_id == current_user.college_id)
-    entity = q.first()
+    entity = db.query(AitEntity).filter(AitEntity.id == entity_id).first()
     if not entity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found")
+    ensure_same_college(current_user, entity.college_id)  # §15/§16
 
     if req.name:
         entity.name = req.name
@@ -201,8 +203,10 @@ def update_entity(
         )
         next_version = (latest_v[0] + 1) if latest_v else 1
 
+        # §14: versions inherit the entity's tenant, never the actor's.
         new_v = AitKnowledgeVersion(
             entity_id=entity.id,
+            college_id=entity.college_id,
             version=next_version,
             payload=req.details,
             status=req.status or "PUBLISHED",
@@ -231,10 +235,16 @@ def rollback_entity_version(
     entity = db.query(AitEntity).filter(AitEntity.id == entity_id).first()
     if not entity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found")
+    ensure_same_college(current_user, entity.college_id)  # §16: entity ownership
 
+    # §16: the target version must belong to the SAME entity AND same tenant.
     target_v = (
         db.query(AitKnowledgeVersion)
-        .filter(AitKnowledgeVersion.entity_id == entity_id, AitKnowledgeVersion.version == req.target_version_number)
+        .filter(
+            AitKnowledgeVersion.entity_id == entity_id,
+            AitKnowledgeVersion.version == req.target_version_number,
+            AitKnowledgeVersion.college_id == entity.college_id,
+        )
         .first()
     )
     if not target_v:
@@ -253,8 +263,10 @@ def rollback_entity_version(
     entity.content_hash = target_v.content_hash
     entity.updated_at = datetime.now(timezone.utc)
 
+    # §14: rollback versions inherit the entity's tenant, never the actor's.
     rollback_record = AitKnowledgeVersion(
         entity_id=entity.id,
+        college_id=entity.college_id,
         version=next_version,
         payload=target_v.payload,
         status="PUBLISHED",
@@ -285,10 +297,13 @@ def delete_entity(
     entity = db.query(AitEntity).filter(AitEntity.id == entity_id).first()
     if not entity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found")
+    ensure_same_college(current_user, entity.college_id)  # §15: delete is tenant-safe
 
     db.delete(entity)
     db.commit()
     semantic_cache.invalidate_all()
-    log_admin_audit(db, current_user, "DELETE_KNOWLEDGE_ENTITY", "AIT_ENTITY", {"id": entity_id})
+    log_admin_audit(db, current_user, "DELETE_KNOWLEDGE_ENTITY", "AIT_ENTITY", {
+        "id": entity_id, "college_id": entity.college_id
+    })
 
     return {"message": "Knowledge entity deleted successfully"}
