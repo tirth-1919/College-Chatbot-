@@ -32,6 +32,7 @@ from backend.app.api.v1.files import router as files_router
 from backend.app.api.v1.voice import router as voice_router
 from backend.app.api.v1.health import router as health_router
 from backend.app.api.v1.colleges import router as colleges_router
+from backend.app.api.v1.user_college import router as user_college_router
 
 # Initialize database schema and migrations
 run_migrations()
@@ -73,6 +74,7 @@ user_app.include_router(images_router, prefix="/api/v1")
 user_app.include_router(files_router, prefix="/api/v1")
 user_app.include_router(voice_router, prefix="/api/v1")
 user_app.include_router(colleges_router, prefix="/api/v1")
+user_app.include_router(user_college_router, prefix="/api/v1")
 
 @user_app.on_event("startup")
 def user_startup():
