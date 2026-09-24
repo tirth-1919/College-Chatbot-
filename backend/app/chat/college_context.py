@@ -65,6 +65,22 @@ def _core_tokens(text: str) -> List[str]:
     return [t for t in norm.split() if t not in _STOP_TOKENS] or norm.split()
 
 
+def _contains_token_sequence(text: str, candidate: str) -> bool:
+    # Return whether normalized candidate tokens occur contiguously in text.
+
+    # This matches registered college identifiers inside a natural-language
+    # request without changing normalization or fuzzy scoring. Token boundaries
+    # prevent short codes from matching arbitrary substrings.
+    text_tokens = normalize(text).split()
+    candidate_tokens = normalize(candidate).split()
+    if not candidate_tokens or len(candidate_tokens) > len(text_tokens):
+        return False
+    width = len(candidate_tokens)
+    return any(
+        text_tokens[index:index + width] == candidate_tokens
+        for index in range(len(text_tokens) - width + 1)
+    )
+
 class CollegeContextManager:
     # ------------------------------------------------------------------
     # Resolution
@@ -95,12 +111,26 @@ class CollegeContextManager:
         if not active_colleges:
             active_colleges = db.query(College).all()
 
-        # Exact normalized name matches must also be unambiguous (§9): if two
-        # active colleges share the same normalized name, ask, don't guess.
+        # Exact normalized name/code matches must also be unambiguous (§9): if
+        # two active colleges share the same identifier, ask, don't guess.
         name_hits = [c for c in active_colleges
                      if normalize(c.name) == norm or normalize(c.code) == norm]
         if len(name_hits) == 1:
             return cls._resolved(name_hits[0], 1.0)
+
+        # A chat message may contain the registered college identifier instead
+        # of consisting solely of it. Match only complete registered token
+        # sequences, preserving the database-backed name/code semantics.
+        embedded_hits = []
+        for c in active_colleges:
+            identifiers = [c.name, c.code] + [
+                alias.alias for alias in getattr(c, "aliases", [])
+            ]
+            if any(_contains_token_sequence(raw, identifier) for identifier in identifiers):
+                embedded_hits.append(c)
+        embedded_ids = {c.id for c in embedded_hits}
+        if len(embedded_ids) == 1:
+            return cls._resolved(embedded_hits[0], 1.0)
         if len(name_hits) > 1:
             return {
                 "status": "AMBIGUOUS", "college_id": None, "college": None,

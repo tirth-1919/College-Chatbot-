@@ -97,6 +97,18 @@ def test_resolve_exact_and_normalized(env):
         assert res["status"] == "RESOLVED", f"{q!r} failed: {res}"
         assert res["college_id"] == env["rcti"].id
 
+def test_resolve_registered_name_code_and_alias(env):
+    from backend.app.chat.college_context import college_context_manager
+    for query, college_id in [
+        (env["ait"].name, env["ait"].id),
+        ("Tell me about Ahmedabad Institute of Technology", env["ait"].id),
+        ("AIT", env["ait"].id),
+        ("Tell me about AIT", env["ait"].id),
+        ("RC Technical", env["rcti"].id),
+    ]:
+        res = college_context_manager.resolve(env["db"], query)
+        assert res["status"] == "RESOLVED", f"{query!r} failed: {res}"
+        assert res["college_id"] == college_id
 
 def test_resolve_typo(env):
     from backend.app.chat.college_context import college_context_manager
