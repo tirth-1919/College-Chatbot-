@@ -1,0 +1,79 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6]:
+      - img "AI FAQ College Chat Bot logo" [ref=e7]
+      - generic [ref=e8]:
+        - generic [ref=e9]: AI FAQ College Chat Bot
+        - generic [ref=e10]: Ask anything about your college
+    - button "New Chat" [ref=e11] [cursor=pointer]:
+      - img [ref=e12]
+      - generic [ref=e13]: New Chat
+    - button "Archived conversations" [ref=e14] [cursor=pointer]:
+      - img [ref=e15]
+      - generic [ref=e18]: Archived conversations
+    - generic [ref=e19]:
+      - img
+      - textbox "Search chats..." [ref=e20]
+    - generic [ref=e22]: No conversations found
+    - button "Sign In / Sign Up" [ref=e24] [cursor=pointer]:
+      - img [ref=e25]
+      - generic [ref=e28]: Sign In / Sign Up
+  - main [ref=e29]:
+    - generic [ref=e30]:
+      - generic [ref=e32]: AI FAQ College Chat Bot
+      - generic [ref=e33]:
+        - generic [ref=e36] [cursor=pointer]: AI FAQ College Chat Bot
+        - button "New conversation" [ref=e37] [cursor=pointer]:
+          - img [ref=e38]
+    - generic [ref=e39]:
+      - img "AI FAQ College Chat Bot logo" [ref=e40]
+      - heading "AI FAQ College Chat Bot" [level=1] [ref=e41]
+      - paragraph [ref=e42]: Ask anything about your college
+      - paragraph [ref=e43]: Get answers about courses, fees, admissions, faculty, facilities, exams, and other college information.
+      - button "Start New Chat" [ref=e44] [cursor=pointer]
+    - generic [ref=e46]:
+      - textbox "Ask anything about your college..." [ref=e47]
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "Attach document or image (PDF, DOCX, XLSX, PNG, JPG)" [ref=e50] [cursor=pointer]:
+            - img [ref=e51]
+          - button "Voice input (Web Speech)" [ref=e53] [cursor=pointer]:
+            - img [ref=e54]
+        - button "Send query" [disabled] [ref=e58]:
+          - img [ref=e59]
+  - generic [ref=e63]:
+    - generic [ref=e64]:
+      - heading "Create Student/Faculty Account" [level=2] [ref=e65]
+      - button [ref=e66] [cursor=pointer]:
+        - img [ref=e67]
+    - generic [ref=e70]:
+      - generic [ref=e71]:
+        - generic [ref=e72]: Full Name
+        - generic [ref=e73]:
+          - img [ref=e74]
+          - textbox "e.g. Anjali Sharma" [active] [ref=e77]: E2E AIT Student
+      - generic [ref=e78]:
+        - generic [ref=e79]: Email Address
+        - generic [ref=e80]:
+          - img [ref=e81]
+          - textbox "name@example.com" [ref=e84]
+      - generic [ref=e85]:
+        - generic [ref=e86]: Password
+        - generic [ref=e87]:
+          - img [ref=e88]
+          - textbox "••••••••" [ref=e91]
+      - button "Sign Up" [ref=e92] [cursor=pointer]
+    - generic [ref=e93]:
+      - generic [ref=e94]: "Google OAuth: Not configured in environment (email/password active)"
+      - button "Continue with Google" [disabled] [ref=e95]
+    - generic [ref=e96]:
+      - text: Already have an account?
+      - button "Sign In" [ref=e97] [cursor=pointer]
+    - generic [ref=e98]:
+      - text: Representing an institution?
+      - link "Register Your College →" [ref=e99] [cursor=pointer]:
+        - /url: /register-college
+```
