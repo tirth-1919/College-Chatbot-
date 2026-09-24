@@ -1,15 +1,16 @@
 import React from 'react';
-import { 
-  CheckCircle2, ExternalLink, ShieldCheck, Copy, 
-  ThumbsUp, ThumbsDown, Check, Sparkles 
+import logoIcon from '../../public/ai-faq-college-chat-bot-icon.svg';
+import {
+  CheckCircle2, ExternalLink, ShieldCheck, Copy,
+  ThumbsUp, ThumbsDown, Check, Sparkles
 } from 'lucide-react';
 
-export function MessageList({ 
-  messages, 
-  streamingDelta, 
-  streamingBlocks, 
-  isStreaming, 
-  onSelectSuggestion, 
+export function MessageList({
+  messages,
+  streamingDelta,
+  streamingBlocks,
+  isStreaming,
+  onSelectSuggestion,
   onImageClick,
   onSendMessage,
   onCollegeSwitch
@@ -73,7 +74,7 @@ export function MessageList({
           <div key={msg.id || index} className={`message-row ${isUser ? 'user' : 'assistant'}`}>
             {!isUser && (
               <div className="message-avatar assistant">
-                <img src="/ai-faq-college-chat-bot-icon.svg" alt="AI FAQ College Chat Bot logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img src={logoIcon} alt="AI FAQ College Chat Bot logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
             )}
 
@@ -186,7 +187,7 @@ export function MessageList({
       {isStreaming && (
         <div className="message-row assistant">
           <div className="message-avatar assistant">
-            <img src="/ai-faq-college-chat-bot-icon.svg" alt="AI FAQ College Chat Bot logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src={logoIcon} alt="AI FAQ College Chat Bot logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <div className="message-content-box">
             <div className="message-bubble">

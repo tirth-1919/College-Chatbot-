@@ -13,6 +13,15 @@ from backend.app.api.v1.admin import admin_master_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
+@api_v1_router.get("")
+def api_v1_root():
+    return {
+        "status": "ok",
+        "service": "AI FAQ College Chat Bot",
+        "version": "v1",
+        "message": "API v1 is running"
+    }
+
 api_v1_router.include_router(health_router)
 api_v1_router.include_router(auth_router)
 api_v1_router.include_router(colleges_router)

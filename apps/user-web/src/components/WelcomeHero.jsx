@@ -1,10 +1,11 @@
 import React from 'react';
+import logo from '../../public/ai-faq-college-chat-bot-logo.svg';
 
 export function WelcomeHero({ onSelectPrompt }) {
   return (
     <div className="welcome-hero">
       <img
-        src="/ai-faq-college-chat-bot-logo.svg"
+        src={logo}
         alt="AI FAQ College Chat Bot logo"
         className="welcome-logo"
       />

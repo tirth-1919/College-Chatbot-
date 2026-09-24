@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { 
+import {
   Plus, MessageSquare, Search, Pin, Trash2, Archive, ArchiveRestore,
   Pencil, LogIn, LogOut, X, Check
 } from 'lucide-react';
 
-export function Sidebar({ 
-  isOpen, 
-  onClose, 
-  conversations, 
-  currentId, 
-  onSelectConversation, 
+export function Sidebar({
+  isOpen,
+  onClose,
+  conversations,
+  currentId,
+  onSelectConversation,
   onNewChat,
   onDeleteConversation,
   onTogglePin,
@@ -23,7 +23,7 @@ export function Sidebar({
 }) {
   const [search, setSearch] = useState('');
 
-  const filtered = conversations.filter(c => 
+  const filtered = conversations.filter(c =>
     c.title.toLowerCase().includes(search.toLowerCase())
   );
 

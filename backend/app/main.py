@@ -1,6 +1,8 @@
 import os
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from backend.app.core.config import settings
 from backend.app.core.database import Base, engine, SessionLocal
@@ -39,6 +41,21 @@ os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
 # Mount public images directory (only verified AIT campus images are stored here)
 app.mount("/storage/images", StaticFiles(directory=settings.IMAGE_STORAGE_DIR), name="images")
+
+frontend_dist = Path(__file__).resolve().parents[2] / "apps" / "user-web" / "dist"
+frontend_public = frontend_dist
+app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="frontend-assets")
+
+@app.get("/ai-faq-college-chat-bot-icon.svg")
+def frontend_logo_icon():
+    return FileResponse(frontend_public / "ai-faq-college-chat-bot-icon.svg")
+
+@app.get("/ai-faq-college-chat-bot-logo.svg")
+def frontend_logo():
+    return FileResponse(frontend_public / "ai-faq-college-chat-bot-logo.svg")
+
+
+
 # P0-4 FIX: /storage/uploads is NO LONGER publicly mounted.
 # Private user uploads are accessed via authenticated GET /api/v1/files/{file_id}/download
 
@@ -60,13 +77,8 @@ def startup_event():
 @app.get("/")
 def root_check():
     """Basic service information for deployment smoke checks."""
-    return {
-        "status": "healthy",
-        "service": settings.APP_NAME,
-        "message": "API is running. See /docs for the interactive API documentation.",
-        "docs": "/docs",
-        "health": "/health"
-    }
+    frontend_index = frontend_dist / "index.html"
+    return FileResponse(frontend_index)
 
 @app.get("/health")
 def health_check():
@@ -93,3 +105,5 @@ def get_brand_config():
             "text": "#0f172a"
         }
     }
+
+
