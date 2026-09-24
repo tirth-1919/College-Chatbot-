@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     # Application Info — permanent platform identity (multi-college).
     # This is the PRODUCT name, independent of any college tenant.
     # Permanent per Platform Name Fix §21-§24: never college-specific.
-    APP_NAME: str = "AI-Powered Colleges Chatbot"
+    APP_NAME: str = "AI FAQ College Chat Bot"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     # DEBUG may be set machine-wide to non-boolean values (e.g. DEBUG=release).

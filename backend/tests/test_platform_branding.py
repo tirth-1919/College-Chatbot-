@@ -18,7 +18,7 @@ from backend.app.core.config import settings
 from backend.app.core.database import Base, get_db
 from backend.app.main import app
 
-PLATFORM_NAME = "AI-Powered Colleges Chatbot"
+PLATFORM_NAME = "AI FAQ College Chat Bot"
 FORBIDDEN_NAMES = {
     "AIT AI Assistant", "AIT Chatbot", "RCTI Chatbot",
     "RC Technical Chatbot", "College AI", "College Assistant",
