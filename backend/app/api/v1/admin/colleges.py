@@ -8,10 +8,13 @@ from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
-from backend.app.core.database import get_db
+from backend.app.core.config import settings
+from backend.app.core.database import engine, get_db
 from backend.app.core.permissions import require_super_admin, get_current_admin_user, log_admin_audit
 from backend.app.core.security import get_password_hash, generate_secure_temporary_password
+from backend.app.chat.college_context import _contains_token_sequence
 from backend.app.scripts.seed_knowledge_categories import seed_knowledge_categories
 from backend.app.models.college import College
 from backend.app.models.user import User
@@ -120,6 +123,55 @@ def _college_to_dict(college: College) -> dict:
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────────────
+
+@router.get("/diagnostics/college-resolution", summary="Read-only college resolution diagnostic")
+def college_resolution_diagnostic(
+    current_user: User = Depends(require_super_admin),
+    db: Session = Depends(get_db),
+):
+    # Read-only diagnostic; no secrets or private records are returned.
+    known_identifiers = {
+        "ahmedabad institute of technology",
+        "ait",
+        "r.c. technical institute",
+        "rcti",
+    }
+    known_matches = db.query(College).filter(
+        or_(
+            func.lower(College.name).in_(known_identifiers),
+            func.lower(College.code).in_(known_identifiers),
+            func.lower(College.slug).in_(known_identifiers),
+        )
+    ).all()
+
+    return {
+        "environment": settings.ENVIRONMENT,
+        "database": {
+            "dialect": engine.dialect.name,
+            "driver": engine.dialect.driver,
+            "database_configured": bool(settings.DATABASE_URL.strip()),
+        },
+        "college_summary": {
+            "total_colleges": db.query(College).count(),
+            "active_colleges": db.query(College).filter(College.status == "ACTIVE").count(),
+            "approved_colleges": db.query(College).filter(
+                College.registration_status == "APPROVED"
+            ).count(),
+        },
+        "known_college_matches": [
+            {
+                "name": college.name,
+                "code": college.code,
+                "slug": college.slug,
+                "status": college.status,
+                "registration_status": college.registration_status,
+            }
+            for college in known_matches
+        ],
+        "resolver_revision": {
+            "token_boundary_match_present": callable(_contains_token_sequence),
+        },
+    }
 
 @router.get("/", summary="List all colleges (SUPER_ADMIN only)")
 def list_colleges(
