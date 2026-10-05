@@ -79,33 +79,21 @@ async def stream_chat(
 
     is_suspicious, reason = sanitizer.inspect_prompt_injection(cleaned_text)
 
-    # 2. P0-5 FIX: Verify or create conversation WITH ownership enforcement
+    # 2. Conversations are created by POST /conversations after explicit tenant
+    # selection. Streaming never creates or upgrades a NULL-tenant row.
     conv = db.query(Conversation).filter(Conversation.id == req.conversation_id).first()
-    if not conv:
-        # Create new conversation — owned by current user.
-        # §5/§12/§67: every NEW conversation starts WITHOUT a college (NULL) and
-        # the assistant asks the in-chat onboarding question. No legacy tenant
-        # linkage, default preference or frontend value seeds the college — the
-        # user's typed selection is resolved server-side from the database.
-        conv = Conversation(
-            id=req.conversation_id,
-            user_id=current_user.id,
-            college_id=None,
-            title=cleaned_text[:35] + ("..." if len(cleaned_text) > 35 else "")
+    if not conv or conv.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+    if conv.conversation_type != "NORMAL" or conv.college_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Select a college before sending messages in this conversation.",
         )
-        db.add(conv)
+
+    # Auto-update title if still default
+    if conv.title in ["New Conversation", "New Chat"]:
+        conv.title = cleaned_text[:35] + ("..." if len(cleaned_text) > 35 else "")
         db.commit()
-    else:
-        # P0-5: Ownership check — cannot access another user's conversation
-        if conv.user_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Conversation not found"  # 404 to avoid leaking existence
-            )
-        # Auto-update title if still default
-        if conv.title in ["New Conversation", "New Chat"]:
-            conv.title = cleaned_text[:35] + ("..." if len(cleaned_text) > 35 else "")
-            db.commit()
 
     # 3. Store user message
     user_msg = Message(
@@ -117,16 +105,10 @@ async def stream_chat(
     db.add(user_msg)
     db.commit()
 
-    # 3.5 College-context onboarding / resolution (Part A: resolved BEFORE retrieval).
-    # A conversation with NO college context is asked the onboarding question
-    # ONCE; a typed college name is resolved from the DATABASE (never from the
-    # frontend) and persisted as THIS conversation's context only (§4/§5).
-    # Re-asking is avoided because conv.college_id is set after resolution.
-    from backend.app.chat.college_context import (
-        college_context_manager, ONBOARDING_QUESTION, AMBIGUOUS_THRESHOLD
-    )
-    has_college_context = conv.college_id is not None
-
+    # 3.5 The conversation already has an explicit tenant. Context is never
+    # inferred from user defaults, previous chats, or a request-body override.
+    from backend.app.chat.college_context import college_context_manager
+    has_college_context = True
     if not has_college_context:
         res = college_context_manager.resolve_and_persist(
             db, current_user, conv, cleaned_text, set_default=False
@@ -181,7 +163,97 @@ async def stream_chat(
             media_type="text/event-stream"
         )
 
-    # 3.6 Explicit other-college mention → safe-switch flow (§22, §23, §61, §68).
+    # 3.6 Explicit multi-college question. Resolve every named tenant and
+    # retrieve each branch independently without changing conversation context.
+    from backend.app.intelligence.intent import intent_classifier
+    request_intent = intent_classifier.classify_intent(cleaned_text)
+    mentions = [] if request_intent.get("intent") == "IMAGE_REQUEST" else college_context_manager.detect_mentions(db, cleaned_text)
+    if len(mentions) >= 2:
+        branch_results = []
+        branch_query = college_context_manager.remove_mentions(db, cleaned_text)
+        for mention in mentions:
+            branch_results.append(await chat_orchestrator.process_chat(
+                db=db,
+                conversation_id=conv.id,
+                user_message_text=branch_query,
+                user_id=current_user.id,
+                college_id=mention["college_id"],
+                attachments=req.attachments,
+                persist_message=False,
+            ))
+
+        # Each branch has already run normal tenant-scoped routing. Combine only
+        # the compact answers and their own provenance.
+        def _source_line(result):
+            source_type = result["source_type"]
+            context = result.get("source_context") or {}
+            if source_type == "OFFICIAL_WEBSITE":
+                label = f"Official {context.get('active_college_name') or 'College'} Website"
+                return f"Source: {label}\nVerified"
+            if source_type == "ADMIN_VERIFIED":
+                label = f"{context.get('active_college_name') or 'College'} Verified Database"
+                return f"Source: {label}\nVerified"
+            if source_type == "GEMINI_UNVERIFIED":
+                return "Source: Gemini Unverified"
+            if source_type == "NO_VERIFIED_INFORMATION":
+                return "No verified information was found for this question."
+            return f"Source: {source_type}"
+
+        combined_text = "\n\n".join(
+            f"### {mention['college'].name}\n{result['text_content']}\n\n{_source_line(result)}"
+            for mention, result in zip(mentions, branch_results)
+        )
+        message_id = str(__import__("uuid").uuid4())
+        branch_blocks = []
+        for mention, result in zip(mentions, branch_results):
+            branch_blocks.append({
+                "type": "college_answer",
+                "college_id": mention["college_id"],
+                "college_name": mention["college"].name,
+                "content": result["text_content"],
+                "answer_status": result["answer_status"],
+                "source_type": result["source_type"],
+                "verified": result["verified"],
+                "source_context": result.get("source_context"),
+                "citations": result.get("blocks", []),
+            })
+        combined_blocks = [{"type": "text", "content": combined_text}, *branch_blocks, {
+            "type": "provenance",
+            "authority": "Tenant-separated college sources",
+            "source_type": "MULTI_COLLEGE",
+            "answer_status": "MULTI_COLLEGE",
+            "verified": all(result["verified"] for result in branch_results),
+            "college_ids": [mention["college_id"] for mention in mentions],
+            "source_types": [result["source_type"] for result in branch_results],
+        }]
+        combined_status = "verified" if all(result["verified"] for result in branch_results) else "unverified"
+        assistant_msg = Message(
+            id=message_id,
+            conversation_id=conv.id,
+            sender="assistant",
+            content=combined_text,
+            blocks=combined_blocks,
+            grounding_status=combined_status,
+            provenance={
+                "college_context": "MULTI_COLLEGE",
+                "college_ids": [mention["college_id"] for mention in mentions],
+                "source_types": [result["source_type"] for result in branch_results],
+            },
+        )
+        db.add(assistant_msg)
+        db.commit()
+        return StreamingResponse(
+            sse_stream_manager.stream_chat_response(
+                conversation_id=conv.id,
+                message_id=message_id,
+                text_content=combined_text,
+                blocks=combined_blocks,
+                grounding_status=combined_status,
+            ),
+            media_type="text/event-stream",
+        )
+
+    # 3.7 Explicit other-college mention → safe-switch flow (§22, §23, §61, §68).
     # A college name typed inside a normal question is detected here; the
     # conversation's college is NEVER changed silently and the user's default
     # is never touched. Prompt-injection text cannot switch context because

@@ -34,9 +34,11 @@ from backend.app.api.v1.health import router as health_router
 from backend.app.api.v1.colleges import router as colleges_router
 from backend.app.api.v1.user_college import router as user_college_router
 
-# Initialize database schema and migrations
-run_migrations()
-Base.metadata.create_all(bind=engine)
+# Development/test SQLite compatibility only. Production schema ownership is
+# Alembic; release automation must run `alembic upgrade head` before startup.
+if settings.ENVIRONMENT.lower() not in ("production", "prod"):
+    run_migrations()
+    Base.metadata.create_all(bind=engine)
 
 # Create dedicated User App
 user_app = FastAPI(
@@ -78,6 +80,10 @@ user_app.include_router(user_college_router, prefix="/api/v1")
 
 @user_app.on_event("startup")
 def user_startup():
+    # AIT seed data is development-only. Production data is provisioned and
+    # approved per tenant; startup must not create tenant-specific defaults.
+    if settings.ENVIRONMENT.lower() in ("production", "prod"):
+        return
     db = SessionLocal()
     try:
         seed_initial_ait_knowledge(db)

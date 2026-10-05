@@ -1,0 +1,1 @@
+export default async function run(page,ui){await page.getByRole('button',{name:'Sign In / Sign Up'}).click(); await page.waitForTimeout(200); return {snap:await ui.snapshot({full:true}), inputs:await page.locator('input').count()};}

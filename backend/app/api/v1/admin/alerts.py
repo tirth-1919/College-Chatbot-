@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from backend.app.core.database import get_db
 from backend.app.api.v1.admin.auth import get_current_admin
+from backend.app.core.permissions import require_super_admin, get_current_admin_user
 from backend.app.models.automation import SystemAlert
 from backend.app.models.audit import SecurityEvent
 
@@ -18,7 +19,7 @@ def list_system_alerts(
     status: Optional[str] = None,
     severity: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
+    current_admin = Depends(require_super_admin)
 ):
     """Lists system alerts with optional filtering by status and severity."""
     query = db.query(SystemAlert)
@@ -51,7 +52,7 @@ def list_system_alerts(
     }
 
 @router.post("/{alert_id}/acknowledge")
-def acknowledge_alert(alert_id: str, db: Session = Depends(get_db), current_admin = Depends(get_current_admin)):
+def acknowledge_alert(alert_id: str, db: Session = Depends(get_db), current_admin = Depends(require_super_admin)):
     """Acknowledges an open system alert."""
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if not alert:
@@ -69,7 +70,7 @@ def resolve_alert(
     alert_id: str,
     req: AlertResolveRequest,
     db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
+    current_admin = Depends(require_super_admin)
 ):
     """Resolves a system alert with resolution notes."""
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
@@ -89,7 +90,7 @@ def list_security_events(
     severity: Optional[str] = None,
     limit: int = 50,
     db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
+    current_admin = Depends(require_super_admin)
 ):
     """Lists recorded security events (failed logins, token misuse, injection attempts)."""
     query = db.query(SecurityEvent)

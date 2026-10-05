@@ -11,6 +11,7 @@ from backend.app.core.config import settings
 from backend.app.automation.engine import automation_engine
 from backend.app.automation.events import event_bus
 from backend.app.models.knowledge import AitEntity, WebsiteSnapshot, KnowledgeGap
+from backend.app.models.college import College
 from backend.app.knowledge.crawler import website_crawler
 from backend.app.models.document import Document, DocumentChunk
 from backend.app.models.image import AitImage
@@ -39,14 +40,13 @@ def job_ait_website_sync(payload: Dict[str, Any]) -> Dict[str, Any]:
         if not automation_engine.acquire_lock(db, "lock:website_sync", ttl_seconds=120):
             return {"status": "SKIPPED", "reason": "Another sync job holds the lock"}
 
-        sync_result = asyncio.run(website_crawler.synchronize_website(db))
-        event_bus.publish("WEBSITE_SYNC_COMPLETED", "job_ait_website_sync", payload={"synced_count": sync_result.get("total_pages", 0)})
+        sync_result = asyncio.run(website_crawler.synchronize_website(db, college_id=payload.get("college_id")))
+        event_bus.publish("WEBSITE_SYNC_COMPLETED", "job_ait_website_sync", payload={"synced_count": sync_result.get("total_pages", 0), "college_id": payload.get("college_id")})
         return {"status": "SUCCESS", "pages_processed": sync_result.get("total_pages", 0),
                 "updated_count": sync_result.get("updated_pages", 0) + sync_result.get("new_pages", 0),
                 "discovered_pages": sync_result.get("discovered_pages", 0),
                 "errors": sync_result.get("errors", 0)}
     finally:
-        automation_engine.release_lock(db, "lock:website_sync")
         db.close()
 
 
@@ -101,13 +101,13 @@ def job_document_ingestion(payload: Dict[str, Any]) -> Dict[str, Any]:
     """5. Document ingestion: processes queued college circulars, syllabus PDFs, and fee booklets."""
     db: Session = SessionLocal()
     try:
-        pending_docs = db.query(Document).filter(Document.status == "PENDING").all()
+        pending_docs = db.query(Document).filter(Document.visibility == "ADMIN_PENDING").all()
         processed = 0
         for doc in pending_docs:
-            doc.status = "PROCESSED"
+            # Approval is a deterministic authorization decision. This job only
+            # indexes already-approved records; it never promotes drafts.
             processed += 1
-        db.commit()
-        return {"status": "SUCCESS", "documents_ingested": processed}
+        return {"status": "SUCCESS", "documents_ingested": processed, "awaiting_approval": len(pending_docs)}
     finally:
         db.close()
 
@@ -122,8 +122,23 @@ def job_rag_indexing(payload: Dict[str, Any]) -> Dict[str, Any]:
     """7. RAG indexing: incrementally indexes newly published chunks into vector embeddings."""
     db: Session = SessionLocal()
     try:
-        chunks = db.query(DocumentChunk).all()
-        return {"status": "SUCCESS", "chunks_indexed": len(chunks), "index_type": "INCREMENTAL"}
+        from backend.app.knowledge.ml import embedding_service, EMBEDDING_MODEL_NAME, MODEL_VERSION
+        chunks = db.query(DocumentChunk).join(Document, DocumentChunk.document_id == Document.id).filter(
+            DocumentChunk.active == True,
+            Document.visibility.in_(["ADMIN_VERIFIED", "PUBLIC_INSTITUTIONAL"]),
+        ).all()
+        indexed = 0
+        for chunk in chunks:
+            if not chunk.embedding_json or not chunk.embedding_vector or chunk.embedding_model != EMBEDDING_MODEL_NAME or chunk.embedding_version != MODEL_VERSION:
+                vector = embedding_service.encode(chunk.content)
+                chunk.embedding_json = __import__("json").dumps(vector)
+                chunk.embedding_vector = vector
+                chunk.embedding_model = EMBEDDING_MODEL_NAME
+                chunk.embedding_version = MODEL_VERSION
+                chunk.indexed_at = datetime.now(timezone.utc)
+                indexed += 1
+        db.commit()
+        return {"status": "SUCCESS", "chunks_indexed": indexed, "chunks_checked": len(chunks), "index_type": "INCREMENTAL", "model_version": MODEL_VERSION}
     finally:
         db.close()
 
@@ -369,3 +384,37 @@ JOBS_MAP = {
 
 for name, fn in JOBS_MAP.items():
     automation_engine.register_job(name, fn)
+
+
+# Multi-tenant website synchronization wrapper. The legacy function remains
+# available for compatibility, while the registered job uses this safe path.
+def job_all_college_website_sync(payload: Dict[str, Any]) -> Dict[str, Any]:
+    db: Session = SessionLocal()
+    totals = {"pages_processed": 0, "updated_count": 0, "discovered_pages": 0, "errors": 0, "colleges": 0}
+    try:
+        query = db.query(College).filter(
+            College.status == "ACTIVE", College.registration_status == "APPROVED"
+        )
+        if payload.get("college_id"):
+            query = query.filter(College.id == payload["college_id"])
+        for college in query.all():
+            lock_key = f"lock:website_sync:{college.id}"
+            if not automation_engine.acquire_lock(db, lock_key, ttl_seconds=120):
+                continue
+            try:
+                result = asyncio.run(website_crawler.synchronize_website(db, college_id=college.id))
+                totals["pages_processed"] += result.get("total_pages", 0)
+                totals["updated_count"] += result.get("updated_pages", 0) + result.get("new_pages", 0)
+                totals["discovered_pages"] += result.get("discovered_pages", 0)
+                totals["errors"] += result.get("errors", 0)
+                totals["colleges"] += 1
+            finally:
+                automation_engine.release_lock(db, lock_key)
+        event_bus.publish("WEBSITE_SYNC_COMPLETED", "job_all_college_website_sync", payload=totals)
+        return {"status": "SUCCESS", **totals}
+    finally:
+        db.close()
+
+# Replace the legacy registered implementation without changing the public job key.
+JOBS_MAP["ait_website_sync"] = job_all_college_website_sync
+automation_engine.register_job("ait_website_sync", job_all_college_website_sync)

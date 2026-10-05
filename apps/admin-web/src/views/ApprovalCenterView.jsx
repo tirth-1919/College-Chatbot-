@@ -1,16 +1,27 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../services/adminApi';
+import { useAdminAuth } from '../context/AdminAuthContext';
 import {
   Building2, CheckCircle, XCircle, Clock, AlertTriangle,
   HelpCircle, Eye, Check, X, Mail, Phone, Globe, MapPin,
   KeyRound, Copy, RefreshCw, Send, FileText, Search
 } from 'lucide-react';
 
+const normalizeRole = (role) => String(role || '').trim().toUpperCase().replace(/-/g, '_');
+const normalizeStatus = (status) => String(status || '').trim().toUpperCase();
+const isPendingSmartUpload = (record) => normalizeStatus(record?.status) === 'PENDING_REVIEW';
+
 export default function ApprovalCenterView() {
+  const { user } = useAdminAuth();
+  const isSuperAdmin = normalizeRole(user?.role) === 'SUPER_ADMIN';
+
   const [colleges, setColleges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('ALL'); // 'ALL' | 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'NEED_MORE_INFORMATION'
+  const [activeSection, setActiveSection] = useState('applications');
+  const [stagedUploads, setStagedUploads] = useState([]);
+  const [smartUploadLoading, setSmartUploadLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals state
@@ -23,6 +34,7 @@ export default function ApprovalCenterView() {
   const [requestInfoNotes, setRequestInfoNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+  const [actionErrorMsg, setActionErrorMsg] = useState('');
   const [copiedPass, setCopiedPass] = useState(false);
 
   const fetchColleges = async () => {
@@ -38,8 +50,21 @@ export default function ApprovalCenterView() {
     }
   };
 
+  const fetchStagedUploads = async () => {
+    setSmartUploadLoading(true);
+    try {
+      const data = await adminApi.getStagedUploads();
+      setStagedUploads(Array.isArray(data) ? data : data?.records || []);
+    } catch (err) {
+      console.error('Failed to fetch staged uploads', err);
+    } finally {
+      setSmartUploadLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchColleges();
+    fetchStagedUploads();
   }, []);
 
   const handleApprove = async (college) => {
@@ -136,6 +161,86 @@ export default function ApprovalCenterView() {
   };
 
   const pendingCount = colleges.filter(c => c.status === 'PENDING' || c.status === 'UNDER_REVIEW').length;
+  const pendingSmartUploadRecords = stagedUploads.filter(isPendingSmartUpload);
+  const pendingSmartUploadCount = pendingSmartUploadRecords.length;
+
+  const handleApproveSmartUpload = async (recordId) => {
+    setActionLoading(true);
+    setActionSuccessMsg('');
+    setActionErrorMsg('');
+    try {
+      await adminApi.approveStagedUpload(recordId);
+      setActionSuccessMsg('Smart Upload document approved and ingested.');
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+      await fetchStagedUploads();
+    } catch (err) {
+      alert('Approval failed: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectSmartUpload = async (recordId) => {
+    setActionLoading(true);
+    setActionSuccessMsg('');
+    setActionErrorMsg('');
+    try {
+      await adminApi.rejectStagedUpload(recordId);
+      setActionSuccessMsg('Smart Upload document rejected.');
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+      await fetchStagedUploads();
+    } catch (err) {
+      alert('Rejection failed: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApproveAllSmartUploads = async () => {
+    if (!isSuperAdmin) return;
+    const pendingRecords = stagedUploads.filter(isPendingSmartUpload);
+    if (!pendingRecords.length) return;
+
+    setActionLoading(true);
+    setActionSuccessMsg('');
+    setActionErrorMsg('');
+    let successCount = 0;
+    let failCount = 0;
+    const errorDetails = [];
+
+    for (const record of pendingRecords) {
+      try {
+        await adminApi.approveStagedUpload(record.id);
+        successCount += 1;
+      } catch (err) {
+        failCount += 1;
+        errorDetails.push(err.message || `Record ${record.id} failed`);
+      }
+    }
+
+    try {
+      await fetchStagedUploads();
+    } catch (err) {
+      console.error('Failed to refresh staged uploads after bulk approval', err);
+    } finally {
+      setActionLoading(false);
+    }
+
+    if (failCount === 0) {
+      setActionSuccessMsg(`${successCount} document${successCount === 1 ? '' : 's'} approved and ingested successfully.`);
+      setTimeout(() => setActionSuccessMsg(''), 5000);
+    } else if (successCount > 0) {
+      setActionSuccessMsg(`${successCount} document${successCount === 1 ? '' : 's'} approved and ingested successfully. ${failCount} failed.`);
+      setActionErrorMsg(`${failCount} document${failCount === 1 ? '' : 's'} failed to approve.`);
+      setTimeout(() => {
+        setActionSuccessMsg('');
+        setActionErrorMsg('');
+      }, 6000);
+    } else {
+      setActionErrorMsg(`Failed to approve ${failCount} document${failCount === 1 ? '' : 's'}. ${errorDetails[0] || ''}`);
+      setTimeout(() => setActionErrorMsg(''), 6000);
+    }
+  };
 
   const filteredColleges = colleges.filter(c => {
     if (filter !== 'ALL' && c.status !== filter) return false;
@@ -188,10 +293,12 @@ export default function ApprovalCenterView() {
             Verify institutional registrations, inspect credentials, and manage tenant provisioning
           </p>
         </div>
-        <button className="btn-secondary" onClick={fetchColleges} disabled={loading} style={{ gap: 8 }}>
-          <RefreshCw size={15} className={loading ? 'spin' : ''} />
-          Refresh Applications
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn-secondary" onClick={fetchColleges} disabled={loading} style={{ gap: 8 }}>
+            <RefreshCw size={15} className={loading ? 'spin' : ''} />
+            Refresh Applications
+          </button>
+        </div>
       </div>
 
       {actionSuccessMsg && (
@@ -205,6 +312,28 @@ export default function ApprovalCenterView() {
         </div>
       )}
 
+      {actionErrorMsg && (
+        <div style={{
+          background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+          borderRadius: 8, padding: '12px 16px', marginBottom: 20, color: '#f87171',
+          fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8
+        }}>
+          <AlertTriangle size={16} />
+          <span>{actionErrorMsg}</span>
+        </div>
+      )}
+
+      {/* Approval source tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <button className={activeSection === 'applications' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveSection('applications')} style={{ padding: '7px 15px', fontSize: '0.82rem', borderRadius: 20 }}>
+          College Applications
+        </button>
+        <button className={activeSection === 'smart_upload' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveSection('smart_upload')} style={{ padding: '7px 15px', fontSize: '0.82rem', borderRadius: 20 }}>
+          Smart Upload ({pendingSmartUploadCount})
+        </button>
+      </div>
+
+      {activeSection === 'applications' ? <>
       {/* Filter Tabs & Search */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -399,6 +528,86 @@ export default function ApprovalCenterView() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      </> : (
+        <div>
+          {/* Smart Upload Section Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 20,
+            flexWrap: 'wrap',
+            gap: 16
+          }}>
+            <div>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+                Smart Upload Review Queue
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                Review and approve documents extracted and classified by the Smart Upload ingestion pipeline
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {isSuperAdmin && (
+                <button
+                  className="btn-primary"
+                  onClick={handleApproveAllSmartUploads}
+                  disabled={actionLoading || pendingSmartUploadCount === 0}
+                  style={{ gap: 8 }}
+                >
+                  {actionLoading ? <RefreshCw size={15} className="spin" /> : <Check size={15} />}
+                  Approve All &amp; Ingest ({pendingSmartUploadCount})
+                </button>
+              )}
+              <button
+                className="btn-secondary"
+                onClick={fetchStagedUploads}
+                disabled={smartUploadLoading || actionLoading}
+                style={{ gap: 8 }}
+              >
+                <RefreshCw size={15} className={smartUploadLoading ? 'spin' : ''} />
+                Refresh Queue
+              </button>
+            </div>
+          </div>
+
+          {smartUploadLoading ? (
+            <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <RefreshCw size={28} className="spin" style={{ margin: '0 auto 12px', opacity: 0.6 }} />
+              <div>Loading Smart Upload review queue...</div>
+            </div>
+          ) : pendingSmartUploadCount === 0 ? (
+            <div className="glass-card" style={{ padding: '48px 24px', textAlign: 'center' }}>
+              <FileText size={40} style={{ margin: '0 auto 16px', opacity: 0.3, color: 'var(--text-dim)' }} />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 6 }}>No Smart Upload Records Found</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>There are currently no Smart Upload documents pending review.</p>
+            </div>
+          ) : (
+            <div className="glass-card" style={{ overflowX: 'auto', padding: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                <thead><tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  {['Document', 'Extracted Category', 'Target Department / Course', 'Academic Year', 'Confidence', 'Status', 'Actions'].map(label => <th key={label} style={{ padding: '14px 18px', fontWeight: 600, color: 'var(--text-dim)' }}>{label}</th>)}
+                </tr></thead>
+                <tbody>{pendingSmartUploadRecords.map(record => {
+                  const confidence = Math.max(0, Math.min(1, Number(record.confidence_score ?? 0)));
+                  return <tr key={record.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '14px 18px', color: '#fff', fontWeight: 600 }}>{record.filename || record.document_name || 'Unnamed document'}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--text-muted)' }}>{(record.detected_category || 'general').replaceAll('_', ' ')}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--text-muted)' }}>{record.course_department || 'All Programs'}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--text-muted)' }}>{record.academic_year || 'Current'}</td>
+                    <td style={{ padding: '14px 18px', color: confidence > 0.8 ? '#34d399' : '#fde68a', fontWeight: 700 }}>{Math.round(confidence * 100)}%</td>
+                    <td style={{ padding: '14px 18px', color: '#f08518', fontWeight: 600 }}>{record.status}</td>
+                    <td style={{ padding: '14px 18px', textAlign: 'right' }}><div style={{ display: 'inline-flex', gap: 8 }}>
+                      <button className="btn-secondary" onClick={() => handleRejectSmartUpload(record.id)} disabled={actionLoading} style={{ padding: '5px 10px', fontSize: '0.75rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}><X size={13} /> Reject</button>
+                      <button className="btn-primary" onClick={() => handleApproveSmartUpload(record.id)} disabled={actionLoading} style={{ padding: '5px 12px', fontSize: '0.75rem', gap: 4 }}><Check size={13} /> Approve &amp; Ingest</button>
+                    </div></td>
+                  </tr>;
+                })}</tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

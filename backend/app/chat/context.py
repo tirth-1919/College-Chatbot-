@@ -90,21 +90,21 @@ class ContextManager:
             if re.search(pattern, query_lower):
                 if last_topic == "FEES":
                     return {
-                        "resolved_query": f"What are the fees for {course.upper()} at AIT?",
+                        "resolved_query": f"What are the fees for {course.upper()} at the active college?",
                         "inferred_intent": "FEES",
                         "inferred_topic": course.upper(),
                         "context_applied": True
                     }
                 elif last_topic == "ADMISSION":
                     return {
-                        "resolved_query": f"What is the admission process and eligibility for {course.upper()} at AIT?",
+                        "resolved_query": f"What is the admission process and eligibility for {course.upper()} at the active college?",
                         "inferred_intent": "ADMISSION",
                         "inferred_topic": course.upper(),
                         "context_applied": True
                     }
                 elif last_topic == "PLACEMENT":
                     return {
-                        "resolved_query": f"What are the placement statistics for {course.upper()} at AIT?",
+                        "resolved_query": f"What are the placement statistics for {course.upper()} at the active college?",
                         "inferred_intent": "PLACEMENT",
                         "inferred_topic": course.upper(),
                         "context_applied": True
@@ -114,21 +114,21 @@ class ContextManager:
         if re.search(r"\b(how\s+(?:does\s+)?it\s+look|how\s+it\s+look|how\s+is\s+it|kaisa\s+hai|kaisa\s+h|ketlu\s+che)\b", query_lower):
             if last_topic == "PLACEMENT":
                 return {
-                    "resolved_query": "How are the placement opportunities and statistics at AIT?",
+                    "resolved_query": "How are the placement opportunities and statistics at the active college?",
                     "inferred_intent": "PLACEMENT",
                     "inferred_topic": "PLACEMENT",
                     "context_applied": True
                 }
             elif last_topic in ["CAMPUS", "LIBRARY", "LAB"]:
                 return {
-                    "resolved_query": f"Show photos of AIT {last_topic.lower()}",
+                    "resolved_query": f"Show photos of the active college {last_topic.lower()}",
                     "inferred_intent": "IMAGE_REQUEST",
                     "inferred_topic": last_topic,
                     "context_applied": True
                 }
             elif last_topic == "FEES":
                 return {
-                    "resolved_query": "What are the fee structure and payment details at AIT?",
+                    "resolved_query": "What are the fee structure and payment details at the active college?",
                     "inferred_intent": "FEES",
                     "inferred_topic": "FEES",
                     "context_applied": True
@@ -145,21 +145,21 @@ class ContextManager:
                 # Follow-up patterns for committees
                 if re.search(r"\b(list\s+all\s+members|members|who\s+are\s+the\s+members)\b", query_lower):
                     return {
-                        "resolved_query": f"List all members of the {committee_name} at AIT",
+                        "resolved_query": f"List all members of the {committee_name} at the active college",
                         "inferred_intent": "AIT_COMMITTEE",
                         "inferred_topic": committee_name,
                         "context_applied": True
                     }
                 elif re.search(r"\b(who\s+is\s+the\s+chairman|chairman|who\s+is\s+the\s+head|head)\b", query_lower):
                     return {
-                        "resolved_query": f"Who is the Chairman of the {committee_name} at AIT",
+                        "resolved_query": f"Who is the Chairman of the {committee_name} at the active college",
                         "inferred_intent": "AIT_COMMITTEE",
                         "inferred_topic": committee_name,
                         "context_applied": True
                     }
                 elif re.search(r"\b(tell\s+me\s+about|about|details)\b", query_lower):
                     return {
-                        "resolved_query": f"Tell me about the {committee_name} at AIT",
+                        "resolved_query": f"Tell me about the {committee_name} at the active college",
                         "inferred_intent": "AIT_COMMITTEE",
                         "inferred_topic": committee_name,
                         "context_applied": True

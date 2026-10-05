@@ -15,6 +15,7 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+    college_id: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -80,20 +81,20 @@ def signup(req: SignupRequest, request: Request, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is already registered")
 
-    # Default signup links user to AIT (first tenant) for backward compatibility.
-    # Future: accept college_code or slug in the signup request.
+    # Tenant-required signup must fail closed when no active tenant is selected.
     from backend.app.models.college import College
-    AIT_TENANT_ID = "ait-default-tenant-0001"
-    ait_college = db.query(College).filter(College.id == AIT_TENANT_ID, College.status == "ACTIVE").first()
-    if not ait_college:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Platform not fully configured. Contact administrator.")
+    if not req.college_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="An active college tenant is required.")
+    college = db.query(College).filter(College.id == req.college_id, College.status == "ACTIVE").first()
+    if not college:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selected college tenant is not active.")
 
     new_user = User(
         email=req.email,
         hashed_password=get_password_hash(req.password),
         full_name=req.full_name,
         role="STUDENT",
-        college_id=AIT_TENANT_ID,
+        college_id=college.id,
         is_verified=True  # For development ease
     )
     db.add(new_user)

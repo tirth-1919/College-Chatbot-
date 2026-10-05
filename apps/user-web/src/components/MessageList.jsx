@@ -4,6 +4,7 @@ import {
   CheckCircle2, ExternalLink, ShieldCheck, Copy,
   ThumbsUp, ThumbsDown, Check, Sparkles
 } from 'lucide-react';
+import { getProvenanceBadge } from './provenanceBadge';
 
 export function MessageList({
   messages,
@@ -70,6 +71,8 @@ export function MessageList({
     <div className="messages-scroll-area">
       {messages.map((msg, index) => {
         const isUser = msg.sender === 'user';
+        const collegeAnswers = (msg.blocks || []).filter(block => block?.type === 'college_answer');
+        const provenanceBadge = getProvenanceBadge(msg);
         return (
           <div key={msg.id || index} className={`message-row ${isUser ? 'user' : 'assistant'}`}>
             {!isUser && (
@@ -80,15 +83,19 @@ export function MessageList({
 
             <div className="message-content-box">
               <div className="message-bubble">
-                {/* Text Content: source metadata is rendered below through MessageBlocks only. */}
-                <div style={{ whiteSpace: 'pre-wrap' }}>
-                  {msg.content}
-                </div>
+                {/* Multi-college answers are rendered exclusively from their
+                    tenant-separated college_answer blocks. Never render the
+                    persisted aggregate content as a second/raw answer. */}
+                {collegeAnswers.length === 0 && (
+                  <div style={{ whiteSpace: 'pre-wrap' }}>
+                    {msg.content}
+                  </div>
+                )}
 
                 {/* Structured Blocks (Images, Citations, Provenance, Suggestions) */}
                 {msg.blocks && msg.blocks.length > 0 && (
                   <MessageBlocks
-                    blocks={mergeMessageMetadata(msg)}
+                    blocks={collegeAnswers.length > 0 ? collegeAnswers : mergeMessageMetadata(msg)}
                     query={messages.slice(0, index).reverse().find(item => item.sender === 'user')?.content || ''}
                     onImageClick={onImageClick}
                     onSelectSuggestion={onSelectSuggestion}
@@ -154,15 +161,20 @@ export function MessageList({
                     />
                   )}
 
-                  {/* P1-15: Dynamic Authority / Grounding Badges */}
-                  {msg.grounding_status === 'verified' && (
+                  {/* P1-15: badges require canonical backend provenance; never infer verification. */}
+                  {provenanceBadge?.kind === 'official' && (
                     <span style={{ fontSize: '0.72rem', color: 'var(--ait-emerald, #10b981)', display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-                      <ShieldCheck size={13} /> {/WEBSITE/.test(msg.provenance?.source_type || '') ? 'Official College Website' : msg.provenance?.source_type === 'DATABASE' ? 'Verified College Database' : 'Verified College Fact'}
+                      <ShieldCheck size={13} /> {provenanceBadge.label}
                     </span>
                   )}
-                  {msg.grounding_status === 'unverified' && (
+                  {provenanceBadge?.kind === 'admin' && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--ait-emerald, #10b981)', display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                      <ShieldCheck size={13} /> {provenanceBadge.label}
+                    </span>
+                  )}
+                  {provenanceBadge?.kind === 'gemini' && (
                     <span style={{ fontSize: '0.72rem', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-                      <Sparkles size={13} /> ⚠ Gemini-generated — not verified by the college
+                      <Sparkles size={13} /> {provenanceBadge.label}
                     </span>
                   )}
                   {msg.grounding_status === 'user_context' && (
@@ -191,12 +203,16 @@ export function MessageList({
           </div>
           <div className="message-content-box">
             <div className="message-bubble">
-              <div style={{ whiteSpace: 'pre-wrap' }}>
-                {streamingDelta || 'Thinking...'}
-              </div>
+              {!(streamingBlocks || []).some(block => block?.type === 'college_answer') && (
+                <div style={{ whiteSpace: 'pre-wrap' }}>
+                  {streamingDelta || 'Thinking...'}
+                </div>
+              )}
               {streamingBlocks && streamingBlocks.length > 0 && (
                 <MessageBlocks
-                  blocks={streamingBlocks}
+                  blocks={streamingBlocks.some(block => block?.type === 'college_answer')
+                    ? streamingBlocks.filter(block => block?.type === 'college_answer')
+                    : streamingBlocks}
                   query={messages.filter(item => item.sender === 'user').at(-1)?.content || ''}
                   onImageClick={onImageClick}
                   onSelectSuggestion={onSelectSuggestion}
@@ -222,15 +238,31 @@ function mergeMessageMetadata(message) {
   return blocks;
 }
 
-function MessageBlocks({ blocks, query = '', onImageClick, onSelectSuggestion, onCollegeSwitch }) {
+function MessageBlocks({ blocks = [], query = '', onImageClick, onSelectSuggestion, onCollegeSwitch }) {
+  // Multi-college content is rendered only from dedicated branch blocks. The
+  // aggregate text/provenance blocks are intentionally ignored here to prevent
+  // raw cross-tenant evidence or a duplicate single-college answer.
+  const collegeAnswers = blocks.filter(b => b?.type === 'college_answer');
+  if (collegeAnswers.length > 0) {
+    return (
+      <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {collegeAnswers.map((answer, index) => (
+          <CollegeAnswerSection key={`${answer.college_id || answer.college_name || 'college'}-${index}`} answer={answer} />
+        ))}
+      </div>
+    );
+  }
+
   // Retrieval metadata is never rendered as answer text. Only citation records that
   // are relevant to this answer are exposed as source cards.
   const images = blocks.filter(b => b.type === 'image');
-  const citations = dedupeRelevantCitations(
+  const provenance = blocks.find(b => b.type === 'provenance');
+  const canonicalStatus = provenance?.answer_status;
+  const citationsAllowed = ['OFFICIAL_WEBSITE', 'ADMIN_VERIFIED'].includes(canonicalStatus) && provenance?.verified === true;
+  const citations = citationsAllowed ? dedupeRelevantCitations(
     blocks.filter(b => b.type === 'citation').flatMap(b => b.items || []),
     `${query} ${blocks.find(b => b.type === 'text')?.content || ''}`
-  );
-  const provenance = blocks.find(b => b.type === 'provenance');
+  ) : [];
   const suggestions = blocks.find(b => b.type === 'suggested_action');
   const switchPrompt = blocks.find(b => b.type === 'college_switch_prompt');
 
@@ -284,8 +316,7 @@ function MessageBlocks({ blocks, query = '', onImageClick, onSelectSuggestion, o
         </div>
       )}
 
-      {/* Trust attribution: source details are shown by the citation card above. */}
-      {provenance && !/unverified|fallback|gemini/i.test(provenance.authority || '') && (
+      {provenance && citationsAllowed && (
         <div className="provenance-bar" aria-label="Answer verification">
           <ShieldCheck size={13} color="var(--ait-emerald)" />
           <span><strong>Verified College Fact</strong></span>
@@ -324,6 +355,40 @@ function MessageBlocks({ blocks, query = '', onImageClick, onSelectSuggestion, o
 }
 
 const GENERIC_SOURCE_TERMS = new Set(['ahmedabad', 'institute', 'technology', 'official', 'website', 'ait', 'group', 'the', 'and', 'of', 'at']);
+
+function CollegeAnswerSection({ answer }) {
+  const sourceLabel = answer.source_type === 'OFFICIAL_WEBSITE'
+    ? `Official ${answer.college_name} Website`
+    : answer.source_type === 'ADMIN_VERIFIED'
+      ? `${answer.college_name} Verified Database`
+      : answer.source_type === 'GEMINI_UNVERIFIED'
+        ? 'Gemini Unverified'
+        : answer.source_type || 'College source';
+  const citation = (answer.citations || []).find(block => block.type === 'citation');
+  const citationItems = citation?.items || [];
+  return (
+    <section
+      aria-label={answer.college_name || 'College answer'}
+      data-testid="college-answer-section"
+      data-college-id={answer.college_id || ''}
+      data-college-name={answer.college_name || ''}
+    >
+      <h3 style={{ margin: 0 }}>{answer.college_name || 'College'}</h3>
+      <div style={{ whiteSpace: 'pre-wrap' }}>{answer.content || ''}</div>
+      {citationItems.map((item, index) => item.source_url ? (
+        <a key={`${item.source_url}-${index}`} href={item.source_url} target="_blank" rel="noreferrer" className="provenance-bar citation-card" style={{ textDecoration: 'none', display: 'flex', marginTop: '8px' }}>
+          <ExternalLink size={12} aria-hidden="true" />
+          <span><strong>Source:</strong> {item.authority || sourceLabel}</span>
+        </a>
+      ) : null)}
+      <div className="provenance-bar" aria-label={`${answer.college_name || 'College'} source verification`}>
+        <ShieldCheck size={13} color={answer.verified ? 'var(--ait-emerald)' : '#f59e0b'} />
+        <span><strong>Source:</strong> {sourceLabel}</span>
+        {answer.verified ? ' · Verified' : ' · Unverified'}
+      </div>
+    </section>
+  );
+}
 
 function canonicalUrl(value) {
   if (!value) return '';

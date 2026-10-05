@@ -10,12 +10,22 @@ export default function ImagesView() {
   const [category, setCategory] = useState('all');
   const [syncing, setSyncing] = useState(false);
   const [preview, setPreview] = useState(null);
+  const requestId = useRef(0);
 
   const load = () => {
+    const id = ++requestId.current;
     setLoading(true);
+    setImages([]);
     const params = {};
     if (category !== 'all') params.category = category;
-    adminApi.getImages(params).then(setImages).finally(() => setLoading(false));
+    adminApi.getImages(params)
+      .then(rows => {
+        // Do not let a slower response from a previous tenant/category render
+        // after the authenticated context has changed.
+        if (id === requestId.current) setImages(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => { if (id === requestId.current) setImages([]); })
+      .finally(() => { if (id === requestId.current) setLoading(false); });
   };
 
   useEffect(() => { load(); }, [category]);
@@ -40,7 +50,7 @@ export default function ImagesView() {
         <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}
              onClick={() => setPreview(null)}>
           <div onClick={e => e.stopPropagation()} style={{ maxWidth:780,width:'90vw' }}>
-            <img src={preview.image_url} alt={preview.title} style={{ width:'100%',borderRadius:12,maxHeight:'70vh',objectFit:'contain' }} onError={e => e.target.src='https://via.placeholder.com/600x400?text=AIT+Image'} />
+            <img src={preview.image_url} alt={preview.title} style={{ width:'100%',borderRadius:12,maxHeight:'70vh',objectFit:'contain' }} onError={e => { e.target.onerror=null; e.target.style.display='none'; }} />
             <div style={{ background:'rgba(10,15,35,0.95)',borderRadius:'0 0 12px 12px',padding:'14px 18px' }}>
               <div style={{ fontWeight:700,marginBottom:4 }}>{preview.title}</div>
               <div style={{ display:'flex',gap:12,fontSize:'0.78rem',color:'var(--text-muted)',flexWrap:'wrap' }}>
@@ -72,6 +82,10 @@ export default function ImagesView() {
         <div style={{ textAlign:'center',padding:60,color:'var(--text-muted)' }}>
           <ImageIcon size={28} style={{ opacity:0.4,marginBottom:10 }} /><div>Loading image library...</div>
         </div>
+      ) : images.length === 0 ? (
+        <div style={{ textAlign:'center',padding:60,color:'var(--text-muted)' }}>
+          <ImageIcon size={28} style={{ opacity:0.4,marginBottom:10 }} /><div>No official images available yet</div>
+        </div>
       ) : (
         <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:16 }}>
           {images.map(img => (
@@ -81,7 +95,7 @@ export default function ImagesView() {
                 <img
                   src={img.thumbnail_url || img.image_url}
                   alt={img.title}
-                  onError={e => { e.target.onerror=null; e.target.src='https://via.placeholder.com/300x200?text=AIT'; }}
+                  onError={e => { e.target.onerror=null; e.target.style.display='none'; }}
                   style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover' }}
                 />
                 <div style={{ position:'absolute',top:8,right:8,display:'flex',gap:6 }}>

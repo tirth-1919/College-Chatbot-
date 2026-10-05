@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from backend.app.core.database import get_db
 from backend.app.core.config import settings
-from backend.app.core.permissions import get_current_admin_user, require_permission, log_admin_audit, PERM_SYSTEM_CONFIGURE, PERM_BACKUP_MANAGE
+from backend.app.core.permissions import require_super_admin, require_permission, log_admin_audit, PERM_SYSTEM_CONFIGURE, PERM_BACKUP_MANAGE
 from backend.app.models.admin_system import (
     SystemPrompt,
     PromptVersion,
@@ -30,7 +30,7 @@ class FeatureFlagToggleRequest(BaseModel):
 
 @router.get("/prompts")
 def list_prompts(
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     prompts = db.query(SystemPrompt).all()
@@ -67,7 +67,7 @@ def list_prompts(
 def add_prompt_version(
     slug: str,
     req: NewPromptVersionRequest,
-    current_user: User = Depends(require_permission(PERM_SYSTEM_CONFIGURE)),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     prompt = db.query(SystemPrompt).filter(SystemPrompt.slug == slug).first()
@@ -108,7 +108,7 @@ def add_prompt_version(
 
 @router.get("/feature-flags")
 def list_feature_flags(
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     flags = db.query(FeatureFlag).order_by(FeatureFlag.key.asc()).all()
@@ -129,7 +129,7 @@ def list_feature_flags(
 def toggle_feature_flag(
     key: str,
     req: FeatureFlagToggleRequest,
-    current_user: User = Depends(require_permission(PERM_SYSTEM_CONFIGURE)),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     flag = db.query(FeatureFlag).filter(FeatureFlag.key == key).first()
@@ -150,19 +150,20 @@ def toggle_feature_flag(
 
 @router.post("/backup")
 def create_system_backup(
-    current_user: User = Depends(require_permission(PERM_BACKUP_MANAGE)),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    backup_filename = f"ait_assistant_backup_{timestamp_str}.db"
+    backup_filename = f"ai_faq_college_chat_bot_backup_{timestamp_str}.db"
     backup_dir = os.path.join(settings.UPLOAD_DIR, "backups")
     os.makedirs(backup_dir, exist_ok=True)
     target_path = os.path.join(backup_dir, backup_filename)
 
-    # If SQLite file exists, copy it
+    # SQLite backup is supported for development only. Production PostgreSQL
+    # backups must use the approved pg_dump/restore procedure.
     source_db = settings.DATABASE_URL.replace("sqlite:///", "")
     size = 0
-    if os.path.exists(source_db):
+    if settings.DATABASE_URL.startswith("sqlite") and os.path.exists(source_db):
         shutil.copy2(source_db, target_path)
         size = os.path.getsize(target_path)
 
@@ -190,7 +191,7 @@ def create_system_backup(
 
 @router.get("/backups")
 def list_system_backups(
-    current_user: User = Depends(require_permission(PERM_BACKUP_MANAGE)),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     backups = db.query(SystemBackup).order_by(SystemBackup.created_at.desc()).all()

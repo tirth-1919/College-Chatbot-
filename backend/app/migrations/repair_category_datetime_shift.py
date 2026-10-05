@@ -25,7 +25,8 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-TENANT_ID = "ait-default-tenant-0001"
+# Legacy tenant identifiers may appear in corrupted historical values, but
+# this repair never assigns or uses a tenant as a default.
 
 
 def _is_iso_timestamp(value) -> bool:

@@ -56,7 +56,11 @@ export function Sidebar({
         </button>
       </div>
 
-      <button className="sidebar-action-btn" onClick={() => { onNewChat(); if (window.innerWidth < 768) onClose(); }}>
+      <button
+        type="button"
+        className="sidebar-action-btn"
+        onClick={() => { onNewChat(); if (window.innerWidth < 768) onClose(); }}
+      >
         <Plus size={18} />
         <span>New Chat</span>
       </button>

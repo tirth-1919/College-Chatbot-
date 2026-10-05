@@ -1,11 +1,31 @@
 import json
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
+from backend.app.knowledge.ml import embedding_service, hybrid_score
 from backend.app.models.document import (
     Document, DocumentChunk,
     VISIBILITY_ADMIN_VERIFIED, VISIBILITY_PUBLIC_INSTITUTIONAL, VISIBILITY_PRIVATE_USER
 )
+
+def _postgres_vector_results(db, query, doc_filter, top_k):
+    '''Use native pgvector ordering on PostgreSQL; return None for fallback paths.'''
+    if getattr(db.bind.dialect, "name", None) != "postgresql":
+        return None
+    vector = embedding_service.encode(query)
+    distance = DocumentChunk.embedding_vector.cosine_distance(vector)
+    rows = (db.query(DocumentChunk)
+        .join(Document, DocumentChunk.document_id == Document.id)
+        .filter(doc_filter, DocumentChunk.active == True, DocumentChunk.embedding_vector.is_not(None))
+        .order_by(distance)
+        .limit(top_k)
+        .all())
+    results = []
+    for chunk in rows:
+        doc = chunk.document
+        results.append((1.0, 1.0, 1.0, chunk, doc))
+    return results
 
 INSTITUTIONAL_VISIBILITIES = [VISIBILITY_ADMIN_VERIFIED, VISIBILITY_PUBLIC_INSTITUTIONAL]
 
@@ -24,42 +44,39 @@ class RAGEngine:
 
         institutional_filter = Document.visibility.in_(INSTITUTIONAL_VISIBILITIES)
 
-        # Phase 8: MANDATORY tenant pre-filter
-        if college_id:
-            tenant_filter = Document.college_id == college_id
-            if user_id:
-                doc_filter = and_(
-                    tenant_filter,
-                    or_(
-                        institutional_filter,
-                        and_(Document.user_id == user_id, Document.visibility == VISIBILITY_PRIVATE_USER)
-                    )
-                )
-            else:
-                doc_filter = and_(tenant_filter, institutional_filter)
-        else:
-            # No college context: restrict to institutional, no cross-college
-            if user_id:
-                doc_filter = or_(
+        # Tenant context is mandatory for retrieval.  Without it there is no
+        # safe way to distinguish one college's institutional documents from
+        # another's, so fail closed instead of widening the query.
+        if not college_id:
+            return []
+
+        tenant_filter = Document.college_id == college_id
+        if user_id:
+            doc_filter = and_(
+                tenant_filter,
+                or_(
                     institutional_filter,
                     and_(Document.user_id == user_id, Document.visibility == VISIBILITY_PRIVATE_USER)
                 )
-            else:
-                doc_filter = institutional_filter
+            )
+        else:
+            doc_filter = and_(tenant_filter, institutional_filter)
 
-        chunks = (db.query(DocumentChunk)
-            .join(Document, DocumentChunk.document_id == Document.id)
-            .filter(doc_filter).all())
-
-        scored_chunks = []
-        for ch in chunks:
-            score = sum(1 for t in query_terms if t in ch.content.lower())
-            if score > 0:
-                scored_chunks.append((score, ch))
-        scored_chunks.sort(key=lambda x: x[0], reverse=True)
+        scored_chunks = _postgres_vector_results(db, query, doc_filter, top_k)
+        if scored_chunks is None:
+            chunks = (db.query(DocumentChunk)
+                .join(Document, DocumentChunk.document_id == Document.id)
+                .filter(doc_filter, DocumentChunk.active == True).all())
+            scored_chunks = []
+            for ch in chunks:
+                lexical = sum(1 for t in query_terms if t in ch.content.lower()) / max(len(query_terms), 1)
+                combined, semantic, rerank = hybrid_score(query, ch.content, lexical)
+                if lexical > 0 or semantic >= 0.52 or rerank >= 0.20:
+                    scored_chunks.append((combined, semantic, rerank, ch, ch.document))
+            scored_chunks.sort(key=lambda x: x[0], reverse=True)
 
         results = []
-        for score, ch in scored_chunks[:top_k]:
+        for score, semantic, rerank, ch, doc in scored_chunks[:top_k]:
             doc = ch.document
             results.append({
                 "chunk_id": ch.id, "document_id": ch.document_id,
@@ -69,6 +86,7 @@ class RAGEngine:
                 "is_institutional": doc.visibility in INSTITUTIONAL_VISIBILITIES,
                 "is_private": doc.visibility == VISIBILITY_PRIVATE_USER,
                 "content": ch.content, "score": score,
+                "semantic_score": semantic, "reranker_score": rerank,
                 "name": doc.title, "details": ch.content,
                 "source_type": "institutional_rag" if doc.visibility in INSTITUTIONAL_VISIBILITIES else "user_document",
                 "verification_status": doc.visibility,
@@ -80,12 +98,17 @@ class RAGEngine:
                        user_id=None, visibility=VISIBILITY_PRIVATE_USER, college_id=None, chunk_size=400):
         import hashlib
         content_hash = hashlib.sha256(text_content.encode("utf-8")).hexdigest()
+        # Tenant ownership is required for every persisted document.  A
+        # document without a tenant cannot safely enter RAG or be deduplicated.
+        if not college_id:
+            raise ValueError("college_id is required to index a document")
+
         # Duplicate detection scoped per college
         q = db.query(Document).filter(
-            Document.content_hash == content_hash, Document.visibility == visibility
+            Document.content_hash == content_hash,
+            Document.visibility == visibility,
+            Document.college_id == college_id,
         )
-        if college_id:
-            q = q.filter(Document.college_id == college_id)
         existing = q.first()
         if existing:
             return existing
@@ -121,12 +144,19 @@ class RAGEngine:
                 college_id=college_id,
                 chunk_index=idx,
                 content=chunk_text,
-                metadata_={"source": title, "college_id": college_id}
+                metadata_={"source": title, "college_id": college_id},
+                embedding_json=json.dumps(embedding_service.encode(chunk_text)),
+                embedding_vector=embedding_service.encode(chunk_text),
+                embedding_model="all-MiniLM-L6-v2",
+                embedding_version="retrieval-1",
+                indexed_at=datetime.now(timezone.utc),
             ))
-        db.commit()
+            # The caller owns the outer transaction.  Flush makes the document and
+            # chunks visible to that transaction while ensuring a failed embedding
+            # or chunk insert rolls the whole operation back atomically.
+            db.flush()
         db.refresh(doc)
         return doc
-
     @classmethod
     def ingest_document(cls, db, file_path, doc_type, title, user_id=None,
                         source_url=None, visibility=VISIBILITY_ADMIN_VERIFIED, college_id=None):

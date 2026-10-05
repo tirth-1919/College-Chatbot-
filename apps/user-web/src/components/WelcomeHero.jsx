@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from '../../public/ai-faq-college-chat-bot-logo.svg';
 
-export function WelcomeHero({ onSelectPrompt }) {
+export function WelcomeHero({ onNewChat }) {
   return (
     <div className="welcome-hero">
       <img
@@ -21,7 +21,7 @@ export function WelcomeHero({ onSelectPrompt }) {
       <button
         type="button"
         className="btn-primary welcome-start-btn"
-        onClick={() => onSelectPrompt('')}
+        onClick={onNewChat}
       >
         Start New Chat
       </button>

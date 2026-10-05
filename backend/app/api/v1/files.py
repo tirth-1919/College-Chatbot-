@@ -9,7 +9,12 @@ from backend.app.core.database import get_db
 from backend.app.core.config import settings
 from backend.app.api.v1.auth import get_current_user
 from backend.app.models.user import User
-from backend.app.models.document import Document, VISIBILITY_PRIVATE_USER
+from backend.app.models.document import (
+    Document,
+    VISIBILITY_PRIVATE_USER,
+    VISIBILITY_ADMIN_VERIFIED,
+    VISIBILITY_PUBLIC_INSTITUTIONAL,
+)
 from backend.app.security.file_validator import file_validator
 from backend.app.knowledge.rag import rag_engine
 from backend.app.security.rate_limiter import rate_limiter
@@ -125,11 +130,16 @@ def download_file(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
-    # P0-4: Ownership enforcement
-    is_owner = (doc.user_id == current_user.id)
-    is_admin = current_user.role in ["ADMIN", "SUPER_ADMIN"]
+    # P0-4: Ownership and tenant enforcement. Private user files are never
+    # downloadable by an administrator merely because they have an admin role.
+    is_owner = doc.user_id == current_user.id
+    role = (current_user.role or "").upper()
+    is_super_admin = role == "SUPER_ADMIN"
+    is_institutional = doc.visibility in [VISIBILITY_ADMIN_VERIFIED, VISIBILITY_PUBLIC_INSTITUTIONAL]
+    is_same_tenant = bool(current_user.college_id and doc.college_id == current_user.college_id)
+    is_authorized_admin = role in ["ADMIN", "COLLEGE_ADMIN", "SUPER_ADMIN"] and is_institutional and (is_super_admin or is_same_tenant)
 
-    if not is_owner and not is_admin:
+    if not is_owner and not is_authorized_admin:
         # Return 404 to avoid leaking existence of file to unauthorized users
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 

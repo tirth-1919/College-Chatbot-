@@ -67,6 +67,8 @@ export function AdminAuthProvider({ children }) {
   const refreshProfile = useCallback(async () => {
     try {
       const profile = await adminApi.getProfile();
+      // The backend is authoritative. Preserve a missing legacy field instead
+      // of converting undefined/null into a mandatory password change.
       setUser(profile);
       return profile;
     } catch {

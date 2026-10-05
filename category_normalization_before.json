@@ -1,0 +1,470 @@
+﻿{
+  "colleges": [
+    {
+      "id": "ait-default-tenant-0001",
+      "code": "AIT",
+      "name": "Ahmedabad Institute of Technology"
+    },
+    {
+      "id": "a607d280-e365-4fc3-b964-d6260983be89",
+      "code": "RCTI",
+      "name": "R.C. Technical Institute"
+    }
+  ],
+  "counts": {
+    "AIT": 21,
+    "RCTI": 2
+  },
+  "categories": [
+    {
+      "code": "AIT",
+      "name": "Hostel",
+      "key": "hostel",
+      "n": 2
+    },
+    {
+      "code": "AIT",
+      "name": "Scholarships",
+      "key": "scholarships",
+      "n": 2
+    },
+    {
+      "code": "AIT",
+      "name": "Departments (0d73)",
+      "key": "departments-2feb57",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "Departments (c09b)",
+      "key": "departments-ef61df",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "Fees",
+      "key": "fees",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_contact (9963)",
+      "key": "admission-contact-952779",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_contact (d576)",
+      "key": "admission-contact-d549f2",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_documents (44b1)",
+      "key": "admission-documents-4812f8",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_documents (72ac)",
+      "key": "admission-documents-289f39",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_eligibility (021a)",
+      "key": "admission-eligibility-946a3d",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_eligibility (2e26)",
+      "key": "admission-eligibility-78a5af",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_entrance_exam (daee)",
+      "key": "admission-entrance-exam-d59335",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_entrance_exam (f1be)",
+      "key": "admission-entrance-exam-c2e5a9",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_fees (a9f4)",
+      "key": "admission-fees-4bff2b",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_fees (acb7)",
+      "key": "admission-fees-348754",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_process (8858)",
+      "key": "admission-process-fc4e50",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "admission_process (c254)",
+      "key": "admission-process-dead73",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "courses (a207)",
+      "key": "courses-3db87a",
+      "n": 1
+    },
+    {
+      "code": "AIT",
+      "name": "courses (d974)",
+      "key": "courses-9b9f78",
+      "n": 1
+    },
+    {
+      "code": "RCTI",
+      "name": "admission_entrance_exam (8a99)",
+      "key": "admission-entrance-exam-9f9136",
+      "n": 1
+    },
+    {
+      "code": "RCTI",
+      "name": "admission_fees (6c89)",
+      "key": "admission-fees-4c4bbc",
+      "n": 1
+    }
+  ],
+  "records": [
+    {
+      "id": "0193184f-f547-429f-836a-6035955e89c9",
+      "college": "AIT",
+      "current_category": "admission_documents (72ac)",
+      "title": "admission_documents - All Programs",
+      "field_name": null,
+      "value": "Admission documents may include the 12th marksheet, school leaving certificate, government identity proof,\npassport-size photographs, and applicable category certificates.",
+      "description": "Admission documents may include the 12th marksheet, school leaving certificate, government identity proof,\npassport-size photographs, and applicable category certificates.",
+      "metadata": "{\"summary\": \"Admission documents may include the 12th marksheet, school leaving certificate, government identity proof,\\npassport-size photographs, and applicable category certificates.\", \"content\": \"Admission documents may include the 12th marksheet, school leaving certificate, government identity proof,\\npassport-size photographs, and applicable category certificates.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "10c2fc07-adc7-4abe-8856-a35b6baa629d",
+      "college": "AIT",
+      "current_category": "Hostel",
+      "title": "hostel - All Programs",
+      "field_name": null,
+      "value": "Hostel: accommodation subject to availability.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Hostel: accommodation subject to availability.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "19586321-ad4a-4ec1-b5be-89d00be86dc4",
+      "college": "AIT",
+      "current_category": "Departments (0d73)",
+      "title": "Departments - General Program",
+      "field_name": null,
+      "value": "%PDF-1.4 % ReportLab Generated PDF document (opensource) 1 0 obj << /F1 2 0 R /F2 3 0 R /F3 5 0 R >> endobj 2 0 obj << /BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font >> endobj 3 0 obj << /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font >> endobj 4 0 obj << /Contents 10 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 9 0 R /Resources << /Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ] >> /Rotate 0 /Trans << >> /Type /Page >> endobj 5 0 obj << /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding /Name ",
+      "description": "Auto-extracted from AIT_Smart_Upload_Test_Data_2026.pdf",
+      "metadata": "{\"summary\": \"%PDF-1.4 % ReportLab Generated PDF document (opensource) 1 0 obj << /F1 2 0 R /F2 3 0 R /F3 5 0 R >> endobj 2 0 obj << /BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font >> endobj 3 0 obj << /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /\", \"academic_year\": \"2026-27\", \"course\": \"General Program\", \"department\": \"General Program\"}",
+      "course": "General Program",
+      "academic_year": "2026-27",
+      "status": "INACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "21805214-8f91-4652-a23e-25a5ac9a7b21",
+      "college": "AIT",
+      "current_category": "admission_entrance_exam (daee)",
+      "title": "admission_entrance_exam - All Programs",
+      "field_name": null,
+      "value": "Entrance Exam: verify GUJCET requirement.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Entrance Exam: verify GUJCET requirement.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "299db2a5-483d-49c8-af3a-69203e8aa932",
+      "college": "AIT",
+      "current_category": "admission_fees (a9f4)",
+      "title": "admission_fees - BCA",
+      "field_name": null,
+      "value": "Admission Fees: BCA fee INR 32000.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Admission Fees: BCA fee INR 32000.\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null, \"fee_amount\": \"\\u20b932000\"}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "33e48b8b-33c5-4b79-b7ad-c8fa820e0578",
+      "college": "AIT",
+      "current_category": "admission_documents (44b1)",
+      "title": "admission_documents - All Programs",
+      "field_name": null,
+      "value": "Admission Documents: submit the marksheet.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Admission Documents: submit the marksheet.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "458f934d-8d65-4bc1-bf38-8944298d843b",
+      "college": "AIT",
+      "current_category": "Hostel",
+      "title": "hostel - All Programs",
+      "field_name": null,
+      "value": "Hostel",
+      "description": "Hostel",
+      "metadata": "{\"summary\": \"Hostel\", \"content\": \"Hostel\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "47f42374-268f-4020-b2e2-58b298d5f13c",
+      "college": "AIT",
+      "current_category": "admission_entrance_exam (f1be)",
+      "title": "admission_entrance_exam - BCA",
+      "field_name": null,
+      "value": "Entrance Exam\nEntrance requirements should be verified against the applicable official admission notification for the relevant\nprogram and academic year.\nFee Summary\n\n\nCollege\nProgram\nYear\nTest Fee\nAhmedabad Institute of Technology\nBCA\n2026-27\nINR 32,000\nTEST DATA WARNING: This document is synthetic test data for Smart Upload & Auto-Classification. Do not\npublish these values as official AIT information without verifying them against an actual official AIT document.",
+      "description": "Entrance Exam\nEntrance requirements should be verified against the applicable official admission notification for the relevant\nprogram and academic year.\nFee Summary\n\n\nCollege\nProgram\nYear\nTest Fee\nAhmedabad Institute of Technology\nBCA\n2026-27\nINR 32,000\nTEST DATA WARNING: This document is synthetic test data for Smart Upload & Auto-Classification. Do not\npublish these values as official AIT information without verifying them against an actual official AIT document.",
+      "metadata": "{\"summary\": \"Entrance Exam\\nEntrance requirements should be verified against the applicable official admission notification for the relevant\\nprogram and academic year.\\nFee Summary\\n\\n\\nCollege\\nProgram\\nYear\\nTest Fee\\nAhmedabad Institute of Technology\\nBCA\\n2026-27\\nINR 32,000\\nTEST DATA WARNING: This d\", \"content\": \"Entrance Exam\\nEntrance requirements should be verified against the applicable official admission notification for the relevant\\nprogram and academic year.\\nFee Summary\\n\\n\\nCollege\\nProgram\\nYear\\nTest Fee\\nAhmedabad Institute of Technology\\nBCA\\n2026-27\\nINR 32,000\\nTEST DATA WARNING: This document is synthetic test data for Smart Upload & Auto-Classification. Do not\\npublish these values as official AIT information without verifying them against an actual official AIT document.\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null, \"fee_amount\": \"\\u20b932,000\"}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "49610f9c-f422-4447-b9a5-85d74e73ef4b",
+      "college": "AIT",
+      "current_category": "admission_contact (d576)",
+      "title": "admission_contact - All Programs",
+      "field_name": null,
+      "value": "Contact Information\nFor this test dataset, admission enquiries can be directed to the AIT Admission Office. Test email:\nadmission-test@ait.example.",
+      "description": "Contact Information\nFor this test dataset, admission enquiries can be directed to the AIT Admission Office. Test email:\nadmission-test@ait.example.",
+      "metadata": "{\"summary\": \"Contact Information\\nFor this test dataset, admission enquiries can be directed to the AIT Admission Office. Test email:\\nadmission-test@ait.example.\", \"content\": \"Contact Information\\nFor this test dataset, admission enquiries can be directed to the AIT Admission Office. Test email:\\nadmission-test@ait.example.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "49ef9ed7-c1a4-4f1c-96fe-7ba203da3a00",
+      "college": "AIT",
+      "current_category": "courses (d974)",
+      "title": "courses - BCA",
+      "field_name": null,
+      "value": "Courses and Programs: BCA is a three-year program.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Courses and Programs: BCA is a three-year program.\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "68f92e41-31a9-4c16-87b0-0d175622d7fb",
+      "college": "AIT",
+      "current_category": "admission_contact (9963)",
+      "title": "admission_contact - All Programs",
+      "field_name": null,
+      "value": "Contact Information: contact the Admission Office.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Contact Information: contact the Admission Office.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "7871276e-4518-434e-9889-e49188b34ce2",
+      "college": "AIT",
+      "current_category": "admission_process (c254)",
+      "title": "admission_process - BCA",
+      "field_name": null,
+      "value": "Admission Process\nBCA applicants should check eligibility, complete the admission application, submit required documents,\ncomplete document verification, pay the applicable fee, and confirm admission according to the college\nadmission procedure.",
+      "description": "Admission Process\nBCA applicants should check eligibility, complete the admission application, submit required documents,\ncomplete document verification, pay the applicable fee, and confirm admission according to the college\nadmission procedure.",
+      "metadata": "{\"summary\": \"Admission Process\\nBCA applicants should check eligibility, complete the admission application, submit required documents,\\ncomplete document verification, pay the applicable fee, and confirm admission according to the college\\nadmission procedure.\", \"content\": \"Admission Process\\nBCA applicants should check eligibility, complete the admission application, submit required documents,\\ncomplete document verification, pay the applicable fee, and confirm admission according to the college\\nadmission procedure.\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "9e04925d-f068-4cad-9820-f34da54ecf8f",
+      "college": "AIT",
+      "current_category": "Scholarships",
+      "title": "scholarships - All Programs",
+      "field_name": null,
+      "value": "Scholarship\nEligible students may apply for applicable government or institutional scholarships. Required",
+      "description": "Scholarship\nEligible students may apply for applicable government or institutional scholarships. Required",
+      "metadata": "{\"summary\": \"Scholarship\\nEligible students may apply for applicable government or institutional scholarships. Required\", \"content\": \"Scholarship\\nEligible students may apply for applicable government or institutional scholarships. Required\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "a05ff61b-bce2-4ba9-b16d-dd88b57dd9c2",
+      "college": "AIT",
+      "current_category": "admission_process (8858)",
+      "title": "admission_process - All Programs",
+      "field_name": null,
+      "value": "Admission Process: complete the application.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Admission Process: complete the application.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "a4497ad0-1342-4e43-88b8-d7cc1630c16c",
+      "college": "AIT",
+      "current_category": "courses (a207)",
+      "title": "courses - BCA",
+      "field_name": null,
+      "value": "Courses and Programs\nThe test dataset includes BCA as a three-year undergraduate program consisting of six semesters.",
+      "description": "Courses and Programs\nThe test dataset includes BCA as a three-year undergraduate program consisting of six semesters.",
+      "metadata": "{\"summary\": \"Courses and Programs\\nThe test dataset includes BCA as a three-year undergraduate program consisting of six semesters.\", \"content\": \"Courses and Programs\\nThe test dataset includes BCA as a three-year undergraduate program consisting of six semesters.\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "b87a18d1-d01c-4a45-9048-de6ec4904347",
+      "college": "AIT",
+      "current_category": "admission_eligibility (2e26)",
+      "title": "admission_eligibility - All Programs",
+      "field_name": null,
+      "value": "Admission Eligibility: passed 12th standard.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Admission Eligibility: passed 12th standard.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "c4c9ad34-44d2-4f4a-88d1-ed208a0110aa",
+      "college": "AIT",
+      "current_category": "Fees",
+      "title": "BCA Semester 1 Fee",
+      "field_name": "Semester Fee",
+      "value": "₹32,000",
+      "description": "",
+      "metadata": "{}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "c96261ea-07b2-4eb4-b5ff-3df6b7ef62bd",
+      "college": "AIT",
+      "current_category": "Scholarships",
+      "title": "scholarships - All Programs",
+      "field_name": null,
+      "value": "Scholarship: eligible students may apply.",
+      "description": "Auto-extracted from AIT_SMART_UPLOAD_NEW_TEST_20261002.pdf",
+      "metadata": "{\"summary\": \"Scholarship: eligible students may apply.\", \"academic_year\": \"2026-27\", \"course\": \"All Programs\", \"department\": null}",
+      "course": "All Programs",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "d5632d43-b2a7-4711-893f-7c1b97e573ed",
+      "college": "AIT",
+      "current_category": "admission_eligibility (021a)",
+      "title": "admission_eligibility - BCA",
+      "field_name": null,
+      "value": "Admission Eligibility\nApplicants for BCA admission should have passed 12th standard from a recognized board. Final eligibility is\nsubject to the applicable admission rules.",
+      "description": "Admission Eligibility\nApplicants for BCA admission should have passed 12th standard from a recognized board. Final eligibility is\nsubject to the applicable admission rules.",
+      "metadata": "{\"summary\": \"Admission Eligibility\\nApplicants for BCA admission should have passed 12th standard from a recognized board. Final eligibility is\\nsubject to the applicable admission rules.\", \"content\": \"Admission Eligibility\\nApplicants for BCA admission should have passed 12th standard from a recognized board. Final eligibility is\\nsubject to the applicable admission rules.\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "d8f3569d-4c3f-4b37-92a1-955cf9d274f9",
+      "college": "AIT",
+      "current_category": "Departments (c09b)",
+      "title": "Departments - General Program",
+      "field_name": null,
+      "value": "%PDF-1.4 % ReportLab Generated PDF document (opensource) 1 0 obj << /F1 2 0 R /F2 3 0 R /F3 5 0 R >> endobj 2 0 obj << /BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font >> endobj 3 0 obj << /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font >> endobj 4 0 obj << /Contents 10 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 9 0 R /Resources << /Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ] >> /Rotate 0 /Trans << >> /Type /Page >> endobj 5 0 obj << /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding /Name ",
+      "description": "Auto-extracted from AIT_Smart_Upload_Test_Data_2026.pdf",
+      "metadata": "{\"summary\": \"%PDF-1.4 % ReportLab Generated PDF document (opensource) 1 0 obj << /F1 2 0 R /F2 3 0 R /F3 5 0 R >> endobj 2 0 obj << /BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font >> endobj 3 0 obj << /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /\", \"academic_year\": \"2026-27\", \"course\": \"General Program\", \"department\": \"General Program\"}",
+      "course": "General Program",
+      "academic_year": "2026-27",
+      "status": "INACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "e0aa3a35-0100-42ee-b820-e06525af8fce",
+      "college": "AIT",
+      "current_category": "admission_fees (acb7)",
+      "title": "admission_fees - BCA",
+      "field_name": null,
+      "value": "Admission Fees\nFor this test dataset, the BCA fee for academic year 2026-27 is INR 32,000. This value is included only to test\nSmart Upload classification and must be verified against the actual AIT fee document before production use.",
+      "description": "Admission Fees\nFor this test dataset, the BCA fee for academic year 2026-27 is INR 32,000. This value is included only to test\nSmart Upload classification and must be verified against the actual AIT fee document before production use.",
+      "metadata": "{\"summary\": \"Admission Fees\\nFor this test dataset, the BCA fee for academic year 2026-27 is INR 32,000. This value is included only to test\\nSmart Upload classification and must be verified against the actual AIT fee document before production use.\", \"content\": \"Admission Fees\\nFor this test dataset, the BCA fee for academic year 2026-27 is INR 32,000. This value is included only to test\\nSmart Upload classification and must be verified against the actual AIT fee document before production use.\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null, \"fee_amount\": \"\\u20b932,000\"}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "ACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "30bd4360-92d9-478f-9c1d-7ddafe375720",
+      "college": "RCTI",
+      "current_category": "admission_fees (6c89)",
+      "title": "admission_fees - BCA",
+      "field_name": null,
+      "value": "College\nProgram\nYear\nTest Fee\nAhmedabad Institute of Technology\nBCA\n2026-27\nINR 32,000\nTEST DATA WARNING: This document is synthetic test data for Smart Upload & Auto-Classification. Do not\npublish these values as official AIT information without verifying them against an actual",
+      "description": "Auto-extracted from AIT_Smart_Upload_Test_Data_2026.pdf",
+      "metadata": "{\"summary\": \"College\\nProgram\\nYear\\nTest Fee\\nAhmedabad Institute of Technology\\nBCA\\n2026-27\\nINR 32,000\\nTEST DATA WARNING: This document is synthetic test data for Smart Upload & Auto-Classification. Do not\\npublish these values as official AIT information without verifying them against an actual\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null, \"fee_amount\": \"\\u20b932,000\"}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "INACTIVE",
+      "verified": 1
+    },
+    {
+      "id": "54bd662b-1e4f-4638-8848-e6a35ff43178",
+      "college": "RCTI",
+      "current_category": "admission_entrance_exam (8a99)",
+      "title": "admission_entrance_exam - BCA",
+      "field_name": null,
+      "value": "Ahmedabad Institute of Technology (AIT) – Smart Upload\n Test Data\n Academic Year: 2026-27\nAdmission Process\nBCA applicants should check eligibility, complete the admission application, submit required documents,\ncomplete document verification, pay the applicable fee, and confirm",
+      "description": "Auto-extracted from AIT_Smart_Upload_Test_Data_2026.pdf",
+      "metadata": "{\"summary\": \"Ahmedabad Institute of Technology (AIT) \\u2013 Smart Upload\\n Test Data\\n Academic Year: 2026-27\\nAdmission Process\\nBCA applicants should check eligibility, complete the admission application, submit required documents,\\ncomplete document verification, pay the applicable fee, and confirm\", \"academic_year\": \"2026-27\", \"course\": \"BCA\", \"department\": null, \"fee_amount\": \"\\u20b932,000\"}",
+      "course": "BCA",
+      "academic_year": "2026-27",
+      "status": "INACTIVE",
+      "verified": 1
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, JSON, Integer
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, JSON, Integer, UniqueConstraint
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
 
@@ -47,16 +47,37 @@ class AitKnowledgeVersion(Base):
 
 class WebsiteSnapshot(Base):
     __tablename__ = "website_snapshots"
+    __table_args__ = (
+        UniqueConstraint("college_id", "url", name="uq_website_snapshots_college_url"),
+    )
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     college_id = Column(String(36), ForeignKey("colleges.id", ondelete="CASCADE"), nullable=True, index=True)
-    url = Column(String(500), unique=True, index=True, nullable=False)
+    # Tenant-owned writes must provide college_id. Nullable is retained only for
+    # legacy rows that cannot be safely attributed during a non-destructive
+    # migration; those rows are excluded from College Admin access.
+    url = Column(String(500), index=True, nullable=False)
     title = Column(String(255), nullable=True)
     content_hash = Column(String(64), nullable=False)
     text_content = Column(Text, nullable=False)
     status_code = Column(Integer, default=200)
     last_crawled_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    active = Column(Boolean, default=True, nullable=False, index=True)
+    crawl_error = Column(Text, nullable=True)
+    version_number = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class WebsiteSnapshotVersion(Base):
+    __tablename__ = "website_snapshot_versions"
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    college_id = Column(String(36), ForeignKey("colleges.id", ondelete="CASCADE"), nullable=False, index=True)
+    snapshot_id = Column(String(36), ForeignKey("website_snapshots.id", ondelete="CASCADE"), nullable=False, index=True)
+    version_number = Column(Integer, nullable=False)
+    content_hash = Column(String(64), nullable=False, index=True)
+    title = Column(String(255), nullable=True)
+    text_content = Column(Text, nullable=False)
+    status_code = Column(Integer, default=200)
+    captured_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
 class KnowledgeGap(Base):
     __tablename__ = "knowledge_gaps"

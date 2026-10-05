@@ -33,12 +33,12 @@ def test_offtopic_college_query_not_institutional():
 
 
 def test_weak_keyword_with_ait_signal_still_institutional():
-    assert _route("Does AIT have a student council?") == "ait_institutional"
+    assert _route("Does AIT have a student council?") == "institutional"
 
 
 def test_strong_keywords_still_institutional():
-    assert _route("What are the BCA fees?") == "ait_institutional"
-    assert _route("Who is the sports chairman at AIT?") == "ait_institutional"
+    assert _route("What are the BCA fees?") == "institutional"
+    assert _route("Who is the sports chairman at AIT?") == "institutional"
 
 
 def test_keywords_match_whole_words_only():

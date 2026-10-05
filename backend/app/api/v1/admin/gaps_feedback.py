@@ -220,6 +220,29 @@ def gap_stats(
     }
 
 
+@router.post("/knowledge-gaps/resolve-all")
+def resolve_all_knowledge_gaps(
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    # Resolve every OPEN gap visible to the authenticated administrator.
+    query = _tenant_filter(
+        db.query(KnowledgeGap), KnowledgeGap, current_user, college_filter=None
+    ).filter(KnowledgeGap.status == "OPEN")
+    gaps = query.all()
+    now = datetime.now(timezone.utc)
+    for gap in gaps:
+        gap.status = "RESOLVED"
+        gap.resolved = True
+        gap.resolved_at = now
+        gap.resolved_by = current_user.id
+    db.commit()
+    log_admin_audit(
+        db, current_user, "KNOWLEDGE_GAPS_RESOLVED_ALL", "KNOWLEDGE_GAP",
+        {"resolved_count": len(gaps)},
+    )
+    return {"message": "Open knowledge gaps resolved", "resolved_count": len(gaps)}
+
 @router.get("/knowledge-gaps/{gap_id}")
 def get_knowledge_gap(
     gap_id: str,

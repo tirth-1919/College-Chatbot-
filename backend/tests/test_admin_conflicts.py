@@ -13,6 +13,7 @@ from backend.app.core.database import Base, get_db
 from backend.app.core.security import create_access_token
 from backend.app.core.permissions import PERM_CONFLICTS_REVIEW
 from backend.app.models.admin_system import KnowledgeConflict
+from backend.app.models.college import College
 from backend.app.models.user import User
 
 
@@ -23,13 +24,18 @@ def conflict_client():
     session_factory = sessionmaker(bind=engine, autoflush=False)
     db = session_factory()
 
+    college = College(
+        id=str(uuid.uuid4()), name="Conflicts College", code="CONFLICTS",
+        slug="conflicts-college", status="ACTIVE", registration_status="APPROVED",
+    )
     admin = User(
         id=str(uuid.uuid4()), email="admin-conflicts@example.test", full_name="Admin",
-        role="ADMIN", permissions=[PERM_CONFLICTS_REVIEW]
+        role="COLLEGE_ADMIN", college_id=college.id, permissions=[PERM_CONFLICTS_REVIEW],
+        is_active=True,
     )
-    super_admin = User(id=str(uuid.uuid4()), email="super-conflicts@example.test", full_name="Super", role="SUPER_ADMIN")
+    super_admin = User(id=str(uuid.uuid4()), email="super-conflicts@example.test", full_name="Super", role="SUPER_ADMIN", is_active=True)
     student = User(id=str(uuid.uuid4()), email="student-conflicts@example.test", full_name="Student", role="STUDENT")
-    db.add_all([admin, super_admin, student])
+    db.add_all([college, admin, super_admin, student])
     db.commit()
 
     app = FastAPI()
@@ -46,7 +52,7 @@ def conflict_client():
 
     def make_conflict():
         conflict = KnowledgeConflict(
-            id=str(uuid.uuid4()), topic="Test conflict", source_a="A", source_b="B",
+            id=str(uuid.uuid4()), college_id=college.id, topic="Test conflict", source_a="A", source_b="B",
             value_a="value A", value_b="value B", detected_discrepancy="test", resolution_status="UNRESOLVED",
         )
         db.add(conflict)

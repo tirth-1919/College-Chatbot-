@@ -1,0 +1,234 @@
+INFO:     Started server process [6728]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 411, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\core\middleware.py", line 15, in dispatch
+    response: Response = await call_next(request)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1791, in _handle_selected
+    await route.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\api\v1\admin\learning.py", line 112, in list_candidates
+    rows = q.order_by(order).offset((page - 1) * per_page).limit(per_page).all()
+           ~~~~~~~~~~^^^^^^^
+  File "<string>", line 2, in order_by
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\sql\base.py", line 284, in _generative
+    x = fn(self, *args, **kw)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\orm\query.py", line 2041, in order_by
+    criterion = tuple(
+        coercions.expect(roles.OrderByRole, clause)
+        for clause in (__first,) + clauses
+    )
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\orm\query.py", line 2042, in <genexpr>
+    coercions.expect(roles.OrderByRole, clause)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\sql\coercions.py", line 396, in expect
+    resolved = impl._literal_coercion(
+        element, argname=argname, **kw
+    )
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\sql\coercions.py", line 635, in _literal_coercion
+    self._raise_for_expected(element, argname)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\sql\coercions.py", line 519, in _raise_for_expected
+    raise exc.ArgumentError(msg, code=code) from err
+sqlalchemy.exc.ArgumentError: ORDER BY expression expected, got (<sqlalchemy.sql.elements.UnaryExpression object at 0x000002A3F31ED520>, <sqlalchemy.sql.elements.UnaryExpression object at 0x000002A3F31ED400>).
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 411, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\core\middleware.py", line 15, in dispatch
+    response: Response = await call_next(request)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1791, in _handle_selected
+    await route.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\api\v1\admin\learning.py", line 112, in list_candidates
+    rows = q.order_by(order).offset((page - 1) * per_page).limit(per_page).all()
+           ~~~~~~~~~~^^^^^^^
+  File "<string>", line 2, in order_by
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\sql\base.py", line 284, in _generative
+    x = fn(self, *args, **kw)
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\orm\query.py", line 2041, in order_by
+    criterion = tuple(
+        coercions.expect(roles.OrderByRole, clause)
+        for clause in (__first,) + clauses
+    )
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\orm\query.py", line 2042, in <genexpr>
+    coercions.expect(roles.OrderByRole, clause)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\sql\coercions.py", line 396, in expect
+    resolved = impl._literal_coercion(
+        element, argname=argname, **kw
+    )
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\sql\coercions.py", line 635, in _literal_coercion
+    self._raise_for_expected(element, argname)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\sqlalchemy\sql\coercions.py", line 519, in _raise_for_expected
+    raise exc.ArgumentError(msg, code=code) from err
+sqlalchemy.exc.ArgumentError: ORDER BY expression expected, got (<sqlalchemy.sql.elements.UnaryExpression object at 0x000002A3F31EE060>, <sqlalchemy.sql.elements.UnaryExpression object at 0x000002A3F31AD010>).

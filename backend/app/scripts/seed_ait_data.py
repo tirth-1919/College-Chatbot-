@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from backend.app.models.user import User
+from backend.app.models.college import College
 from backend.app.models.knowledge import AitEntity, AitKnowledgeVersion, WebsiteSnapshot
 from backend.app.models.image import AitImage, ImageProvenance
 from backend.app.models.admin_system import (
@@ -26,7 +27,13 @@ _DEMO_USER_2_PASSWORD = os.getenv("DEMO_USER_2_PASSWORD", "2")
 _DEMO_USER_3_PASSWORD = os.getenv("DEMO_USER_3_PASSWORD", "3")
 
 def seed_initial_ait_knowledge(db: Session):
-    # 1. Seed Super Admin User if not exists — using ADMIN_BOOTSTRAP_PASSWORD env var.
+    # Resolve the AIT tenant from the tenant registry. Image ownership must
+    # never be inferred from a missing college_id or from row order.
+    ait_college = db.query(College).filter(College.code == "AIT").first()
+    if not ait_college:
+        raise RuntimeError("AIT tenant is not registered; refusing to seed tenant-owned data")
+
+    # 1. Super Admin User if not exists — using ADMIN_BOOTSTRAP_PASSWORD env var.
     # Credentials are NEVER hardcoded here. They come from the environment.
     super_admin = db.query(User).filter(User.email == "admin@aitindia.in").first()
     if not super_admin:
@@ -802,6 +809,8 @@ def seed_initial_ait_knowledge(db: Session):
         existing = db.query(AitImage).filter(AitImage.content_hash == img_item["content_hash"]).first()
         if not existing:
             img = AitImage(
+                college_id=ait_college.id,
+                source_type="OFFICIAL_WEBSITE",
                 title=img_item["title"],
                 category=img_item["category"],
                 image_url=img_item["image_url"],

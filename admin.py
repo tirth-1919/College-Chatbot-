@@ -28,19 +28,24 @@ from backend.app.api.v1.admin import admin_master_router
 from backend.app.api.v1.health import router as health_router
 from backend.app.api.v1.colleges import router as colleges_router
 
-# Initialize database schema and migrations
-run_migrations()
-Base.metadata.create_all(bind=engine)
+# Development/test SQLite compatibility only. Production schema ownership is
+# Alembic; release automation must run `alembic upgrade head` before startup.
+if settings.ENVIRONMENT.lower() not in ("production", "prod"):
+    run_migrations()
+    Base.metadata.create_all(bind=engine)
 
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    db = SessionLocal()
-    try:
-        seed_initial_ait_knowledge(db)
-    finally:
-        db.close()
+    # AIT seed data is development-only; production tenant data is provisioned
+    # explicitly and must not be created by application startup.
+    if settings.ENVIRONMENT.lower() not in ("production", "prod"):
+        db = SessionLocal()
+        try:
+            seed_initial_ait_knowledge(db)
+        finally:
+            db.close()
     yield
 
 # Create dedicated Admin App

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Test Chat Resolution Flow (STEP 4)
 =====================================
 Verifies that:
@@ -59,6 +59,7 @@ def colleges(db: Session):
         official_email="admin@mit.edu.in",
         official_website="https://mit.edu.in",
         status="ACTIVE",
+        registration_status="APPROVED",
         connection_status="CONNECTED_VERIFIED"
     )
     # Active pending setup college
@@ -70,6 +71,7 @@ def colleges(db: Session):
         official_email="admin@pit.edu.in",
         official_website="https://pit.edu.in",
         status="ACTIVE",
+        registration_status="APPROVED",
         connection_status="REGISTERED_PENDING_SETUP"
     )
     # Suspended college
@@ -81,6 +83,7 @@ def colleges(db: Session):
         official_email="admin@sit.edu.in",
         official_website="https://sit.edu.in",
         status="SUSPENDED",
+        registration_status="APPROVED",
         connection_status="NOT_CONNECTED"
     )
     db.add_all([mit, pending_college, suspended])
@@ -95,52 +98,52 @@ def colleges(db: Session):
     db.commit()
 
 
-def test_new_conversation_has_no_college(db: Session, test_user: User):
-    """
-    REQUIREMENT §5/§12/§67: Every NEW conversation starts WITHOUT a college (NULL).
-    No legacy tenant linkage, default preference or frontend value seeds the college.
-    """
+def test_onboarding_conversation_has_no_college(db: Session, test_user: User):
+    # Only an explicitly marked ONBOARDING conversation may be tenantless.
     conv = Conversation(
         id="test-conv-new",
         user_id=test_user.id,
-        college_id=None,  # Must be None
+        college_id=None,
+        conversation_type="ONBOARDING",
         title="New Chat"
     )
     db.add(conv)
     db.commit()
-    
-    # Verify college_id is None
+
+    # Tenantlessness is valid only for the onboarding type.
     db.refresh(conv)
-    assert conv.college_id is None, "New conversation must have college_id=None"
+    assert conv.conversation_type == "ONBOARDING"
+    assert conv.college_id is None
 
 
 def test_college_onboarding_question(db: Session, test_user: User, colleges: dict):
     """
-    REQUIREMENT §4/§5: When conversation has no college, assistant asks the
+    REQUIREMENT Â§4/Â§5: When conversation has no college, assistant asks the
     onboarding question. This is the FIRST interaction, not a separate page.
     """
     conv = Conversation(
         id="test-conv-onboard",
         user_id=test_user.id,
         college_id=None,
+        conversation_type="ONBOARDING",
         title="New Chat"
     )
     db.add(conv)
     db.commit()
-    
+
     # User sends first message (not a college name)
     user_message = "Hello"
-    
+
     # Resolution should detect no college and return status based on message
     result = college_context_manager.resolve_and_persist(
         db, test_user, conv, user_message, set_default=False
     )
-    
+
     # Should return NOT_FOUND or PENDING status (needs college)
     # NOT_FOUND is acceptable because "Hello" doesn't match any college
     assert result["status"] in ["PENDING", "NOT_FOUND"], "First non-college message should indicate need for college"
     assert result["college"] is None
-    
+
     # Verify conversation still has no college
     db.refresh(conv)
     assert conv.college_id is None
@@ -148,13 +151,14 @@ def test_college_onboarding_question(db: Session, test_user: User, colleges: dic
 
 def test_college_resolution_database_only(db: Session, test_user: User, colleges: dict):
     """
-    REQUIREMENT §4/§38: Resolver is DATABASE-ONLY.
+    REQUIREMENT Â§4/Â§38: Resolver is DATABASE-ONLY.
     Gemini cannot determine tenant. Never guess.
     """
     conv = Conversation(
         id="test-conv-resolve",
         user_id=test_user.id,
         college_id=None,
+        conversation_type="ONBOARDING",
         title="New Chat"
     )
     db.add(conv)
@@ -197,7 +201,7 @@ def test_resolver_exact_match(db: Session, test_user: User, colleges: dict):
 
 def test_resolver_not_found(db: Session):
     """
-    REQUIREMENT §38: When college not found, return NOT_FOUND status.
+    REQUIREMENT Â§38: When college not found, return NOT_FOUND status.
     Never guess or use AI to pick a college.
     """
     result = college_context_manager.resolve(db, "Nonexistent College XYZ 12345")
@@ -250,7 +254,7 @@ def test_resolver_ambiguous(db: Session):
 
 def test_follow_up_messages_retain_college(db: Session, test_user: User, colleges: dict):
     """
-    REQUIREMENT §5: Follow-up messages in the same conversation retain
+    REQUIREMENT Â§5: Follow-up messages in the same conversation retain
     the resolved college_id without re-asking.
     """
     conv = Conversation(
@@ -321,7 +325,7 @@ def test_conversation_college_persistence(db: Session, test_user: User, colleges
 
 def test_college_switching_explicit_only(db: Session, test_user: User, colleges: dict):
     """
-    REQUIREMENT §22/§23: College switching is NEVER silent.
+    REQUIREMENT Â§22/Â§23: College switching is NEVER silent.
     Detecting another college mention prompts user confirmation.
     """
     conv = Conversation(
@@ -376,7 +380,7 @@ def test_orchestrator_receives_college_id(db: Session, test_user: User, colleges
 
 def test_connection_health_prevents_unverified_queries(db: Session, colleges: dict):
     """
-    REQUIREMENT §5/§6: College exists ≠ college connected.
+    REQUIREMENT Â§5/Â§6: College exists â‰  college connected.
     Connection health must verify actual knowledge infrastructure.
     """
     # MIT is CONNECTED_VERIFIED - should allow queries
@@ -412,7 +416,7 @@ def test_no_hard_coded_colleges(db: Session):
 
 def test_platform_branding_not_college_specific(db: Session):
     """
-    REQUIREMENT §14/§15: Platform name is always "AI FAQ College Chat Bot",
+    REQUIREMENT Â§14/Â§15: Platform name is always "AI FAQ College Chat Bot",
     never college-specific branding.
     """
     from backend.app.ai.prompts import build_system_prompt
@@ -427,3 +431,4 @@ def test_platform_branding_not_college_specific(db: Session):
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+

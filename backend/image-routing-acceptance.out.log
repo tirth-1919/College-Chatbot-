@@ -1,0 +1,55 @@
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+SQLite migration check and table creation completed successfully.
+========================================================================
+[*] AHMEDABAD INSTITUTE OF TECHNOLOGY (AIT) - USER AI ASSISTANT
+========================================================================
+[*] User API Backend:  http://localhost:8000/api/v1
+[*] User Health Check: http://localhost:8000/health
+[*] User Web App:      http://localhost:8000 (Self-Hosted)
+========================================================================
+INFO:     127.0.0.1:58696 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58696 - "POST /api/v1/conversations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58696 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58623 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58623 - "POST /api/v1/conversations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58623 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54601 - "POST /api/v1/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63021 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49769 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53257 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53257 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54658 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54149 - "GET /api/v1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60254 - "GET /assets/index-D8SBy4Eu.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54149 - "GET /assets/index-B5vUPYIJ.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51745 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54149 - "GET /ai-faq-college-chat-bot-icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55850 - "GET /icon-192.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54149 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60254 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54149 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54149 - "POST /api/v1/auth/refresh HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56492 - "POST /api/v1/colleges/register HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:53693 - "POST /api/v1/colleges/register HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:65531 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50119 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60475 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53693 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62659 - "POST /api/v1/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60176 - "GET /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59956 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58147 - "POST /api/v1/college-context/resolve HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55897 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50427 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61277 - "GET /api/v1/conversations HTTP/1.1" 200 OK

@@ -6,31 +6,59 @@ export default function GapsView() {
   const [gaps, setGaps] = useState([]);
   const [feedback, setFeedback] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [resolvingAll, setResolvingAll] = useState(false);
+  const [notice, setNotice] = useState(null);
   const [tab, setTab] = useState('gaps');
 
   useEffect(() => {
     setLoading(true);
+    setGaps([]);
+    setFeedback([]);
     Promise.all([adminApi.getKnowledgeGaps(), adminApi.getFeedback()])
-      .then(([g, f]) => { setGaps(g); setFeedback(f); })
+      .then(([g, f]) => {
+        setGaps(Array.isArray(g) ? g : (g?.items || []));
+        setFeedback(Array.isArray(f) ? f : (f?.items || []));
+      })
+      .catch(() => { setGaps([]); setFeedback([]); })
       .finally(() => setLoading(false));
   }, []);
 
   const resolveGap = async (id) => {
     await adminApi.resolveGap(id);
-    setGaps(g => g.map(x => x.id === id ? { ...x, status:'RESOLVED' } : x));
+    setGaps(g => g.map(x => x.id === id ? { ...x, status:'RESOLVED', resolved: true } : x));
   };
 
-  const unresolvedGaps = gaps.filter(g => g.status !== 'RESOLVED');
+  const resolveAllGaps = async () => {
+    if (resolvingAll || unresolvedGaps.length === 0) return;
+    if (!window.confirm(`Resolve all ${unresolvedGaps.length} open knowledge gaps?`)) return;
+    setResolvingAll(true);
+    setNotice(null);
+    try {
+      await adminApi.resolveAllKnowledgeGaps();
+      setGaps(g => g.map(x => x.status === 'OPEN' ? { ...x, status:'RESOLVED', resolved: true } : x));
+      setNotice({ type: 'success', text: 'All open knowledge gaps resolved successfully.' });
+    } catch (error) {
+      setNotice({ type: 'error', text: error.message || 'Unable to resolve open knowledge gaps.' });
+    } finally {
+      setResolvingAll(false);
+    }
+  };
+
+  const unresolvedGaps = gaps.filter(g => g.status === 'OPEN');
   const ratingCounts = feedback.reduce((acc, f) => { acc[f.rating] = (acc[f.rating]||0)+1; return acc; }, {});
 
   return (
     <div>
-      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:22 }}>
+      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:22,gap:16 }}>
         <div>
           <h1 style={{ fontSize:'1.4rem',fontWeight:800,marginBottom:4 }}>Gaps & User Feedback</h1>
           <p style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>{unresolvedGaps.length} unresolved gaps · {feedback.length} feedback items</p>
         </div>
+        <button className="btn-secondary" onClick={resolveAllGaps} disabled={resolvingAll || unresolvedGaps.length === 0}>
+          <CheckCircle size={15} /> {resolvingAll ? 'Resolving...' : 'Resolve All Open Gaps'}
+        </button>
       </div>
+      {notice && <div role="alert" style={{ marginBottom:16, color: notice.type === 'success' ? '#34d399' : '#f87171' }}>{notice.text}</div>}
 
       {/* Summary stats */}
       <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:14,marginBottom:22 }}>

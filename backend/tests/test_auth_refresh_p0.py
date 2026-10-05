@@ -46,6 +46,7 @@ from backend.app.core.security import (
     create_refresh_token,
     decode_token,
 )
+from backend.app.models.college import College
 from backend.app.models.user import User, UserSession
 
 
@@ -95,11 +96,13 @@ def auth_env():
     db = factory()
     user = User(id=str(uuid.uuid4()), email="student@example.test",
                 full_name="Student", role="STUDENT")
+    college = College(id=str(uuid.uuid4()), name="Auth College", code="AUTH",
+                      slug="auth-college", status="ACTIVE", registration_status="APPROVED")
     admin = User(id=str(uuid.uuid4()), email="admin@example.test",
-                 full_name="Admin", role="ADMIN")
+                 full_name="Admin", role="COLLEGE_ADMIN", college_id=college.id)
     super_admin = User(id=str(uuid.uuid4()), email="root@example.test",
                        full_name="Root", role="SUPER_ADMIN")
-    db.add_all([user, admin, super_admin])
+    db.add_all([user, college, admin, super_admin])
     db.commit()
 
     app = _make_app(user_auth_router)
@@ -119,7 +122,7 @@ def auth_env():
 
     yield {
         "client": client, "db": db, "user": user, "admin": admin,
-        "super_admin": super_admin, "make_session": make_session,
+        "college": college, "super_admin": super_admin, "make_session": make_session,
         "engine": engine,
     }
     db.close()
@@ -354,7 +357,8 @@ def test_student_user_authentication_flow(auth_env):
     conv_app = _make_app(conversations_router)
     _install_db_override(conv_app, sessionmaker(bind=env["engine"], autoflush=False))
     conv_client = TestClient(conv_app)
-    create = conv_client.post("/conversations", headers=headers, json={"title": "t"})
+    create = conv_client.post("/conversations", headers=headers,
+                              json={"title": "t", "college_id": env["college"].id})
     assert create.status_code == 201
 
     # STUDENT cannot access admin APIs
@@ -374,7 +378,7 @@ def test_admin_authentication_flow(auth_env):
 
     me = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
-    assert me.json()["role"] == "ADMIN"
+    assert me.json()["role"] == "COLLEGE_ADMIN"
 
 
 def test_super_admin_authentication_flow(auth_env):

@@ -1,0 +1,10 @@
+INFO:     Started server process [12376]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 1597.29it/s]
+SMART_UPLOAD_DEBUG filename=AIT_Smart_Upload_Test_Data_2026.pdf endpoint=/api/v1/admin/smart-upload/upload tenant_id=a607d280-e365-4fc3-b964-d6260983be89 extraction_method=PyPDF2 text_length=1992 classification_path=_classify_sections->_classify_content->intent_classifier classification_result=admission_entrance_exam confidence=0.98 confidence_normalized=0.98 staged_record_id=pending
+SMART_UPLOAD_DEBUG filename=AIT_Smart_Upload_Test_Data_2026.pdf endpoint=/api/v1/admin/smart-upload/upload tenant_id=a607d280-e365-4fc3-b964-d6260983be89 extraction_method=PyPDF2 text_length=1992 classification_path=_classify_sections->_classify_content->intent_classifier classification_result=admission_entrance_exam confidence=0.98 confidence_normalized=0.98 staged_record_id=9cf74e40-573a-4383-8c10-3c5227d842c6
+SMART_UPLOAD_DEBUG filename=AIT_Smart_Upload_Test_Data_2026.pdf endpoint=/api/v1/admin/smart-upload/upload tenant_id=a607d280-e365-4fc3-b964-d6260983be89 extraction_method=PyPDF2 text_length=1992 classification_path=_classify_sections->_classify_content->intent_classifier classification_result=admission_fees confidence=0.9 confidence_normalized=0.9 staged_record_id=pending
+SMART_UPLOAD_DEBUG filename=AIT_Smart_Upload_Test_Data_2026.pdf endpoint=/api/v1/admin/smart-upload/upload tenant_id=a607d280-e365-4fc3-b964-d6260983be89 extraction_method=PyPDF2 text_length=1992 classification_path=_classify_sections->_classify_content->intent_classifier classification_result=admission_fees confidence=0.9 confidence_normalized=0.9 staged_record_id=b4bc5204-e16c-444c-87c7-4a646354829f

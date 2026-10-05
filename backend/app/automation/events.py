@@ -3,6 +3,7 @@ from typing import Dict, List, Callable, Any
 from datetime import datetime, timezone
 from backend.app.core.database import SessionLocal
 from backend.app.models.automation import SystemEvent
+from backend.app.knowledge.semantic_cache import semantic_cache
 
 class EventBus:
     def __init__(self):
@@ -48,8 +49,10 @@ event_bus = EventBus()
 
 # Default Event Handlers
 def on_knowledge_updated(evt, source, entity_id, payload):
-    # Triggers cache invalidation & evaluation check
-    pass
+    # Invalidate only the affected tenant when possible; avoid cross-tenant cache
+    # churn while preserving safety for legacy events without tenant metadata.
+    college_id = (payload or {}).get("college_id")
+    semantic_cache.invalidate_college(college_id) if college_id else semantic_cache.invalidate_all()
 
 def on_image_updated(evt, source, entity_id, payload):
     # Invalidate image cache

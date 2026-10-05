@@ -1,0 +1,13 @@
+C:\Users\HP\OneDrive\Desktop\college chatbot\user.py:81: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @user_app.on_event("startup")
+INFO:     Started server process [20584]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+GEMINI_RAW_RESPONSE='The general-AI provider is currently unavailable. Please try again later.' ROUTE=general_educational GROUNDING_BEFORE=verified source_file=C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\chat\orchestrator.py
+GROUNDING_AFTER=unverified FINAL_RESPONSE='The general-AI provider is currently unavailable. Please try again later.' ROUTE=general_educational source_status=PROVIDER_ERROR grounding_called=False

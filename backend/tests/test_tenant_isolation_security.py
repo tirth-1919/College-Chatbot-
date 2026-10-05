@@ -121,25 +121,28 @@ def setup_module():
     db.add(record_b)
     db.commit()
     
-    # Create admins
+    # Create admins with the permissions needed to exercise the secured endpoints.
+    admin_permissions = ["knowledge.read", "knowledge.create", "knowledge.update", "knowledge.delete"]
     admin_a = User(
         id="sec-admin-a",
         email="security_test_admin_a@test.local",
         full_name="Security Test Admin A",
         role="COLLEGE_ADMIN",
         college_id=college_a.id,
+        permissions=admin_permissions,
         is_active=True
     )
-    
+
     admin_b = User(
         id="sec-admin-b",
         email="security_test_admin_b@test.local",
         full_name="Security Test Admin B",
         role="COLLEGE_ADMIN",
         college_id=college_b.id,
+        permissions=admin_permissions,
         is_active=True
     )
-    
+
     super_admin = User(
         id="sec-super-admin",
         email="security_test_super@test.local",
@@ -147,7 +150,7 @@ def setup_module():
         role="SUPER_ADMIN",
         is_active=True
     )
-    
+
     print(f"[SECURITY TEST] Setup complete:")
     print(f"  College A: {college_a.id}, Admin: {admin_a.id}")
     print(f"  College B: {college_b.id}, Admin: {admin_b.id}")
@@ -173,15 +176,15 @@ def test_cross_tenant_category_read():
     """College A Admin cannot read College B category"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
+
     # Admin A tries to read College B category
     r = client.get(f"/api/v1/admin/knowledge-db/categories/{category_b.id}")
     assert r.status_code == 404, f"Expected 404, got {r.status_code}: College A admin should not see College B category"
-    
+
     # Admin A CAN read their own category
     r = client.get(f"/api/v1/admin/knowledge-db/categories/{category_a.id}")
     assert r.status_code == 200, "Admin A should be able to read their own category"
-    
+
     app.dependency_overrides.clear()
 
 
@@ -189,49 +192,58 @@ def test_cross_tenant_category_update():
     """College A Admin cannot update College B category"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
+
     # Admin A tries to update College B category
-    r = client.patch(f"/api/v1/admin/knowledge-db/categories/{category_b.id}", 
+    r = client.patch(f"/api/v1/admin/knowledge-db/categories/{category_b.id}",
                      json={"description": "HACKED BY COLLEGE A"})
     assert r.status_code == 404, f"Expected 404, got {r.status_code}: Cross-tenant category update should fail"
-    
+
+    # A same-tenant update is an approval proposal, not an immediate mutation.
+    r = client.patch(f"/api/v1/admin/knowledge-db/categories/{category_a.id}",
+                     json={"description": "Pending description"})
+    assert r.status_code == 200
+    assert r.json()["status"] == "PENDING"
+    db.refresh(category_a)
+    assert category_a.description != "Pending description"
+
     # Verify College B category was NOT modified
     app.dependency_overrides[get_current_admin_user] = lambda: admin_b
     r = client.get(f"/api/v1/admin/knowledge-db/categories/{category_b.id}")
     assert r.status_code == 200
     desc = r.json().get("description") or ""
     assert "HACKED" not in desc, "College B category should not be modified"
-    
+
     app.dependency_overrides.clear()
 
 
 def test_cross_tenant_category_delete():
     """College A Admin cannot delete College B category"""
     from backend.app.core.permissions import get_current_admin_user
-    
+
     # Create a temporary category in College B
     app.dependency_overrides[get_current_admin_user] = lambda: admin_b
-    r = client.post("/api/v1/admin/knowledge-db/categories", 
+    r = client.post("/api/v1/admin/knowledge-db/categories",
                     json={
                         "name": "SECURITY_TEST Temp B",
                         "key": "security-test-temp-b",
                         "description": "Temp category"
                     })
-    assert r.status_code == 200, f"Failed to create temp category: {r.status_code} {r.text}"
-    temp_cat_b_id = r.json()["id"]
-    
+    assert r.status_code == 200, f"Failed to submit temp category: {r.status_code} {r.text}"
+    body = r.json()
+    assert body["status"] == "PENDING"
+    temp_request_id = body["request_id"]
+    assert db.query(KnowledgeCategory).filter(KnowledgeCategory.name == "SECURITY_TEST Temp B").first() is None
+    # A cannot delete B's category, and the pending create remains isolated.
+    temp_cat_b_id = "not-a-production-category"
+
     # Admin A tries to delete College B's temporary category
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
     r = client.delete(f"/api/v1/admin/knowledge-db/categories/{temp_cat_b_id}")
     assert r.status_code == 404, f"Expected 404, got {r.status_code}: Cross-tenant category delete should fail"
-    
-    # Verify category still exists
-    app.dependency_overrides[get_current_admin_user] = lambda: admin_b
-    r = client.get(f"/api/v1/admin/knowledge-db/categories/{temp_cat_b_id}")
-    assert r.status_code == 200, "College B category should still exist"
-    
-    # Cleanup
-    client.delete(f"/api/v1/admin/knowledge-db/categories/{temp_cat_b_id}")
+
+    # No production category was created by the College B proposal.
+    assert db.query(KnowledgeCategory).filter(KnowledgeCategory.name == "SECURITY_TEST Temp B").first() is None
+    assert db.query(__import__("backend.app.models.college", fromlist=["ChangeRequest"]).ChangeRequest).filter_by(id=temp_request_id).one().status == "PENDING"
     app.dependency_overrides.clear()
 
 
@@ -243,17 +255,17 @@ def test_cross_tenant_record_read():
     """College A Admin cannot read College B record"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
+
     # Admin A tries to read College B record
     r = client.get(f"/api/v1/admin/knowledge-db/records/{record_b.id}")
     assert r.status_code == 404, f"Expected 404, got {r.status_code}: College A admin should not see College B record"
-    
+
     # Admin A CAN read their own record
     r = client.get(f"/api/v1/admin/knowledge-db/records/{record_a.id}")
     assert r.status_code == 200, "Admin A should be able to read their own record"
     data = r.json()
     assert data["value"] == "Secret Data for College A"
-    
+
     app.dependency_overrides.clear()
 
 
@@ -261,48 +273,45 @@ def test_cross_tenant_record_update():
     """College A Admin cannot update College B record"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
+
     # Admin A tries to update College B record
-    r = client.patch(f"/api/v1/admin/knowledge-db/records/{record_b.id}", 
+    r = client.patch(f"/api/v1/admin/knowledge-db/records/{record_b.id}",
                      json={"value": "HACKED BY COLLEGE A"})
     assert r.status_code == 404, f"Expected 404, got {r.status_code}: Cross-tenant record update should fail"
-    
+
     # Verify College B record was NOT modified
     app.dependency_overrides[get_current_admin_user] = lambda: admin_b
     r = client.get(f"/api/v1/admin/knowledge-db/records/{record_b.id}")
     assert r.status_code == 200
     assert r.json()["value"] == "Secret Data for College B", "College B record should not be modified"
-    
+
     app.dependency_overrides.clear()
 
 
 def test_cross_tenant_record_delete():
     """College A Admin cannot delete College B record"""
     from backend.app.core.permissions import get_current_admin_user
-    
+
     # Create a temporary record in College B
     app.dependency_overrides[get_current_admin_user] = lambda: admin_b
-    r = client.post(f"/api/v1/admin/knowledge-db/categories/{category_b.id}/records", 
+    r = client.post(f"/api/v1/admin/knowledge-db/categories/{category_b.id}/records",
                     json={
                         "title": "SECURITY_TEST Temp Record B",
                         "value": "temp",
                         "status": "DRAFT"
                     })
     assert r.status_code == 200
-    temp_rec_b_id = r.json()["id"]
-    
+    temp_body = r.json()
+    assert temp_body["status"] == "PENDING"
+    temp_rec_b_id = "not-a-production-record"
+
     # Admin A tries to delete College B's temporary record
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
     r = client.delete(f"/api/v1/admin/knowledge-db/records/{temp_rec_b_id}")
     assert r.status_code == 404, f"Expected 404, got {r.status_code}: Cross-tenant record delete should fail"
-    
-    # Verify record still exists
-    app.dependency_overrides[get_current_admin_user] = lambda: admin_b
-    r = client.get(f"/api/v1/admin/knowledge-db/records/{temp_rec_b_id}")
-    assert r.status_code == 200, "College B record should still exist"
-    
-    # Cleanup
-    client.delete(f"/api/v1/admin/knowledge-db/records/{temp_rec_b_id}")
+
+    # The College B proposal did not create a production record.
+    assert db.query(KnowledgeRecord).filter(KnowledgeRecord.title == "SECURITY_TEST Temp Record B").first() is None
     app.dependency_overrides.clear()
 
 
@@ -310,11 +319,11 @@ def test_cross_tenant_record_duplicate():
     """College A Admin cannot duplicate College B record"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
+
     # Admin A tries to duplicate College B record
     r = client.post(f"/api/v1/admin/knowledge-db/records/{record_b.id}/duplicate")
     assert r.status_code == 404, f"Expected 404, got {r.status_code}: Cross-tenant record duplicate should fail"
-    
+
     app.dependency_overrides.clear()
 
 
@@ -322,11 +331,12 @@ def test_cross_tenant_record_verify():
     """College A Admin cannot verify College B record"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
+
     # Admin A tries to verify College B record
     r = client.post(f"/api/v1/admin/knowledge-db/records/{record_b.id}/verify")
-    assert r.status_code == 404, f"Expected 404, got {r.status_code}: Cross-tenant record verify should fail"
-    
+    # Permission evaluation happens before tenant lookup for this Super-Admin-only endpoint.
+    assert r.status_code == 403, f"Expected 403, got {r.status_code}: College Admin cannot verify records"
+
     app.dependency_overrides.clear()
 
 
@@ -334,15 +344,14 @@ def test_cross_tenant_record_enable_disable():
     """College A Admin cannot enable/disable College B record"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
-    # Admin A tries to disable College B record
+
+    # Permission evaluation happens before tenant lookup for these Super-Admin-only endpoints.
     r = client.post(f"/api/v1/admin/knowledge-db/records/{record_b.id}/disable")
-    assert r.status_code == 404, f"Expected 404, got {r.status_code}: Cross-tenant record disable should fail"
-    
-    # Admin A tries to enable College B record
+    assert r.status_code == 403, f"Expected 403, got {r.status_code}: College Admin cannot disable records"
+
     r = client.post(f"/api/v1/admin/knowledge-db/records/{record_b.id}/enable")
-    assert r.status_code == 404, f"Expected 404, got {r.status_code}: Cross-tenant record enable should fail"
-    
+    assert r.status_code == 403, f"Expected 403, got {r.status_code}: College Admin cannot enable records"
+
     app.dependency_overrides.clear()
 
 
@@ -350,16 +359,16 @@ def test_cross_tenant_record_creation_in_wrong_category():
     """College A Admin cannot create records in College B category"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
+
     # Admin A tries to create record in College B category
-    r = client.post(f"/api/v1/admin/knowledge-db/categories/{category_b.id}/records", 
+    r = client.post(f"/api/v1/admin/knowledge-db/categories/{category_b.id}/records",
                     json={
                         "title": "MALICIOUS Record",
                         "value": "Should not be created",
                         "status": "ACTIVE"
                     })
     assert r.status_code in [403, 404], f"Expected 403 or 404, got {r.status_code}: Cross-tenant record creation should fail"
-    
+
     app.dependency_overrides.clear()
 
 
@@ -371,20 +380,20 @@ def test_super_admin_can_access_all_colleges():
     """Super Admin can access data from all colleges"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: super_admin
-    
+
     # Super Admin can read College A record
     r = client.get(f"/api/v1/admin/knowledge-db/records/{record_a.id}")
     assert r.status_code == 200, "Super Admin should access College A record"
-    
+
     # Super Admin can read College B record
     r = client.get(f"/api/v1/admin/knowledge-db/records/{record_b.id}")
     assert r.status_code == 200, "Super Admin should access College B record"
-    
+
     # Super Admin can update College A record
-    r = client.patch(f"/api/v1/admin/knowledge-db/records/{record_a.id}", 
+    r = client.patch(f"/api/v1/admin/knowledge-db/records/{record_a.id}",
                      json={"description": "Updated by Super Admin"})
     assert r.status_code == 200, "Super Admin should update any record"
-    
+
     app.dependency_overrides.clear()
 
 
@@ -396,24 +405,19 @@ def test_record_creation_assigns_college_id():
     """Verify new records receive correct college_id"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
-    # Create record in College A
-    r = client.post(f"/api/v1/admin/knowledge-db/categories/{category_a.id}/records", 
+
+    # Create record in College A: College Admin creates a pending request.
+    r = client.post(f"/api/v1/admin/knowledge-db/categories/{category_a.id}/records",
                     json={
                         "title": "SECURITY_TEST New Record A",
                         "value": "Test value",
                         "status": "DRAFT"
                     })
     assert r.status_code == 200
-    new_rec_id = r.json()["id"]
-    
-    # Verify record has correct college_id in database
-    rec = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == new_rec_id).first()
-    assert rec is not None, "Record should exist in database"
-    assert rec.college_id == college_a.id, f"Record college_id should be {college_a.id}, got {rec.college_id}"
-    
-    # Cleanup
-    client.delete(f"/api/v1/admin/knowledge-db/records/{new_rec_id}")
+    body = r.json()
+    assert body["status"] == "PENDING"
+    assert "request_id" in body
+    assert db.query(KnowledgeRecord).filter(KnowledgeRecord.title == "SECURITY_TEST New Record A").first() is None
     app.dependency_overrides.clear()
 
 
@@ -421,20 +425,15 @@ def test_record_duplication_preserves_college_id():
     """Verify duplicated records preserve college_id"""
     from backend.app.core.permissions import get_current_admin_user
     app.dependency_overrides[get_current_admin_user] = lambda: admin_a
-    
-    # Duplicate record in College A
+
+    # Duplicate record in College A creates a pending request; no production
+    # duplicate exists until Super Admin approval.
     r = client.post(f"/api/v1/admin/knowledge-db/records/{record_a.id}/duplicate")
     assert r.status_code == 200
-    dup_rec_id = r.json()["id"]
-    
-    # Verify duplicate has correct college_id in database
-    dup = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == dup_rec_id).first()
-    assert dup is not None, "Duplicate record should exist in database"
-    assert dup.college_id == college_a.id, f"Duplicate college_id should be {college_a.id}, got {dup.college_id}"
-    assert dup.college_id == record_a.college_id, "Duplicate should have same college_id as original"
-    
-    # Cleanup
-    client.delete(f"/api/v1/admin/knowledge-db/records/{dup_rec_id}")
+    body = r.json()
+    assert body["status"] == "PENDING"
+    assert "request_id" in body
+    assert db.query(KnowledgeRecord).filter(KnowledgeRecord.title == "SECURITY_TEST Record A (Copy)").first() is None
     app.dependency_overrides.clear()
 
 

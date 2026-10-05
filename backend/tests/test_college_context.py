@@ -380,9 +380,17 @@ def test_switch_refresh_persistence_and_no_default_change(client, env):
     assert env["user"].default_college_id is None
 
 
-def test_after_switch_next_question_uses_new_tenant(client, env):
+def test_after_switch_next_question_uses_new_tenant(client, env, monkeypatch):
     """§6/§7: after AIT -> RCTI switch, the next question must use the RCTI
     tenant (no AIT leakage) instead of asking which college again."""
+    from backend.app.knowledge.crawler import AitWebsiteCrawler
+    from backend.app.ai.router import ai_router
+    async def no_live_page(self, query):
+        return None
+    async def deterministic_provider(*args, **kwargs):
+        return "The college is in its active tenant context."
+    monkeypatch.setattr(AitWebsiteCrawler, "fetch_relevant_page", no_live_page)
+    monkeypatch.setattr(ai_router, "generate_response", deterministic_provider)
     db = env["db"]
     conv_id = f"conv-{uuid.uuid4().hex[:8]}"
     client.post("/api/v1/chat/stream", headers=_headers(env["user"]),

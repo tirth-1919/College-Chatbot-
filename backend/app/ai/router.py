@@ -121,12 +121,30 @@ class AIRouter:
         db: Optional[Session] = None,
         user_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
-        is_private_data: bool = False
+        is_private_data: bool = False,
+        college_name: Optional[str] = None,
+        general_educational: bool = False,
+        query_spec=None,
     ) -> str:
         """
         Multi-AI Provider Router with Capability Matrix, Circuit Breaker,
         Privacy Filtering, Automatic Failover, and Telemetry Logging.
+
+        P0.1 (TASK 9): the fallback receives the SAME QuerySpec context as
+        every other stage.  If the spec says college=AIT, program=BCA,
+        category=Fees, the fallback is pinned to exactly those values and must
+        not independently infer a different college / program / category.
+
+        Gemini (and every other AI fallback) REMAINS UNVERIFIED here: nothing
+        in this method promotes an AI answer to a verified source.
         """
+        # P0.1: pin the canonical identity onto the tenant name used by the
+        # provider and by the local refusal/self-intro templates below.
+        if query_spec is not None:
+            college_name = (
+                getattr(query_spec, "college_name", None) or college_name
+            )
+
         candidate_models = []
         if db:
             query = (
@@ -535,7 +553,8 @@ class AIRouter:
             if "chairman" in str(details).lower() and "members" in str(details).lower():
                 # This is committee data - format as direct answer
                 lines = []
-                lines.append(f"Based on verified institutional records from Ahmedabad Institute of Technology:")
+                institution_label = college_name or "the active college"
+                lines.append(f"Based on verified institutional records from {institution_label}:")
 
                 # Extract chairman
                 details_str = str(details)
@@ -565,12 +584,13 @@ class AIRouter:
 
                 # Add source reference
                 if section:
-                    lines.append(f"\n*Source: Official AIT Website — {section}*")
+                    lines.append(f"\n*Source: Official {institution_label} Website — {section}*")
 
                 return "\n".join(lines)
             else:
                 # Generic formatting for other content
-                lines = [f"Based on verified institutional records from Ahmedabad Institute of Technology:\n"]
+                institution_label = college_name or "the active college"
+                lines = [f"Based on verified institutional records from {institution_label}:\n"]
                 if isinstance(details, dict):
                     details_str = "\n".join([f"- **{k.replace('_', ' ').title()}**: {v}" for k, v in details.items()])
                 else:
@@ -579,11 +599,17 @@ class AIRouter:
                 return "\n".join(lines).strip()
 
         if any(w in prompt_lower for w in ["who are you", "what can you do", "help"]):
+            if college_name:
+                return (
+                    f"I am the AI Assistant for **{college_name}**. "
+                    "I can help you explore academic courses, check available fee and admission information, "
+                    "understand eligibility and processes, review placement information, and look up faculty or "
+                    "campus facilities. How can I help you today?"
+                )
             return (
-                "I am the official **Ahmedabad Institute of Technology (AIT) AI Assistant**. "
-                "I can help you explore academic courses (BCA, MCA, B.Tech CSE/IT, BBA, MBA), check official fee structures, "
-                "understand admission eligibility and ACPC processes, review placement statistics and top recruiters, "
-                "lookup faculty information, and view campus photos. How can I help you today?"
+                "I am the AI Assistant for the active college context. "
+                "I can help you explore academic courses, admissions, fees, placements, faculty, and campus facilities. "
+                "How can I help you today?"
             )
 
         # General questions must not be described as failed institutional retrieval.
@@ -599,9 +625,19 @@ class AIRouter:
                 f"({category}). Please try again later."
             )
 
+        if general_educational:
+            return (
+                "The general-AI provider is currently unavailable. "
+                "Please try again later."
+            )
+        if college_name:
+            return (
+                f"I couldn't verify that specific information from the available {college_name} sources. "
+                "Please check the active college's official channels for authoritative institutional information."
+            )
         return (
-            "I couldn't verify that specific information from the available official AIT sources. "
-            "Please visit https://www.aitindia.in for authoritative institutional information."
+            "I couldn't verify that specific information from the available college sources. "
+            "Please check the active college's official channels for authoritative institutional information."
         )
 
 

@@ -3,7 +3,7 @@ import hashlib
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
@@ -13,7 +13,8 @@ from backend.app.models.document import Document, DocumentChunk, VISIBILITY_ADMI
 from backend.app.models.user import User
 from backend.app.knowledge.rag import rag_engine
 from backend.app.security.file_validator import file_validator
-
+from backend.app.models.college import College
+from backend.app.utils.tenancy import resolve_target_college_id
 router = APIRouter(prefix="/documents", tags=["Admin Document Management"])
 
 @router.get("")
@@ -24,8 +25,11 @@ def list_authoritative_documents(
     q = (db.query(Document)
         .filter(Document.visibility.in_([VISIBILITY_ADMIN_VERIFIED, VISIBILITY_PUBLIC_INSTITUTIONAL]))
     )
-    # Phase 9 tenant isolation
-    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+    # Tenant-owned documents are never visible without an authenticated
+    # College Admin tenant. Super Admin may explicitly inspect all tenants.
+    if current_user.role != "SUPER_ADMIN":
+        if not current_user.college_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="A college context is required")
         q = q.filter(Document.college_id == current_user.college_id)
     docs = q.order_by(Document.created_at.desc()).all()
     return [
@@ -46,9 +50,22 @@ def list_authoritative_documents(
 @router.post("/upload")
 async def upload_authoritative_document(
     file: UploadFile = File(...),
+    college_id: Optional[str] = Form(None),
     current_user: User = Depends(require_permission(PERM_DOCUMENTS_MANAGE)),
     db: Session = Depends(get_db)
 ):
+    tenant_id = resolve_target_college_id(
+        current_user, college_id,
+        required=(current_user.role or "").upper() == "SUPER_ADMIN",
+    )
+    tenant = db.query(College).filter(
+        College.id == tenant_id,
+        College.status == "ACTIVE",
+        College.registration_status == "APPROVED",
+    ).first()
+    if not tenant:
+        raise HTTPException(status_code=400, detail="Target college is not active and approved.")
+
     content = await file.read()
     filename = file.filename or "uploaded_file"
     is_valid, reason, meta = file_validator.validate_file(filename, content)
@@ -75,14 +92,15 @@ async def upload_authoritative_document(
         user_id=current_user.id,  # admin accountability
         source_url=f"internal://storage/{file.filename}",
         visibility=VISIBILITY_ADMIN_VERIFIED,
-        college_id=current_user.college_id  # Phase 9: tenant stamp
+        college_id=tenant_id  # authoritative tenant stamp
     )
 
     log_admin_audit(db, current_user, "UPLOAD_OFFICIAL_DOCUMENT", "DOCUMENT", {
         "id": doc.id,
+        "college_id": tenant_id,
         "filename": clean_filename,
         "chunks": len(doc.chunks)
-    })
+    }, college_id=tenant_id)
 
     return {
         "message": "Institutional document ingested and verified successfully",
@@ -102,7 +120,9 @@ def get_document_chunks(
         Document.id == document_id,
         Document.visibility.in_([VISIBILITY_ADMIN_VERIFIED, VISIBILITY_PUBLIC_INSTITUTIONAL])
     )
-    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+    if current_user.role != "SUPER_ADMIN":
+        if not current_user.college_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="A college context is required")
         q = q.filter(Document.college_id == current_user.college_id)
     doc = q.first()
     if not doc:
@@ -110,7 +130,10 @@ def get_document_chunks(
 
     chunks = (
         db.query(DocumentChunk)
-        .filter(DocumentChunk.document_id == document_id)
+        .filter(
+            DocumentChunk.document_id == document_id,
+            DocumentChunk.college_id == doc.college_id,
+        )
         .order_by(DocumentChunk.chunk_index.asc())
         .all()
     )
@@ -142,7 +165,9 @@ def delete_document(
         Document.id == document_id,
         Document.visibility.in_([VISIBILITY_ADMIN_VERIFIED, VISIBILITY_PUBLIC_INSTITUTIONAL])
     )
-    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+    if current_user.role != "SUPER_ADMIN":
+        if not current_user.college_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="A college context is required")
         q = q.filter(Document.college_id == current_user.college_id)
     doc = q.first()
     if not doc:

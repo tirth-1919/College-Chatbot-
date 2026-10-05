@@ -1,0 +1,6 @@
+export default async function run(page, ui) {
+  const requests = [], responses = []; page.on('request', r => { if (r.url().includes('/api/')) requests.push({ method: r.method(), url: r.url() }) }); page.on('response', async r => { if (r.url().includes('/api/')) { let body = ''; try { body = await r.text() } catch { } responses.push({ url: r.url(), status: r.status(), body: body.slice(0, 600) }) } });
+  await page.getByPlaceholder('admin@yourcollege.edu').fill('admin@aitindia.in'); await page.locator('input[type="password"]').fill('1'); await page.getByRole('button', { name: 'Sign In to Admin Panel' }).click(); await page.waitForTimeout(300);
+  const code = await page.evaluate(async () => { const r = await fetch('/api/v1/admin/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@aitindia.in', password: '1' }) }); return (await r.json()).temp_token });
+  return { mfa: true, code, page: await ui.snapshot({ full: true }), requests, responses };
+}

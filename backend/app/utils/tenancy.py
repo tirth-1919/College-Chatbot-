@@ -120,13 +120,13 @@ def get_tenant_category(db: Session, user, key: str,
     cid = user.college_id
     if role == "SUPER_ADMIN":
         cid = college_id  # Super Admin must pass the tenant explicitly
-    if cid is not None:
-        return (db.query(KnowledgeCategory)
-                .filter(KnowledgeCategory.college_id == cid,
-                        KnowledgeCategory.key == key)
-                .first())
+    # Categories are tenant-owned.  A missing tenant is an unresolved context,
+    # not a request for legacy/global rows; fail closed and never expose NULL-
+    # tenant data to an authenticated request.
+    if cid is None:
+        return None
     return (db.query(KnowledgeCategory)
-            .filter(KnowledgeCategory.college_id.is_(None),
+            .filter(KnowledgeCategory.college_id == cid,
                     KnowledgeCategory.key == key)
             .first())
 

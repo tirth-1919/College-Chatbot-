@@ -563,6 +563,14 @@ def approve_college(
     db.refresh(college)
     db.refresh(admin_user)
 
+    # Start tenant-scoped ingestion automatically after approval. The job is
+    # idempotent and performs validation/crawl/change detection/indexing.
+    from backend.app.automation.engine import automation_engine
+    automation_engine.enqueue_job(
+        "ait_website_sync", payload={"college_id": college.id},
+        priority=2, idempotency_key=f"initial-website-sync:{college.id}",
+    )
+
     # Seed knowledge categories for this college
     categories_created = seed_knowledge_categories(db, college_id=college.id)
     

@@ -26,6 +26,12 @@ import CollegesView from './views/CollegesView';
 import CollegeDetailsView from './views/CollegeDetailsView';
 import SmartUploadView from './views/SmartUploadView';
 import ChangeRequestsView from './views/ChangeRequestsView';
+import LearningView from './views/LearningView';
+
+const VIEW_PATHS = {
+  colleges: '/super-admin/colleges',
+  approval_center: '/super-admin/approval-center',
+};
 
 const VIEW_MAP = {
   dashboard: DashboardView,
@@ -47,6 +53,7 @@ const VIEW_MAP = {
   colleges: CollegesView,
   smart_upload: SmartUploadView,
   change_requests: ChangeRequestsView,
+  learning: LearningView,
 };
 
 function AdminApp() {
@@ -67,6 +74,13 @@ function AdminApp() {
       adminApi.getMetrics().then(setMetrics).catch(() => {});
     }
   }, [user]);
+
+  // Keep this hook before any conditional return so login/logout transitions do
+  // not change the hook order and blank the application.
+  useEffect(() => {
+    if (currentPath === '/super-admin/colleges') setActiveView('colleges');
+    if (currentPath === '/super-admin/approval-center') setActiveView('approval_center');
+  }, [currentPath]);
 
   // Public College Registration route - accessible without admin session and
   // never redirects to dashboard even if a token exists in local storage.
@@ -106,7 +120,7 @@ function AdminApp() {
 
   // Colleges list route (§2): /super-admin/colleges — also handled when the
   // sidebar's `colleges` view is activated so the URL matches the navigation.
-  const collegesListActive = currentPath === '/super-admin/colleges' || activeView === 'colleges';
+  const collegesListActive = currentPath === '/super-admin/colleges';
 
   if (loading) {
     return (
@@ -133,17 +147,21 @@ function AdminApp() {
 
   if (!user) return <LoginPage />;
 
-  // Enforce first-time password change for provisioned college admins
-  if (user.must_change_password) {
+  // Enforce first-time password change only when the authenticated backend
+  // explicitly requires it. Missing legacy fields must not become a redirect.
+  if (user.must_change_password === true) {
     return <FirstPasswordChangePage />;
   }
 
-  // When a token exists but we are on a colleges route, show the right page.
-  useEffect(() => {
-    if (currentPath === '/super-admin/colleges') setActiveView('colleges');
-  }, [currentPath]);
-
   const ActiveView = VIEW_MAP[activeView] || DashboardView;
+  const navigateToView = (key) => {
+    const target = VIEW_PATHS[key] || '/';
+    if (target !== window.location.pathname) {
+      window.history.pushState({}, '', target);
+      setCurrentPath(target);
+    }
+    setActiveView(key);
+  };
 
   const layoutChildren = collegesListActive
     ? <CollegesView />
@@ -151,14 +169,10 @@ function AdminApp() {
     ? (selectedCategory
       ? <CategoryDetailView category={selectedCategory} onBack={() => setSelectedCategory(null)} />
       : <CategoriesView onOpenCategory={setSelectedCategory} />)
-    : <ActiveView onNavChange={(key) => {
-        window.history.pushState({}, '', '/');
-        setCurrentPath('/');
-        setActiveView(key);
-      }} />;
+    : <ActiveView onNavChange={navigateToView} />;
 
   return (
-    <AdminLayout activeView={activeView} onNavChange={setActiveView} metrics={metrics}>
+    <AdminLayout activeView={activeView} onNavChange={navigateToView} metrics={metrics}>
       {layoutChildren}
     </AdminLayout>
   );

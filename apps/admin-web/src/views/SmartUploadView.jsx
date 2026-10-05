@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../services/adminApi';
+import { useAdminAuth } from '../context/AdminAuthContext';
 import {
   UploadCloud, FileText, CheckCircle, XCircle, Clock, AlertTriangle,
   FolderArchive, Sparkles, RefreshCw, Check, X, ArrowRight, Database,
   FileSpreadsheet, FileCode, Image as ImageIcon, Filter, Tag
 } from 'lucide-react';
 
+const normalizeRole = (role) => String(role || '').trim().toUpperCase().replace(/-/g, '_');
+
 export default function SmartUploadView() {
+  const { user } = useAdminAuth();
+  const isSuperAdmin = normalizeRole(user?.role) === 'SUPER_ADMIN';
   const [stagedRecords, setStagedRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -276,6 +281,7 @@ export default function SmartUploadView() {
             <tbody>
               {filteredRecords.map(rec => {
                 const catStyle = getCategoryColor(rec.detected_category);
+                const confidence = Math.max(0, Math.min(1, Number(rec.confidence_score ?? 0.85)));
                 const isPending = rec.status === 'PENDING_REVIEW';
                 const isActionLoading = actionLoadingId === rec.id;
 
@@ -284,10 +290,10 @@ export default function SmartUploadView() {
                     {/* Document */}
                     <td style={{ padding: '14px 18px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {getFileIcon(rec.original_filename)}
+                        {getFileIcon(rec.filename)}
                         <div>
-                          <div style={{ fontWeight: 600, color: '#fff', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={rec.original_filename}>
-                            {rec.original_filename}
+                          <div style={{ fontWeight: 600, color: '#fff', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={rec.filename}>
+                            {rec.filename}
                           </div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
                             {rec.file_size ? `${Math.round(rec.file_size / 1024)} KB` : ''} · {rec.file_type || 'file'}
@@ -303,13 +309,13 @@ export default function SmartUploadView() {
                         padding: '3px 8px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4
                       }}>
                         <Tag size={11} />
-                        {rec.detected_category || 'General'}
+                        {(rec.detected_category || 'general').replaceAll('_', ' ').toUpperCase()}
                       </span>
                     </td>
 
                     {/* Target Course */}
                     <td style={{ padding: '14px 18px', color: 'var(--text-muted)' }}>
-                      {rec.target_course || 'All Departments'}
+                      {rec.course_department || 'All Programs'}
                     </td>
 
                     {/* Academic Year */}
@@ -322,14 +328,14 @@ export default function SmartUploadView() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ width: 50, height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
                           <div style={{
-                            width: `${Math.round((rec.confidence_score || 0.85) * 100)}%`,
+                            width: `${Math.round(confidence * 100)}%`,
                             height: '100%',
-                            background: (rec.confidence_score || 0.85) > 0.8 ? '#10b981' : '#f59e0b',
+                            background: confidence > 0.8 ? '#10b981' : '#f59e0b',
                             borderRadius: 3
                           }} />
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: (rec.confidence_score || 0.85) > 0.8 ? '#34d399' : '#fde68a' }}>
-                          {Math.round((rec.confidence_score || 0.85) * 100)}%
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: confidence > 0.8 ? '#34d399' : '#fde68a' }}>
+                          {Math.round(confidence * 100)}%
                         </span>
                       </div>
                     </td>
@@ -356,28 +362,34 @@ export default function SmartUploadView() {
                     {/* Actions */}
                     <td style={{ padding: '14px 18px', textAlign: 'right' }}>
                       {isPending ? (
-                        <div style={{ display: 'inline-flex', gap: 8 }}>
-                          <button
-                            className="btn-secondary"
-                            onClick={() => handleReject(rec.id)}
-                            disabled={isActionLoading}
-                            style={{ padding: '5px 10px', fontSize: '0.75rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}
-                            title="Reject and discard"
-                          >
-                            <X size={13} />
-                            Reject
-                          </button>
-                          <button
-                            className="btn-primary"
-                            onClick={() => handleApprove(rec.id)}
-                            disabled={isActionLoading}
-                            style={{ padding: '5px 12px', fontSize: '0.75rem', gap: 4 }}
-                            title="Approve and write to RAG Knowledge Store"
-                          >
-                            <Check size={13} />
-                            Approve & Ingest
-                          </button>
-                        </div>
+                        isSuperAdmin ? (
+                          <div style={{ display: 'inline-flex', gap: 8 }}>
+                            <button
+                              className="btn-secondary"
+                              onClick={() => handleReject(rec.id)}
+                              disabled={isActionLoading}
+                              style={{ padding: '5px 10px', fontSize: '0.75rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}
+                              title="Reject and discard"
+                            >
+                              <X size={13} />
+                              Reject
+                            </button>
+                            <button
+                              className="btn-primary"
+                              onClick={() => handleApprove(rec.id)}
+                              disabled={isActionLoading}
+                              style={{ padding: '5px 12px', fontSize: '0.75rem', gap: 4 }}
+                              title="Approve and write to RAG Knowledge Store"
+                            >
+                              <Check size={13} />
+                              Approve & Ingest
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>
+                            Awaiting Super Admin Approval
+                          </span>
+                        )
                       ) : (
                         <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>Completed</span>
                       )}

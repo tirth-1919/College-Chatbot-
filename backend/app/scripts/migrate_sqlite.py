@@ -4,13 +4,13 @@ import shutil
 from datetime import datetime, timezone
 from backend.app.core.config import settings
 
-AIT_TENANT_ID = "ait-default-tenant-0001"
-
 def run_migrations():
-    # 1. Ensure all tables registered in models are created first
+    # Schema creation is intentionally limited to development/test SQLite. In
+    # production, Alembic/SQL migrations own the PostgreSQL schema lifecycle.
     from backend.app.core.database import Base, engine
     import backend.app.models
-    Base.metadata.create_all(bind=engine)
+    if settings.ENVIRONMENT.lower() not in ("production", "prod"):
+        Base.metadata.create_all(bind=engine)
 
     # Run category uniqueness migration (cross-database compatible)
     from backend.app.core.database import SessionLocal
@@ -108,6 +108,12 @@ def run_migrations():
     add_col("sessions", "is_revoked", "BOOLEAN DEFAULT 0")
     add_col("sessions", "last_activity_at", "DATETIME")
 
+    # Conversation lifecycle: legacy NULL rows remain onboarding/global and are
+    # never exposed as normal tenant conversations.
+    add_col("conversations", "conversation_type", "VARCHAR(24) DEFAULT 'NORMAL'")
+    cursor.execute("UPDATE conversations SET conversation_type = 'ONBOARDING' WHERE college_id IS NULL")
+    cursor.execute("UPDATE conversations SET conversation_type = 'NORMAL' WHERE college_id IS NOT NULL AND conversation_type IS NULL")
+
     # Inspect documents columns
     add_col("documents", "visibility", "VARCHAR(32) DEFAULT 'ADMIN_VERIFIED'")
     add_col("documents", "college_id", "VARCHAR(36)")
@@ -149,107 +155,9 @@ def run_migrations():
         cursor.execute("ALTER TABLE ai_model_registry ADD COLUMN free_tier_status VARCHAR(30) DEFAULT 'UNKNOWN' NOT NULL")
         print("Added column free_tier_status to ai_model_registry table.")
 
-    # 2. Seed AIT as the First College / Tenant if not exists
-    cursor.execute("SELECT id FROM colleges WHERE id = ? OR code = 'AIT'", (AIT_TENANT_ID,))
-    ait_row = cursor.fetchone()
-    now_str = datetime.now(timezone.utc).isoformat()
-
-    if not ait_row:
-        cursor.execute("""
-            INSERT INTO colleges (
-                id, name, code, slug, official_email, official_website,
-                phone, address, city, state, country, university_affiliation,
-                contact_person, contact_email, contact_phone, logo_url,
-                status, registration_status, application_id, timezone,
-                assistant_name, welcome_message, primary_color, secondary_color, accent_color,
-                supported_languages, max_users, max_storage_mb, max_documents, max_ai_requests_per_day,
-                created_at, updated_at
-            ) VALUES (
-                ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?
-            )
-        """, (
-            AIT_TENANT_ID,
-            "Ahmedabad Institute of Technology",
-            "AIT",
-            "ait",
-            "admin@aitindia.in",
-            "https://www.aitindia.in",
-            "+91-79-27660214",
-            "Near Vasantnagar Township, Gota-Ognaj Road, Ahmedabad, Gujarat 382481",
-            "Ahmedabad",
-            "Gujarat",
-            "India",
-            "Gujarat Technological University (GTU)",
-            "AIT Administration",
-            "admin@aitindia.in",
-            "+91-79-27660214",
-            "https://www.aitindia.in/images/Ait-logo.webp",
-            "ACTIVE",
-            "APPROVED",
-            "COL-AIT-ORIGIN",
-            "Asia/Kolkata",
-            "AI-Powered Colleges Chatbot",
-            "Hello! Welcome to AI-Powered Colleges Chatbot. How can I assist you today with courses, admissions, fees, faculty, or placements?",
-            "#0b0a3e",
-            "#1a2345",
-            "#f08518",
-            '["en", "gu", "hi"]',
-            5000,
-            10240,
-            2000,
-            50000,
-            now_str,
-            now_str
-        ))
-        print("[MIGRATION] Seeded AIT as the first tenant.")
-
-    # 3. Backfill all existing tenant records with AIT college_id
-    backfill_tables = [
-        "knowledge_categories",
-        "knowledge_records",
-        "ait_entities",
-        "ait_knowledge_versions",
-        "website_snapshots",
-        "knowledge_gaps",
-        "documents",
-        "document_chunks",
-        "conversations",
-        "ait_images",
-        "audit_logs",
-        "security_events",
-        "ai_usage_logs",
-        "knowledge_conflicts"
-    ]
-
-    for tbl in backfill_tables:
-        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{tbl}'")
-        if cursor.fetchone():
-            # Check actual columns before UPDATE
-            cursor.execute(f"PRAGMA table_info({tbl})")
-            cols_info = cursor.fetchall()
-            print(f"[MIGRATION] Table {tbl} columns before backfill: {[c[1] for c in cols_info]}")
-            
-            cursor.execute(f"UPDATE {tbl} SET college_id = ? WHERE college_id IS NULL", (AIT_TENANT_ID,))
-            updated_count = cursor.rowcount
-            if updated_count > 0:
-                print(f"[MIGRATION] Backfilled {updated_count} rows in {tbl} with AIT college_id.")
-
-    # 4. Backfill users:
-    # Super admin has role SUPER_ADMIN and can access platform level
-    cursor.execute("UPDATE users SET role = 'SUPER_ADMIN' WHERE email = 'admin@aitindia.in'")
-    cursor.execute("UPDATE users SET role = 'SUPER_ADMIN', college_id = NULL WHERE email = '3@gmail.com'")
-    # College admin 2@gmail.com belongs to AIT as COLLEGE_ADMIN
-    cursor.execute("UPDATE users SET role = 'COLLEGE_ADMIN', college_id = ? WHERE email = '2@gmail.com'", (AIT_TENANT_ID,))
-    # Demo User 1@gmail.com belongs to AIT as STUDENT
-    cursor.execute("UPDATE users SET role = 'STUDENT', college_id = ? WHERE email = '1@gmail.com'", (AIT_TENANT_ID,))
-    # Any other user with NULL college_id gets linked to AIT unless SUPER_ADMIN
-    cursor.execute("UPDATE users SET college_id = ? WHERE college_id IS NULL AND role != 'SUPER_ADMIN'", (AIT_TENANT_ID,))
+    # Tenant records are never seeded or assigned by startup migration. Existing
+    # NULL-tenant rows remain legacy/unattributed until an operator performs a
+    # reviewed ownership migration with evidence.
 
     conn.commit()
     conn.close()

@@ -1,0 +1,77 @@
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+SQLite migration check and table creation completed successfully.
+========================================================================
+[*] AHMEDABAD INSTITUTE OF TECHNOLOGY (AIT) - USER AI ASSISTANT
+========================================================================
+[*] User API Backend:  http://localhost:8000/api/v1
+[*] User Health Check: http://localhost:8000/health
+[*] User Web App:      http://localhost:8000 (Self-Hosted)
+========================================================================
+INFO:     127.0.0.1:62019 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64021 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64022 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63764 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63765 - "POST /api/v1/conversations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52375 - "GET /api/v1/college-context/me?conversation_id=35632ff1-b502-4c9f-b686-53f3c408e35d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /api/v1/college-context/me?conversation_id=35632ff1-b502-4c9f-b686-53f3c408e35d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63763 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63766 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63864 - "GET /api/v1/college-context/me?conversation_id=35632ff1-b502-4c9f-b686-53f3c408e35d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64863 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50164 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50165 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50167 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50168 - "POST /api/v1/conversations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52428 - "GET /api/v1/college-context/me?conversation_id=2ff30610-f3f5-4d71-b2c6-11f968e8a684 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64853 - "GET /api/v1/college-context/me?conversation_id=2ff30610-f3f5-4d71-b2c6-11f968e8a684 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50166 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50169 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63320 - "GET /api/v1/college-context/me?conversation_id=2ff30610-f3f5-4d71-b2c6-11f968e8a684 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51054 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53154 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53155 - "POST /api/v1/college-context/resolve HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57990 - "GET /api/v1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57990 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63821 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57990 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63821 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63821 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63821 - "POST /api/v1/conversations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:57990 - "GET /api/v1/college-context/me?conversation_id=bddadef4-bcbc-4522-8787-85bca1b811bc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57990 - "GET /api/v1/college-context/me?conversation_id=bddadef4-bcbc-4522-8787-85bca1b811bc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63821 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57990 - "GET /api/v1/college-context/me?conversation_id=bddadef4-bcbc-4522-8787-85bca1b811bc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63821 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63821 - "GET /api/v1/conversations/bddadef4-bcbc-4522-8787-85bca1b811bc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62057 - "GET /api/v1/college-context/me?conversation_id=bddadef4-bcbc-4522-8787-85bca1b811bc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57990 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64152 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56161 - "GET /api/v1/auth/oauth/google/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50235 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50237 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50238 - "POST /api/v1/conversations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:64079 - "GET /api/v1/college-context/me?conversation_id=c5edca06-3bc6-4212-bc5e-18afff5b9b43 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63193 - "GET /api/v1/college-context/me?conversation_id=c5edca06-3bc6-4212-bc5e-18afff5b9b43 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50236 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50239 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57856 - "GET /api/v1/college-context/me?conversation_id=c5edca06-3bc6-4212-bc5e-18afff5b9b43 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63894 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49527 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49527 - "GET /api/v1/college-context/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49527 - "POST /api/v1/conversations HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49527 - "POST /api/v1/chat/stream HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58105 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58105 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58123 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58123 - "POST /api/v1/conversations HTTP/1.1" 409 Conflict

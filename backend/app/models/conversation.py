@@ -11,6 +11,10 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
+    # NORMAL conversations are tenant-owned and must have college_id. ONBOARDING
+    # conversations are the explicit platform-global exception used only while a
+    # user is selecting a college; they are converted to NORMAL before retrieval.
+    conversation_type = Column(String(24), nullable=False, default="NORMAL", index=True)
     college_id = Column(String(36), ForeignKey("colleges.id", ondelete="CASCADE"), nullable=True, index=True)
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(255), default="New Conversation", nullable=False)

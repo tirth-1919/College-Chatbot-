@@ -1,0 +1,88 @@
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+SQLite migration check and table creation completed successfully.
+========================================================================
+[*] AHMEDABAD INSTITUTE OF TECHNOLOGY (AIT) - USER AI ASSISTANT
+========================================================================
+[*] User API Backend:  http://localhost:8000/api/v1
+[*] User Health Check: http://localhost:8000/health
+[*] User Web App:      http://localhost:8000 (Self-Hosted)
+========================================================================
+INFO:     127.0.0.1:62442 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62458 - "POST /api/v1/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:62458 - "POST /api/v1/conversations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:62458 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "GET /api/v1/college-context/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "POST /api/v1/conversations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:64258 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64258 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64258 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64258 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56427 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63163 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51121 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56427 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54206 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60072 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60072 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54206 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50466 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49926 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49926 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50466 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63568 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59293 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59293 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63568 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62057 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59646 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59646 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62057 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51754 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49927 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49927 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51754 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51754 - "POST /api/v1/college-context/switch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51754 - "GET /api/v1/conversations/717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49927 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51754 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49927 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64251 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65014 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51670 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49231 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60586 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51670 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50384 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64155 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64155 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50384 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61963 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52167 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52167 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61963 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63161 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62340 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62340 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63161 - "GET /api/v1/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63098 - "POST /api/v1/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61465 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61465 - "GET /api/v1/college-context/me?conversation_id=717c4682-2066-4a29-a21b-37d3412700fb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63098 - "GET /api/v1/conversations HTTP/1.1" 200 OK

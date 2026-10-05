@@ -69,3 +69,13 @@ def test_insufficient_spa_extraction_is_not_successful():
     crawler = AitWebsiteCrawler()
     result = crawler._extract_generic_spa_page("/placement", "path:\"/placement\",element:x.jsx(Y)")
     assert result["extraction_status"] in {"EMPTY", "INSUFFICIENT"}
+
+
+def test_crawler_normalises_scheme_less_ait_hostname():
+    assert AitWebsiteCrawler("aitindia.in").base_url == "https://www.aitindia.in"
+    assert AitWebsiteCrawler("www.aitindia.in").base_url == "https://www.aitindia.in"
+
+
+def test_crawler_preserves_valid_http_url():
+    assert AitWebsiteCrawler("https://www.aitindia.in").base_url == "https://www.aitindia.in"
+    assert AitWebsiteCrawler("http://www.aitindia.in").base_url == "http://www.aitindia.in"

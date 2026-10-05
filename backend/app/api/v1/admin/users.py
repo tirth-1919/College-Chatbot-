@@ -112,16 +112,36 @@ def inspect_user_conversations(
     """
     Privacy-controlled, auditable access to student conversation titles & metadata.
     """
+    role = (current_user.role or "").upper()
+    target_user_query = db.query(User).filter(User.id == user_id)
+    if role != "SUPER_ADMIN":
+        # Resolve ownership before loading any conversation metadata. A missing
+        # or cross-tenant user is deliberately indistinguishable from not found.
+        target_user_query = target_user_query.filter(
+            User.college_id == current_user.college_id,
+            User.college_id.isnot(None),
+        )
+    target_user = target_user_query.first()
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    conversation_query = db.query(Conversation).filter(
+        Conversation.user_id == target_user.id,
+    )
+    if role != "SUPER_ADMIN":
+        conversation_query = conversation_query.filter(
+            Conversation.college_id == current_user.college_id,
+            Conversation.college_id.isnot(None),
+        )
     conversations = (
-        db.query(Conversation)
-        .filter(Conversation.user_id == user_id)
+        conversation_query
         .order_by(Conversation.updated_at.desc())
         .limit(20)
         .all()
     )
 
     log_admin_audit(db, current_user, "AUDITED_CONVERSATION_ACCESS", "CONVERSATION", {
-        "target_user_id": user_id,
+        "target_user_id": target_user.id,
         "record_count": len(conversations)
     })
 

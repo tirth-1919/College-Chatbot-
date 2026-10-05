@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from backend.app.core.database import get_db
-from backend.app.api.v1.admin.auth import get_current_admin
+from backend.app.core.permissions import require_super_admin
 from backend.app.models.automation import KnowledgeEvaluation
 from backend.app.knowledge.evaluation import run_golden_evaluation_suite
 from backend.app.knowledge.rollback import rollback_engine
@@ -22,7 +22,7 @@ class RollbackFlagRequest(BaseModel):
     flag_key: str
 
 @router.get("/results")
-def get_evaluation_history(db: Session = Depends(get_db), current_admin = Depends(get_current_admin)):
+def get_evaluation_history(db: Session = Depends(get_db), current_admin = Depends(require_super_admin)):
     """Retrieves history of golden knowledge evaluations and domain scores."""
     evals = db.query(KnowledgeEvaluation).order_by(KnowledgeEvaluation.created_at.desc()).limit(20).all()
     return {
@@ -45,13 +45,13 @@ def get_evaluation_history(db: Session = Depends(get_db), current_admin = Depend
     }
 
 @router.post("/run")
-def trigger_golden_evaluation(current_admin = Depends(get_current_admin)):
+def trigger_golden_evaluation(current_admin = Depends(require_super_admin)):
     """Triggers an instant golden evaluation run across all 16 academic domains."""
     result = run_golden_evaluation_suite()
     return result
 
 @router.post("/rollback/knowledge")
-def rollback_knowledge(req: RollbackKnowledgeRequest, current_admin = Depends(get_current_admin)):
+def rollback_knowledge(req: RollbackKnowledgeRequest, current_admin = Depends(require_super_admin)):
     """Rolls back a verified knowledge entity to a previous version."""
     result = rollback_engine.rollback_knowledge_entity(
         entity_id=req.entity_id,
@@ -63,7 +63,7 @@ def rollback_knowledge(req: RollbackKnowledgeRequest, current_admin = Depends(ge
     return result
 
 @router.post("/rollback/prompt")
-def rollback_prompt(req: RollbackPromptRequest, current_admin = Depends(get_current_admin)):
+def rollback_prompt(req: RollbackPromptRequest, current_admin = Depends(require_super_admin)):
     """Rolls back a system prompt to a historical version."""
     result = rollback_engine.rollback_system_prompt(
         prompt_slug=req.prompt_slug,
@@ -75,7 +75,7 @@ def rollback_prompt(req: RollbackPromptRequest, current_admin = Depends(get_curr
     return result
 
 @router.post("/rollback/feature-flag")
-def rollback_flag(req: RollbackFlagRequest, current_admin = Depends(get_current_admin)):
+def rollback_flag(req: RollbackFlagRequest, current_admin = Depends(require_super_admin)):
     """Toggles or rolls back a feature flag."""
     result = rollback_engine.rollback_feature_flag(
         key=req.flag_key,

@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from backend.app.core.database import get_db
-from backend.app.core.permissions import get_current_admin_user, require_permission, log_admin_audit, PERM_KNOWLEDGE_CREATE, PERM_KNOWLEDGE_UPDATE, PERM_KNOWLEDGE_DELETE
+from backend.app.core.permissions import get_current_admin_user, require_permission, require_super_admin, log_admin_audit, PERM_KNOWLEDGE_CREATE, PERM_KNOWLEDGE_UPDATE, PERM_KNOWLEDGE_DELETE
 from backend.app.models.knowledge import AitEntity, AitKnowledgeVersion
+from backend.app.models.college import College
 from backend.app.models.user import User
 from backend.app.knowledge.semantic_cache import semantic_cache
 from backend.app.utils.tenancy import ensure_same_college, resolve_target_college_id
@@ -19,9 +20,10 @@ class EntityCreateRequest(BaseModel):
     name: str
     code: Optional[str] = None
     details: Dict[str, Any]
-    source_url: str = "https://www.aitindia.in"
+    college_id: Optional[str] = None
+    source_url: str = "admin://knowledge"
     source_page: Optional[str] = None
-    authority: str = "Official AIT Records"
+    authority: str = "Admin Verified Database"
     status: str = "PUBLISHED"
 
 class EntityUpdateRequest(BaseModel):
@@ -40,15 +42,24 @@ class RollbackRequest(BaseModel):
 def list_entities(
     category: Optional[str] = None,
     search: Optional[str] = None,
+    college_id: Optional[str] = Query(None, description="Explicit target tenant for Super Admins"),
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     query = db.query(AitEntity)
-    # Phase 9: SUPER_ADMIN can see all; COLLEGE_ADMIN scoped to own college
-    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+    # Tenant-owned knowledge is fail-closed for non-Super admins. Legacy NULL
+    # rows are never exposed as a tenant fallback. Super Admins may aggregate,
+    # or explicitly narrow to one selected tenant.
+    if (current_user.role or "").upper() != "SUPER_ADMIN":
+        if not current_user.college_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="A college context is required")
         query = query.filter(AitEntity.college_id == current_user.college_id)
+    elif college_id:
+        query = query.filter(AitEntity.college_id == college_id)
+    else:
+        query = query.filter(AitEntity.college_id.isnot(None))
     if category and category != "all":
         query = query.filter(AitEntity.category == category)
     if search:
@@ -88,7 +99,9 @@ def get_entity_details(
     db: Session = Depends(get_db)
 ):
     q = db.query(AitEntity).filter(AitEntity.id == entity_id)
-    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
+    if current_user.role != "SUPER_ADMIN":
+        if not current_user.college_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="A college context is required")
         q = q.filter(AitEntity.college_id == current_user.college_id)
     entity = q.first()
     if not entity:
@@ -96,7 +109,10 @@ def get_entity_details(
 
     versions = (
         db.query(AitKnowledgeVersion)
-        .filter(AitKnowledgeVersion.entity_id == entity_id)
+        .filter(
+            AitKnowledgeVersion.entity_id == entity_id,
+            AitKnowledgeVersion.college_id == entity.college_id,
+        )
         .order_by(AitKnowledgeVersion.version.desc())
         .all()
     )
@@ -134,9 +150,19 @@ def create_entity(
     db: Session = Depends(get_db)
 ):
     content_hash = hashlib.sha256(str(req.details).encode("utf-8")).hexdigest()
-    # §32/§7: never trust a request-supplied tenant — College Admin is scoped
-    # to own college; Super Admin must have selected a target college.
-    tenant_id = resolve_target_college_id(current_user, None, required=True)
+    # College Admins are hard-bound to their authenticated tenant. Super Admins
+    # must explicitly select a tenant; no default or NULL tenant is allowed.
+    tenant_id = resolve_target_college_id(
+        current_user, req.college_id,
+        required=(current_user.role or "").upper() == "SUPER_ADMIN",
+    )
+    college = db.query(College).filter(
+        College.id == tenant_id,
+        College.status == "ACTIVE",
+        College.registration_status == "APPROVED",
+    ).first()
+    if not college:
+        raise HTTPException(status_code=400, detail="Target college is not active and approved.")
     new_entity = AitEntity(
         category=req.category,
         name=req.name,
@@ -163,7 +189,12 @@ def create_entity(
     db.commit()
     db.refresh(new_entity)
 
-    semantic_cache.invalidate_all()
+    semantic_cache.invalidate_college(new_entity.college_id)
+    from backend.app.automation.engine import automation_engine
+    automation_engine.enqueue_job(
+        "rag_indexing", payload={"college_id": new_entity.college_id, "entity_id": new_entity.id},
+        priority=2, idempotency_key=f"entity-index:{new_entity.id}:{new_entity.content_hash}",
+    )
     log_admin_audit(db, current_user, "CREATE_KNOWLEDGE_ENTITY", "AIT_ENTITY", {"id": new_entity.id, "name": new_entity.name})
 
     return {"message": "Knowledge entity created successfully", "id": new_entity.id}
@@ -172,7 +203,7 @@ def create_entity(
 def update_entity(
     entity_id: str,
     req: EntityUpdateRequest,
-    current_user: User = Depends(require_permission(PERM_KNOWLEDGE_UPDATE)),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     entity = db.query(AitEntity).filter(AitEntity.id == entity_id).first()
@@ -226,7 +257,7 @@ def update_entity(
 def rollback_entity_version(
     entity_id: str,
     req: RollbackRequest,
-    current_user: User = Depends(require_permission(PERM_KNOWLEDGE_UPDATE)),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -291,7 +322,7 @@ def rollback_entity_version(
 @router.delete("/{entity_id}")
 def delete_entity(
     entity_id: str,
-    current_user: User = Depends(require_permission(PERM_KNOWLEDGE_DELETE)),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     entity = db.query(AitEntity).filter(AitEntity.id == entity_id).first()

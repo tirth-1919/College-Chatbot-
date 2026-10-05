@@ -1,0 +1,169 @@
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+SQLite migration check and table creation completed successfully.
+========================================================================
+[*] AHMEDABAD INSTITUTE OF TECHNOLOGY (AIT) - ADMIN CONSOLE
+========================================================================
+[*] Admin API Backend:  http://localhost:8001/api/v1/admin
+[*] Admin Health Check: http://localhost:8001/health
+[*] Admin Web Portal:   http://localhost:8001 (Self-Hosted)
+========================================================================
+INFO:     127.0.0.1:60627 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58266 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58266 - "GET /assets/index-OsiLq4Hw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63277 - "GET /assets/index-DqzhiOVF.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63277 - "GET /favicon.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58266 - "GET /ai-faq-college-chat-bot-icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49242 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49242 - "GET /assets/index-OsiLq4Hw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62326 - "GET /assets/index-DqzhiOVF.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49242 - "GET /ai-faq-college-chat-bot-icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49242 - "GET /favicon.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51770 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51770 - "GET /assets/index-OsiLq4Hw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51770 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59367 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59367 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51770 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51770 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51770 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54487 - "POST /api/v1/admin/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58560 - "POST /api/v1/admin/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58560 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:54076 - "GET /api/v1/admin/colleges/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64844 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53977 - "GET /api/v1/admin/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50366 - "GET /api/v1/admin/knowledge-gaps HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50366 - "GET /api/v1/admin/knowledge HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49241 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:55951 - "GET /api/v1/admin/colleges/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62680 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62680 - "GET /assets/index-Ck0HygUg.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62680 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62680 - "GET /api/v1/admin/monitoring/live-stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63202 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63202 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65181 - "GET /api/v1/admin/knowledge HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65181 - "GET /api/v1/admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65181 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:65484 - "GET /super-admin/approval-center HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /assets/index-DnrPZSf3.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:57356 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /super-admin/approval-center HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:57356 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /super-admin/approval-center HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:57356 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /super-admin/approval-center HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:57356 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /super-admin/approval-center HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65484 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:57356 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58169 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50152 - "GET /super-admin/approval-center HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50152 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50152 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:62759 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55099 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57398 - "GET /super-admin/approval-center HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57398 - "GET /assets/index-DnrPZSf3.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57398 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57398 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:49767 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/485e4285-0b8a-474f-a550-7b2166acb21e/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/22e20f88-6a5b-40c0-8877-446a1d0a340c/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/acba94b1-ced6-4595-831f-fe6e43746c8f/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/2155c5bd-cdb5-41ad-9826-aa9b3c0f8457/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/ea3b441b-3d08-43dc-b29e-0e31ece8d365/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/c9127851-f75d-4bf5-88d0-1038d553c6ec/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/1f6361e6-63f3-4f9a-ab4a-1b932a2f22d9/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/8d6396c7-cf24-4776-afad-5291cef96d8c/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/b6e32a49-b02b-4569-8b58-1015a7a93eda/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "POST /api/v1/admin/smart-upload/staged/6735035d-a7fa-4759-a5f3-da25b550f78f/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50536 - "GET /api/v1/admin/monitoring/live-stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65285 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65285 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65285 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:56416 - "GET /api/v1/admin/colleges/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56416 - "POST /api/v1/admin/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62599 - "POST /api/v1/admin/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62599 - "GET /api/v1/admin/colleges/?per_page=200 HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50503 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52326 - "GET /api/v1/admin/colleges/stats/summary HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:54700 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64066 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64066 - "POST /api/v1/admin/smart-upload/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64066 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57286 - "POST /api/v1/admin/smart-upload/staged/b4bc5204-e16c-444c-87c7-4a646354829f/reject HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:57286 - "POST /api/v1/admin/smart-upload/staged/b4bc5204-e16c-444c-87c7-4a646354829f/approve HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:57286 - "POST /api/v1/admin/smart-upload/staged/b4bc5204-e16c-444c-87c7-4a646354829f/approve HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63402 - "POST /api/v1/admin/smart-upload/staged/9cf74e40-573a-4383-8c10-3c5227d842c6/approve HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63402 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /assets/index-DnrPZSf3.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65269 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65269 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65269 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65269 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65269 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65269 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63402 - "POST /api/v1/admin/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "POST /api/v1/admin/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57323 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57323 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54817 - "POST /api/v1/admin/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63778 - "POST /api/v1/admin/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63778 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51317 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51317 - "POST /api/v1/admin/smart-upload/staged/b4bc5204-e16c-444c-87c7-4a646354829f/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51317 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51317 - "POST /api/v1/admin/smart-upload/staged/9cf74e40-573a-4383-8c10-3c5227d842c6/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51317 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK

@@ -20,7 +20,7 @@ from backend.app.api.v1.admin.maintenance import router as maintenance_router
 from backend.app.api.v1.admin.colleges import router as colleges_router
 from backend.app.api.v1.admin.smart_upload import router as smart_upload_router
 from backend.app.api.v1.admin.change_requests import router as change_requests_router
-
+from backend.app.api.v1.admin.learning import router as learning_router
 admin_master_router = APIRouter(prefix="/admin")
 
 admin_master_router.include_router(auth_router)
@@ -44,4 +44,5 @@ admin_master_router.include_router(maintenance_router)
 admin_master_router.include_router(colleges_router)
 admin_master_router.include_router(smart_upload_router)
 admin_master_router.include_router(change_requests_router)
+admin_master_router.include_router(learning_router)
 

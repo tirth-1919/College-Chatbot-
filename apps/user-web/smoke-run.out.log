@@ -1,0 +1,99 @@
+
+Running 2 tests using 2 workers
+
+  x  1 [chromium] › e2e\student-journey.spec.js:24:1 › college switch persists conversation tenant, asks onboarding, and keeps default (2.0m)
+  x  2 [mobile-chrome] › e2e\student-journey.spec.js:24:1 › college switch persists conversation tenant, asks onboarding, and keeps default (2.3m)
+
+
+  1) [chromium] › e2e\student-journey.spec.js:24:1 › college switch persists conversation tenant, asks onboarding, and keeps default 
+
+    [31mTest timeout of 120000ms exceeded.[39m
+
+    Error: locator.fill: Test timeout of 120000ms exceeded.
+    Call log:
+    [2m  - waiting for getByPlaceholder('name@aitindia.in')[22m
+
+
+       at support.mjs:20
+
+      18 |   await page.getByRole('button', { name: 'Create Account' }).click();
+      19 |   await page.getByPlaceholder('e.g. Anjali Sharma').fill(name);
+    > 20 |   await page.getByPlaceholder('name@aitindia.in').fill(email);
+         |                                                   ^
+      21 |   await page.locator('input[type="password"]').fill(password);
+      22 |   await page.getByRole('button', { name: 'Sign Up', exact: true }).click();
+      23 |   await expect(page.getByTitle('Logout')).toBeVisible();
+        at signup (C:\Users\HP\OneDrive\Desktop\college chatbot\apps\user-web\e2e\support.mjs:20:51)
+        at C:\Users\HP\OneDrive\Desktop\college chatbot\apps\user-web\e2e\student-journey.spec.js:24:3
+
+    [31mTest timeout of 120000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\student-journey-college-sw-80d30-nboarding-and-keeps-default-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\student-journey-college-sw-80d30-nboarding-and-keeps-default-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\student-journey-college-sw-80d30-nboarding-and-keeps-default-chromium\error-context.md
+
+  2) [mobile-chrome] › e2e\student-journey.spec.js:24:1 › college switch persists conversation tenant, asks onboarding, and keeps default 
+
+    [31mTest timeout of 120000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 120000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Sign In / Sign Up' })[22m
+    [2m    - locator resolved to <button class="user-profile-badge">…</button>[22m
+    [2m  - attempting click action[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - element is outside of the viewport[22m
+    [2m    - retrying click action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - element is outside of the viewport[22m
+    [2m    - retrying click action[22m
+    [2m      - waiting 100ms[22m
+    [2m    227 × waiting for element to be visible, enabled and stable[22m
+    [2m        - element is visible, enabled and stable[22m
+    [2m        - scrolling into view if needed[22m
+    [2m        - done scrolling[22m
+    [2m        - element is outside of the viewport[22m
+    [2m      - retrying click action[22m
+    [2m        - waiting 500ms[22m
+
+
+       at support.mjs:17
+
+      15 | export async function signup(page, name = 'E2E AIT Student') {
+      16 |   const email = unique();
+    > 17 |   await page.getByRole('button', { name: 'Sign In / Sign Up' }).click();
+         |                                                                 ^
+      18 |   await page.getByRole('button', { name: 'Create Account' }).click();
+      19 |   await page.getByPlaceholder('e.g. Anjali Sharma').fill(name);
+      20 |   await page.getByPlaceholder('name@aitindia.in').fill(email);
+        at signup (C:\Users\HP\OneDrive\Desktop\college chatbot\apps\user-web\e2e\support.mjs:17:65)
+        at C:\Users\HP\OneDrive\Desktop\college chatbot\apps\user-web\e2e\student-journey.spec.js:24:9
+
+    [31mTest timeout of 120000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\student-journey-college-sw-80d30-nboarding-and-keeps-default-mobile-chrome\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\student-journey-college-sw-80d30-nboarding-and-keeps-default-mobile-chrome\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\student-journey-college-sw-80d30-nboarding-and-keeps-default-mobile-chrome\error-context.md
+
+  2 failed
+    [chromium] › e2e\student-journey.spec.js:24:1 › college switch persists conversation tenant, asks onboarding, and keeps default 
+    [mobile-chrome] › e2e\student-journey.spec.js:24:1 › college switch persists conversation tenant, asks onboarding, and keeps default 

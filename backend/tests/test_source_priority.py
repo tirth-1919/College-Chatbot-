@@ -174,11 +174,11 @@ def test_grounding_status_verified_sources(db: Session, test_college: College):
     # Validate grounding
     result = grounding_validator.validate_answer(
         query="What is the average placement package?",
-        route="ait_institutional",
+        route="institutional",
         retrieved_evidence=evidence,
         candidate_answer="The average placement package is Rs. 6 LPA."
     )
-    
+
     assert result["grounding_status"] in ["verified", "grounded"], "Should be verified with official sources"
 
 
@@ -189,7 +189,7 @@ def test_grounding_status_unverified_gemini_fallback(db: Session):
     # No evidence = Gemini fallback
     result = grounding_validator.validate_answer(
         query="What is the campus size?",
-        route="ait_institutional",
+        route="institutional",
         retrieved_evidence=[],
         candidate_answer="The campus size information is not available."
     )

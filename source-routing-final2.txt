@@ -1,0 +1,253 @@
+﻿.F.FF.....F.F....FFFFFF....F..F..                                        [100%]
+================================== FAILURES ===================================
+______ test_exact_ait_bca_documents_question_rejects_program_fee_record _______
+backend\tests\test_final_answer_source_routing.py:207: in test_exact_ait_bca_documents_question_rejects_program_fee_record
+    assert result["text_content"] == expected
+E   AssertionError: assert 'Beginners sh... application.' == 'The specific...fied records.'
+E     
+E     - The specific admission document requirements could not be verified from the official college website or admin-verified records.
+E     + Beginners should practice variables, conditionals, loops, functions, data structures, HTML, CSS, JavaScript, DOM events, form validation, debugging, and Git before building a small web application.
+___ test_smart_upload_dynamic_admission_documents_answer_does_not_duplicate ___
+backend\tests\test_final_answer_source_routing.py:330: in test_smart_upload_dynamic_admission_documents_answer_does_not_duplicate
+    assert item in answer
+E   AssertionError: assert 'marksheet' in 'Beginners should practice variables, conditionals, loops, functions, data structures, HTML, CSS, JavaScript, DOM events, form validation, debugging, and Git before building a small web application.'
+__________ test_ait_bca_eligibility_answer_contains_only_eligibility __________
+backend\tests\test_final_answer_source_routing.py:383: in test_ait_bca_eligibility_answer_contains_only_eligibility
+    assert answer == "10+2 with English and Mathematics / Business Maths / Statistics"
+E   AssertionError: assert 'Beginners sh... application.' == '10+2 with En... / Statistics'
+E     
+E     - 10+2 with English and Mathematics / Business Maths / Statistics
+E     + Beginners should practice variables, conditionals, loops, functions, data structures, HTML, CSS, JavaScript, DOM events, form validation, debugging, and Git before building a small web application.
+____ test_real_chat_ait_departments_require_academic_snapshot_through_sse _____
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1938: in _exec_single_context
+    self.dialect.do_executemany(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:949: in do_executemany
+    cursor.executemany(statement, parameters)
+E   sqlite3.IntegrityError: UNIQUE constraint failed: website_snapshots.college_id, website_snapshots.url
+
+The above exception was the direct cause of the following exception:
+backend\tests\test_final_answer_source_routing.py:501: in test_real_chat_ait_departments_require_academic_snapshot_through_sse
+    db.commit()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2035: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1316: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1290: in _prepare_impl
+    self.session.flush()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4353: in flush
+    self._flush(objects)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4488: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4449: in _flush
+    flush_context.execute()
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:465: in execute
+    rec.execute(self)
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:94: in save_obj
+    _emit_insert_statements(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1049: in _emit_insert_statements
+    result = connection.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1938: in _exec_single_context
+    self.dialect.do_executemany(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:949: in do_executemany
+    cursor.executemany(statement, parameters)
+E   sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: website_snapshots.college_id, website_snapshots.url
+E   [SQL: INSERT INTO website_snapshots (id, college_id, url, title, content_hash, text_content, status_code, last_crawled_at, active, crawl_error, version_number, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E   [parameters: [('routing-ait-placement-company', 'routing-ait', 'https://ait.routing.test/placement/company', 'Placement � Company', 'a6463748c936bf5d2ce7700e8de1c1bbb83c7166ecce15a1be169db904ab6086', 'Placement companies and recruiters visit the campus. The placement department supports students and AIT engineering branches.', 200, '2026-10-05 07:41:03.647180', 1, None, 1, '2026-10-05 07:41:03.647185'), ('routing-ait-placement-drives', 'routing-ait', 'https://ait.routing.test/placement/drives', 'Placement � Drives', 'e2d6001201aeda769b252fd53029a6321bcfbc1d26fc9fdaf6dca43b4b5538bb', 'Placement drives and company recruitment events are available for students from every branch at AIT.', 200, '2026-10-05 07:41:03.647187', 1, None, 1, '2026-10-05 07:41:03.647188'), ('routing-ait-home', 'routing-ait', 'https://ait.routing.test/', 'Home', '09dd41596345f6c01cda7dd32cfab19406ec07f879eea538d876c0bec651ab83', 'Welcome to Ahmedabad Institute of Technology. Campus, events, admissions, students, and facilities.', 200, '2026-10-05 07:41:03.647189', 1, None, 1, '2026-10-05 07:41:03.647191'), ('routing-ait-departments', 'routing-ait', 'https://ait.routing.test/academics/departments', 'Academic Departments', '6612e385c0cf00ce1d0ddfbce7776dffb173b5c9c8e3cb82b03a9c201f748208', 'Academic departments available at AIT include Computer Engineering, Information Technology, Civil Engineering, and Mechanical Engineering.', 200, '2026-10-05 07:41:03.647192', 1, None, 1, '2026-10-05 07:41:03.647193')]]
+E   (Background on this error at: https://sqlalche.me/e/20/gkpj)
+__________ test_ait_dbms_official_snapshot_beats_library_through_sse __________
+backend\tests\test_final_answer_source_routing.py:590: in test_ait_dbms_official_snapshot_beats_library_through_sse
+    assert '"source_type": "OFFICIAL_WEBSITE"' in response
+E   assert '"source_type": "OFFICIAL_WEBSITE"' in 'event: message_start\ndata: {"conversation_id": "conv-routing-ait", "message_id": "2f77cc38-3054-484e-9107-90c4e7e55a...n_id": "conv-routing-ait", "message_id": "2f77cc38-3054-484e-9107-90c4e7e55a0c", "grounding_status": "unverified"}\n\n'
+---------------------------- Captured stdout call -----------------------------
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+SQLite migration check and table creation completed successfully.
+[PLATFORM] Platform infrastructure initialization complete.
+_ test_general_ait_advice_uses_gemini_warning_path[What career paths can an AIT computer engineering student pursue after graduation?] _
+backend\tests\test_final_answer_source_routing.py:673: in test_general_ait_advice_uses_gemini_warning_path
+    assert "Gemini advice" in result["text_content"]
+E   AssertionError: assert 'Gemini advice' in 'Beginners should practice variables, conditionals, loops, functions, data structures, HTML, CSS, JavaScript, DOM events, form validation, debugging, and Git before building a small web application.'
+_ test_general_ait_advice_uses_gemini_warning_path[What skills should an AIT student develop to prepare for a software development internship?] _
+backend\tests\test_final_answer_source_routing.py:673: in test_general_ait_advice_uses_gemini_warning_path
+    assert "Gemini advice" in result["text_content"]
+E   AssertionError: assert 'Gemini advice' in 'Beginners should practice variables, conditionals, loops, functions, data structures, HTML, CSS, JavaScript, DOM events, form validation, debugging, and Git before building a small web application.'
+______ test_exact_general_programming_question_uses_gemini_warning_path _______
+backend\tests\test_final_answer_source_routing.py:688: in test_exact_general_programming_question_uses_gemini_warning_path
+    assert "Gemini advice" in result["text_content"]
+E   AssertionError: assert 'Gemini advice' in 'Beginners should practice variables, conditionals, loops, functions, data structures, HTML, CSS, JavaScript, DOM events, form validation, debugging, and Git before building a small web application.'
+_ test_real_chat_stream_exact_programming_question_has_only_unverified_gemini_guidance _
+backend\tests\test_final_answer_source_routing.py:705: in test_real_chat_stream_exact_programming_question_has_only_unverified_gemini_guidance
+    assert "web application" in response.lower()
+E   assert 'web application' in 'event: message_start\ndata: {"conversation_id": "conv-routing-ait", "message_id": "dc28ec29-54da-409b-b28a-b3a7bb04fd...n_id": "conv-routing-ait", "message_id": "dc28ec29-54da-409b-b28a-b3a7bb04fdf2", "grounding_status": "general_ai"}\n\n'
+E    +  where 'event: message_start\ndata: {"conversation_id": "conv-routing-ait", "message_id": "dc28ec29-54da-409b-b28a-b3a7bb04fd...n_id": "conv-routing-ait", "message_id": "dc28ec29-54da-409b-b28a-b3a7bb04fdf2", "grounding_status": "general_ai"}\n\n' = <built-in method lower of str object at 0x00000159064F7BE0>()
+E    +    where <built-in method lower of str object at 0x00000159064F7BE0> = 'event: message_start\ndata: {"conversation_id": "conv-routing-ait", "message_id": "dc28ec29-54da-409b-b28a-b3a7bb04fd...n_id": "conv-routing-ait", "message_id": "dc28ec29-54da-409b-b28a-b3a7bb04fdf2", "grounding_status": "general_ai"}\n\n'.lower
+---------------------------- Captured stdout call -----------------------------
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+SQLite migration check and table creation completed successfully.
+[PLATFORM] Platform infrastructure initialization complete.
+__________ test_rcti_matching_crawled_data_wins_as_official_website ___________
+backend\tests\test_final_answer_source_routing.py:734: in test_rcti_matching_crawled_data_wins_as_official_website
+    assert result["answer_status"] == OFFICIAL_WEBSITE
+E   AssertionError: assert 'GEMINI_UNVERIFIED' == 'OFFICIAL_WEBSITE'
+E     
+E     - OFFICIAL_WEBSITE
+E     + GEMINI_UNVERIFIED
+__ test_real_chat_stream_general_ait_python_question_calls_gemini_unverified __
+backend\tests\test_final_answer_source_routing.py:762: in test_real_chat_stream_general_ait_python_question_calls_gemini_unverified
+    assert "\\u26a0 Gemini advice" in response, response
+E   AssertionError: event: message_start
+E     data: {"conversation_id": "conv-routing-ait", "message_id": "633f8ccc-6162-41fa-a628-67a9558f1b78"}
+E     
+E     event: tool_status
+E     data: {"status": "Completed institutional resolution"}
+E     
+E     event: text_delta
+E     data: {"delta": "Beginners should practice variables, "}
+E     
+E     event: text_delta
+E     data: {"delta": "conditionals, loops, functions, data "}
+E     
+E     event: text_delta
+E     data: {"delta": "structures, HTML, CSS, JavaScript, "}
+E     
+E     event: text_delta
+E     data: {"delta": "DOM events, form validation, "}
+E     
+E     event: text_delta
+E     data: {"delta": "debugging, and Git before "}
+E     
+E     event: text_delta
+E     data: {"delta": "building a small web "}
+E     
+E     event: text_delta
+E     data: {"delta": "application."}
+E     
+E     event: provenance_metadata
+E     data: {"type": "provenance", "authority": "General AI Academic Knowledge \u2014 Gemini-generated, not verified by the college", "source_domain": null, "answer_status": "GEMINI_UNVERIFIED", "source_type": "GEMINI_UNVERIFIED", "verified": false, "source_context": {"active_college_id": "routing-ait", "active_college_name": "Ahmedabad Institute of Technology", "provenance": "gemini_unverified"}, "source_label": "\ud83e\udd16 Gemini Answer \u2014 Not Verified", "source_url": null, "verified_at": "Unverified - General AI Response"}
+E     
+E     event: message_complete
+E     data: {"conversation_id": "conv-routing-ait", "message_id": "633f8ccc-6162-41fa-a628-67a9558f1b78", "grounding_status": "general_ai"}
+E     
+E     
+E   assert '\\u26a0 Gemini advice' in 'event: message_start\ndata: {"conversation_id": "conv-routing-ait", "message_id": "633f8ccc-6162-41fa-a628-67a9558f1b...n_id": "conv-routing-ait", "message_id": "633f8ccc-6162-41fa-a628-67a9558f1b78", "grounding_status": "general_ai"}\n\n'
+---------------------------- Captured stdout call -----------------------------
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+SQLite migration check and table creation completed successfully.
+[PLATFORM] Platform infrastructure initialization complete.
+_____________ test_rcti_courses_use_about_snapshot_without_gemini _____________
+backend\tests\test_final_answer_source_routing.py:862: in test_rcti_courses_use_about_snapshot_without_gemini
+    assert result["answer_status"] == OFFICIAL_WEBSITE
+E   AssertionError: assert 'GEMINI_UNVERIFIED' == 'OFFICIAL_WEBSITE'
+E     
+E     - OFFICIAL_WEBSITE
+E     + GEMINI_UNVERIFIED
+___ test_official_snapshots_are_synthesized_into_a_focused_grounded_answer ____
+backend\tests\test_final_answer_source_routing.py:967: in test_official_snapshots_are_synthesized_into_a_focused_grounded_answer
+    assert "does not confirm" in result["text_content"]
+E   AssertionError: assert 'does not confirm' in 'AIT has organized an Internal Hackathon and Technical Day. Students participate in technical activities and project work.'
+============================== warnings summary ===============================
+backend\app\core\config.py:6
+  C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\core\config.py:6: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class Settings(BaseSettings):
+
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv\Lib\site-packages\starlette\testclient.py:53
+  C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+backend\app\main.py:69
+  C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\main.py:69: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+.venv\Lib\site-packages\fastapi\applications.py:4681
+  C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\fastapi\applications.py:4681: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_final_answer_source_routing.py::test_exact_ait_bca_documents_question_rejects_program_fee_record
+FAILED backend/tests/test_final_answer_source_routing.py::test_smart_upload_dynamic_admission_documents_answer_does_not_duplicate
+FAILED backend/tests/test_final_answer_source_routing.py::test_ait_bca_eligibility_answer_contains_only_eligibility
+FAILED backend/tests/test_final_answer_source_routing.py::test_real_chat_ait_departments_require_academic_snapshot_through_sse
+FAILED backend/tests/test_final_answer_source_routing.py::test_ait_dbms_official_snapshot_beats_library_through_sse
+FAILED backend/tests/test_final_answer_source_routing.py::test_general_ait_advice_uses_gemini_warning_path[What career paths can an AIT computer engineering student pursue after graduation?]
+FAILED backend/tests/test_final_answer_source_routing.py::test_general_ait_advice_uses_gemini_warning_path[What skills should an AIT student develop to prepare for a software development internship?]
+FAILED backend/tests/test_final_answer_source_routing.py::test_exact_general_programming_question_uses_gemini_warning_path
+FAILED backend/tests/test_final_answer_source_routing.py::test_real_chat_stream_exact_programming_question_has_only_unverified_gemini_guidance
+FAILED backend/tests/test_final_answer_source_routing.py::test_rcti_matching_crawled_data_wins_as_official_website
+FAILED backend/tests/test_final_answer_source_routing.py::test_real_chat_stream_general_ait_python_question_calls_gemini_unverified
+FAILED backend/tests/test_final_answer_source_routing.py::test_rcti_courses_use_about_snapshot_without_gemini
+FAILED backend/tests/test_final_answer_source_routing.py::test_official_snapshots_are_synthesized_into_a_focused_grounded_answer
+13 failed, 20 passed, 5 warnings in 39.71s

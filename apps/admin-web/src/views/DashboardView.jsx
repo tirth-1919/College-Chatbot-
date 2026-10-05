@@ -81,7 +81,11 @@ export default function DashboardView({ onNavChange }) {
     }
 
     // EventSource cannot send Authorization headers, so consume the SSE stream
-    // through fetch instead of exposing the admin token in the URL.
+    // through fetch instead of exposing the admin token in the URL. This is a
+    // platform-level stream and is intentionally restricted to Super Admins;
+    // College Admin dashboards must never probe the Super Admin endpoint.
+    if (user?.role !== 'SUPER_ADMIN') return undefined;
+
     const controller = new AbortController();
     const consumeStream = async () => {
       const response = await adminApi.authFetch('/api/v1/admin/monitoring/live-stream', {

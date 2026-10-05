@@ -51,9 +51,9 @@ def env(db_session):
 
     now = datetime.now(timezone.utc)
     ait = College(id="ait-x", name="Ahmedabad Institute of Technology",
-                  code="AIT", slug="ait", status="ACTIVE", created_at=now)
+                  code="AIT", slug="ait", status="ACTIVE", registration_status="APPROVED", created_at=now)
     rcti = College(id="rcti-x", name="R.C. Technical Institute",
-                   code="RCTI", slug="rcti", status="ACTIVE",
+                   code="RCTI", slug="rcti", status="ACTIVE", registration_status="APPROVED",
                    official_website="https://www.rcti.ac.in/",
                    city="Ahmedabad", state="Gujarat", created_at=now)
     db_session.add_all([ait, rcti])
@@ -90,14 +90,24 @@ def _last_assistant(db, conv_id):
     return msgs[-1] if msgs else None
 
 
-def _new_conv(client, env):
+def _new_conv(client, env, college_id=None):
     """Create a fresh conversation via the API and return its id."""
-    res = client.post("/api/v1/conversations", headers=_headers(env["user"]), json={})
+    res = client.post("/api/v1/conversations", headers=_headers(env["user"]),
+                      json={"college_id": college_id or env["ait"].id})
     assert res.status_code == 201
     return res.json()["id"]
 
 
-# ── T1: new chat starts NULL and asks ────────────────────────────────────────
+def _switch_college(client, env, conv_id, *, college_id=None, college_name=None):
+    payload = {"conversation_id": conv_id}
+    if college_id:
+        payload["college_id"] = college_id
+    if college_name:
+        payload["college_name"] = college_name
+    return client.post("/api/v1/college-context/switch",
+                       headers=_headers(env["user"]), json=payload)
+
+                      # ── T1: explicitly assigned chat uses its selected tenant ────────────────────────────────────
 
 def test_t1_new_chat_null_and_asks(client, env):
     db = env["db"]
@@ -106,10 +116,21 @@ def test_t1_new_chat_null_and_asks(client, env):
                       json={"conversation_id": conv_id, "message": "hello there"})
     assert res.status_code == 200
     reply = _last_assistant(db, conv_id)
-    assert "Which college information do you want" in reply.content
+    assert "Ahmedabad Institute of Technology AI Assistant" in reply.content
     from backend.app.models.conversation import Conversation
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
-    assert conv.college_id is None
+    assert conv.college_id == env["ait"].id
+
+def test_safe_no_college_conversation_is_rejected(client, env):
+    from backend.app.models.conversation import Conversation
+    conv = Conversation(id=str(uuid.uuid4()), user_id=env["user"].id,
+                        conversation_type="ONBOARDING", title="Onboarding")
+    env["db"].add(conv)
+    env["db"].commit()
+    res = client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
+                      json={"conversation_id": conv.id, "message": "hello there"})
+    assert res.status_code == 409
+    assert "Select a college" in res.json()["detail"]
 
 
 # ── T2/T3: select AIT / RCTI ────────────────────────────────────────────────
@@ -117,26 +138,19 @@ def test_t1_new_chat_null_and_asks(client, env):
 def test_t2_select_ait(client, env):
     db = env["db"]
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    res = client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                      json={"conversation_id": conv_id,
-                            "message": "Ahmedabad Institute of Technology"})
+    res = _switch_college(client, env, conv_id, college_name="Ahmedabad Institute of Technology")
     assert res.status_code == 200
     from backend.app.models.conversation import Conversation
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     db.refresh(conv)
     assert conv.college_id == env["ait"].id
-    assert "Connected to Ahmedabad Institute of Technology" in _last_assistant(db, conv_id).content
+    assert "connected to Ahmedabad Institute of Technology" in _last_assistant(db, conv_id).content
 
 
 def test_t3_select_rcti(client, env):
     db = env["db"]
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "R.C. Technical Institute"})
+    _switch_college(client, env, conv_id, college_name="R.C. Technical Institute")
     from backend.app.models.conversation import Conversation
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     db.refresh(conv)
@@ -148,10 +162,7 @@ def test_t4_alias_resolves_same_college(client, env):
     from backend.app.models.conversation import Conversation
     for alias in ["RC Technical", "R C Technical Institute", "RCTI", "rcti"]:
         conv_id = _new_conv(client, env)
-        client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                    json={"conversation_id": conv_id, "message": "hi"})
-        client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                    json={"conversation_id": conv_id, "message": alias})
+        _switch_college(client, env, conv_id, college_name=alias)
         conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
         db.refresh(conv)
         assert conv.college_id == env["rcti"].id, alias
@@ -162,16 +173,14 @@ def test_t4_alias_resolves_same_college(client, env):
 def test_t5_invalid_college_not_guessed(client, env):
     db = env["db"]
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    res = client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                      json={"conversation_id": conv_id, "message": "XYZ Unknown College"})
+    res = _switch_college(client, env, conv_id, college_name="XYZ Unknown College")
     assert res.status_code == 200
     from backend.app.models.conversation import Conversation
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     db.refresh(conv)
-    assert conv.college_id is None
-    assert "couldn’t find that college" in _last_assistant(db, conv_id).content
+    assert conv.college_id == env["ait"].id
+    assert res.json()["status"] == "NOT_FOUND"
+    assert "confirm the college name" in res.json()["message"]
 
 
 # ── T6: asked only once per conversation ────────────────────────────────────
@@ -179,10 +188,7 @@ def test_t5_invalid_college_not_guessed(client, env):
 def test_t6_no_reasking_after_selection(client, env):
     db = env["db"]
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "R.C. Technical Institute"})
+    _switch_college(client, env, conv_id, college_name="R.C. Technical Institute")
     for q in ["What courses are available?", "What is the BCA fee?",
               "Who is the principal?", "Where is the library?"]:
         client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
@@ -195,28 +201,24 @@ def test_t6_no_reasking_after_selection(client, env):
         Message.conversation_id == conv_id,
         Message.sender == "assistant").all()
         if "Which college information do you want" in m.content]
-    assert len(prompts) == 1
+    assert len(prompts) == 0
 
 
 # ── T7: new chat after an assigned chat resets context ──────────────────────
 
 def test_t7_new_chat_resets_context(client, env):
     db = env["db"]
-    conv1 = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv1, "message": "hi"})
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv1, "message": "RCTI"})
-    conv2 = _new_conv(client, env)
+    conv1 = _new_conv(client, env, env["rcti"].id)
+    conv2 = _new_conv(client, env, env["ait"].id)
     from backend.app.models.conversation import Conversation
     c1 = db.query(Conversation).filter(Conversation.id == conv1).first()
     c2 = db.query(Conversation).filter(Conversation.id == conv2).first()
     assert c1.college_id == env["rcti"].id
-    assert c2.college_id is None, "college must NOT carry over to chat 2"
+    assert c2.college_id == env["ait"].id, "new chat uses its explicit tenant"
     res = client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
                       json={"conversation_id": conv2, "message": "hello"})
     assert res.status_code == 200
-    assert "Which college information do you want" in _last_assistant(db, conv2).content
+    assert "Ahmedabad Institute of Technology AI Assistant" in _last_assistant(db, conv2).content
 
 
 # ── T8: existing chat restores context (no re-ask) ──────────────────────────
@@ -224,10 +226,7 @@ def test_t7_new_chat_resets_context(client, env):
 def test_t8_existing_chat_restores(client, env):
     db = env["db"]
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "R.C. Technical Institute"})
+    _switch_college(client, env, conv_id, college_name="R.C. Technical Institute")
     # Simulate reload: conversation GET + further messages, no college question
     res = client.get(f"/api/v1/conversations/{conv_id}", headers=_headers(env["user"]))
     assert res.status_code == 200
@@ -239,7 +238,7 @@ def test_t8_existing_chat_restores(client, env):
         Message.conversation_id == conv_id,
         Message.sender == "assistant").all()
         if "Which college information do you want" in m.content]
-    assert len(prompts) == 1
+    assert len(prompts) == 0
 
 
 # ── T13: future college resolves with NO code change ────────────────────────
@@ -249,19 +248,15 @@ def test_t13_future_college_auto_resolves(client, env):
     from backend.app.models.college import College, CollegeAlias
     now = datetime.now(timezone.utc)
     db.add(College(id="fut-x", name="ABC Institute of Technology",
-                   code="ABCT", slug="abcit", status="ACTIVE", created_at=now))
+                   code="ABCT", slug="abcit", status="ACTIVE", registration_status="APPROVED", created_at=now))
     db.commit()
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id,
-                      "message": "ABC Institute of Technology"})
+    _switch_college(client, env, conv_id, college_name="ABC Institute of Technology")
     from backend.app.models.conversation import Conversation
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     db.refresh(conv)
     assert conv.college_id == "fut-x"
-    assert "Connected to ABC Institute of Technology" in _last_assistant(db, conv_id).content
+    assert "connected to ABC Institute of Technology" in _last_assistant(db, conv_id).content
     # Inactive colleges are NOT selectable (§24)
     db.add(CollegeAlias(college_id="fut-x", alias="abc", normalized_alias=normalize("abc")))
     off = College(id="off-x", name="Offline University", code="OFFU",
@@ -269,12 +264,9 @@ def test_t13_future_college_auto_resolves(client, env):
     db.add(off)
     db.commit()
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "Offline University"})
+    _switch_college(client, env, conv_id, college_name="Offline University")
     db.refresh(conv := db.query(Conversation).filter(Conversation.id == conv_id).first())
-    assert conv.college_id is None, "inactive college must not be selectable"
+    assert conv.college_id == env["ait"].id, "inactive college must not replace the explicit tenant"
 
 
 # ── T14: ambiguous alias never auto-selects ─────────────────────────────────
@@ -293,6 +285,8 @@ def test_t14_ambiguous_alias_asks_for_clarification(client, env):
                         normalized_alias=normalize("ABC College")))
     db.add(CollegeAlias(college_id="amb-2", alias="ABC College",
                         normalized_alias=normalize("ABC College")))
+    c1.registration_status = "APPROVED"
+    c2.registration_status = "APPROVED"
     db.commit()
 
     res = college_context_manager.resolve(db, "ABC College")
@@ -300,16 +294,13 @@ def test_t14_ambiguous_alias_asks_for_clarification(client, env):
     assert res["college_id"] is None
 
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "ABC College"})
+    switch_res = _switch_college(client, env, conv_id, college_name="ABC College")
     from backend.app.models.conversation import Conversation
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     db.refresh(conv)
-    assert conv.college_id is None
-    reply = _last_assistant(db, conv_id).content
-    assert "more than one college" in reply
+    assert conv.college_id == env["ait"].id
+    assert switch_res.json()["status"] == "AMBIGUOUS"
+    assert "confirm" in switch_res.json()["message"].lower()
 
 
 # ── T15: frontend tampering — backend never trusts client college_id ────────
@@ -317,10 +308,7 @@ def test_t14_ambiguous_alias_asks_for_clarification(client, env):
 def test_t15_frontend_cannot_override_tenant(client, env):
     db = env["db"]
     conv_id = _new_conv(client, env)
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "hi"})
-    client.post("/api/v1/chat/stream", headers=_headers(env["user"]),
-                json={"conversation_id": conv_id, "message": "R.C. Technical Institute"})
+    _switch_college(client, env, conv_id, college_name="R.C. Technical Institute")
     from backend.app.models.conversation import Conversation
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     db.refresh(conv)

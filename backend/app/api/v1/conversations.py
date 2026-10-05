@@ -12,7 +12,10 @@ router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
 class ConversationCreateRequest(BaseModel):
     title: Optional[str] = "New Conversation"
-
+    # Explicit tenant selection is required for every normal conversation.
+    # This is intentionally not inferred from the user, a previous chat, or the
+    # first college in the database.
+    college_id: Optional[str] = None
 class ConversationUpdateRequest(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=255)
     is_pinned: Optional[bool] = None
@@ -30,7 +33,9 @@ def list_conversations(
     """
     q = db.query(Conversation).filter(
         Conversation.user_id == current_user.id,
-        Conversation.is_archived == archived
+        Conversation.is_archived == archived,
+        Conversation.conversation_type == "NORMAL",
+        Conversation.college_id.isnot(None),
     )
 
     if search:
@@ -58,14 +63,27 @@ def create_conversation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # §5/§12: a NEW chat starts WITHOUT a college context (college_id = NULL).
-    # The in-chat onboarding question ("Which college information do you want?")
-    # is asked once for THIS conversation and the user's typed selection is
-    # resolved from the database. Neither the user's default preference,
-    # previous chats, nor any frontend value seeds a new conversation (§12/§67).
+    # A normal conversation cannot be created without an explicit tenant.
+    # The API deliberately does not infer one from defaults or prior chats.
+    if not req.college_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Select a college before creating a conversation.",
+        )
+
+    from backend.app.models.college import College
+    college = db.query(College).filter(
+        College.id == req.college_id,
+        College.status == "ACTIVE",
+        College.registration_status == "APPROVED",
+    ).first()
+    if not college:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown or unavailable college")
+
     conv = Conversation(
         user_id=current_user.id,
-        college_id=None,
+        college_id=college.id,
+        conversation_type="NORMAL",
         title=req.title or "New Conversation"
     )
     db.add(conv)
@@ -89,7 +107,9 @@ def get_conversation(
 ):
     conv = db.query(Conversation).filter(
         Conversation.id == conversation_id,
-        Conversation.user_id == current_user.id
+        Conversation.user_id == current_user.id,
+        Conversation.conversation_type == "NORMAL",
+        Conversation.college_id.isnot(None),
     ).first()
 
     if not conv:
@@ -130,7 +150,9 @@ def update_conversation(
 ):
     conv = db.query(Conversation).filter(
         Conversation.id == conversation_id,
-        Conversation.user_id == current_user.id
+        Conversation.user_id == current_user.id,
+        Conversation.conversation_type == "NORMAL",
+        Conversation.college_id.isnot(None),
     ).first()
 
     if not conv:
@@ -157,7 +179,9 @@ def delete_conversation(
 ):
     conv = db.query(Conversation).filter(
         Conversation.id == conversation_id,
-        Conversation.user_id == current_user.id
+        Conversation.user_id == current_user.id,
+        Conversation.conversation_type == "NORMAL",
+        Conversation.college_id.isnot(None),
     ).first()
 
     if not conv:

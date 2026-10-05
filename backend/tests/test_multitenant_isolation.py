@@ -14,6 +14,9 @@ from sqlalchemy.orm import sessionmaker
 def db_session():
     """Shared in-memory SQLite session for all tests in this module."""
     from backend.app.core.database import Base
+    # Import all model modules before creating the schema so every mapped table,
+    # including the tenant anchor table, is registered in Base.metadata.
+    import backend.app.models  # noqa: F401
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)

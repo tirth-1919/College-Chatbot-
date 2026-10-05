@@ -1,0 +1,52 @@
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+[MIGRATION] Table knowledge_categories columns before backfill: ['id', 'name', 'key', 'description', 'icon', 'display_order', 'status', 'college_id', 'created_by', 'updated_by', 'created_at', 'updated_at']
+[MIGRATION] Table knowledge_records columns before backfill: ['id', 'category_id', 'course_id', 'course', 'academic_year', 'title', 'field_name', 'value', 'description', 'metadata', 'source_type', 'source_url', 'source_title', 'verified', 'verified_by', 'verified_at', 'valid_from', 'valid_until', 'status', 'created_by', 'updated_by', 'created_at', 'updated_at', 'college_id']
+[MIGRATION] Table ait_entities columns before backfill: ['id', 'category', 'name', 'code', 'details', 'source_url', 'source_page', 'authority', 'is_verified', 'content_hash', 'created_at', 'updated_at', 'verified_at', 'academic_year', 'college_id', 'source_type', 'is_official']
+[MIGRATION] Table ait_knowledge_versions columns before backfill: ['id', 'entity_id', 'version', 'payload', 'status', 'content_hash', 'created_at', 'college_id']
+[MIGRATION] Table website_snapshots columns before backfill: ['id', 'url', 'title', 'content_hash', 'text_content', 'status_code', 'last_crawled_at', 'created_at', 'college_id']
+[MIGRATION] Table knowledge_gaps columns before backfill: ['id', 'user_query', 'detected_intent', 'missing_entity', 'occurred_at', 'resolved', 'college_id', 'dedup_key', 'conversation_id', 'message_id', 'status', 'occurrence_count', 'first_seen_at', 'last_seen_at', 'sample_answer', 'reason', 'category', 'course', 'academic_year', 'priority', 'resolved_at', 'resolved_by']
+[MIGRATION] Table documents columns before backfill: ['id', 'user_id', 'title', 'doc_type', 'source_url', 'content_hash', 'created_at', 'visibility', 'college_id']
+[MIGRATION] Table document_chunks columns before backfill: ['id', 'document_id', 'chunk_index', 'content', 'embedding_json', 'metadata_', 'created_at', 'college_id']
+[MIGRATION] Table conversations columns before backfill: ['id', 'user_id', 'title', 'is_pinned', 'is_archived', 'summary', 'created_at', 'updated_at', 'college_id']
+[MIGRATION] Table ait_images columns before backfill: ['id', 'title', 'description', 'category', 'image_url', 'thumbnail_url', 'source_url', 'source_page', 'source_type', 'source_domain', 'official_source', 'verified', 'verification_status', 'content_hash', 'width', 'height', 'license_basis', 'retrieved_at', 'created_at', 'updated_at', 'last_verified_at', 'college_id']
+[MIGRATION] Table audit_logs columns before backfill: ['id', 'trace_id', 'user_id', 'action', 'resource', 'status', 'details', 'ip_address', 'created_at', 'college_id']
+[MIGRATION] Table security_events columns before backfill: ['id', 'event_type', 'severity', 'ip_address', 'user_id', 'payload', 'created_at', 'college_id']
+[MIGRATION] Table ai_usage_logs columns before backfill: ['id', 'user_id', 'conversation_id', 'request_id', 'provider_name', 'model_identifier', 'input_tokens', 'output_tokens', 'total_tokens', 'latency_ms', 'http_status', 'success', 'error_type', 'failover_occurred', 'fallback_from_model', 'timestamp', 'college_id']
+[MIGRATION] Table knowledge_conflicts columns before backfill: ['id', 'topic', 'source_a', 'source_b', 'value_a', 'value_b', 'detected_discrepancy', 'resolution_status', 'resolved_by', 'resolution_notes', 'created_at', 'resolved_at', 'college_id']
+SQLite migration check and table creation completed successfully.
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+[MIGRATION] Table knowledge_categories columns before backfill: ['id', 'name', 'key', 'description', 'icon', 'display_order', 'status', 'college_id', 'created_by', 'updated_by', 'created_at', 'updated_at']
+[MIGRATION] Table knowledge_records columns before backfill: ['id', 'category_id', 'course_id', 'course', 'academic_year', 'title', 'field_name', 'value', 'description', 'metadata', 'source_type', 'source_url', 'source_title', 'verified', 'verified_by', 'verified_at', 'valid_from', 'valid_until', 'status', 'created_by', 'updated_by', 'created_at', 'updated_at', 'college_id']
+[MIGRATION] Table ait_entities columns before backfill: ['id', 'category', 'name', 'code', 'details', 'source_url', 'source_page', 'authority', 'is_verified', 'content_hash', 'created_at', 'updated_at', 'verified_at', 'academic_year', 'college_id', 'source_type', 'is_official']
+[MIGRATION] Table ait_knowledge_versions columns before backfill: ['id', 'entity_id', 'version', 'payload', 'status', 'content_hash', 'created_at', 'college_id']
+[MIGRATION] Table website_snapshots columns before backfill: ['id', 'url', 'title', 'content_hash', 'text_content', 'status_code', 'last_crawled_at', 'created_at', 'college_id']
+[MIGRATION] Table knowledge_gaps columns before backfill: ['id', 'user_query', 'detected_intent', 'missing_entity', 'occurred_at', 'resolved', 'college_id', 'dedup_key', 'conversation_id', 'message_id', 'status', 'occurrence_count', 'first_seen_at', 'last_seen_at', 'sample_answer', 'reason', 'category', 'course', 'academic_year', 'priority', 'resolved_at', 'resolved_by']
+[MIGRATION] Table documents columns before backfill: ['id', 'user_id', 'title', 'doc_type', 'source_url', 'content_hash', 'created_at', 'visibility', 'college_id']
+[MIGRATION] Table document_chunks columns before backfill: ['id', 'document_id', 'chunk_index', 'content', 'embedding_json', 'metadata_', 'created_at', 'college_id']
+[MIGRATION] Table conversations columns before backfill: ['id', 'user_id', 'title', 'is_pinned', 'is_archived', 'summary', 'created_at', 'updated_at', 'college_id']
+[MIGRATION] Table ait_images columns before backfill: ['id', 'title', 'description', 'category', 'image_url', 'thumbnail_url', 'source_url', 'source_page', 'source_type', 'source_domain', 'official_source', 'verified', 'verification_status', 'content_hash', 'width', 'height', 'license_basis', 'retrieved_at', 'created_at', 'updated_at', 'last_verified_at', 'college_id']
+[MIGRATION] Table audit_logs columns before backfill: ['id', 'trace_id', 'user_id', 'action', 'resource', 'status', 'details', 'ip_address', 'created_at', 'college_id']
+[MIGRATION] Table security_events columns before backfill: ['id', 'event_type', 'severity', 'ip_address', 'user_id', 'payload', 'created_at', 'college_id']
+[MIGRATION] Table ai_usage_logs columns before backfill: ['id', 'user_id', 'conversation_id', 'request_id', 'provider_name', 'model_identifier', 'input_tokens', 'output_tokens', 'total_tokens', 'latency_ms', 'http_status', 'success', 'error_type', 'failover_occurred', 'fallback_from_model', 'timestamp', 'college_id']

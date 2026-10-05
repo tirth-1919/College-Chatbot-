@@ -19,8 +19,8 @@ class AitImage(Base):
     thumbnail_url = Column(String(500), nullable=True)
     source_url = Column(String(500), nullable=False)
     source_page = Column(String(255), nullable=True)
-    source_type = Column(String(50), default="official_website")
-    source_domain = Column(String(100), default="aitindia.in")
+    source_type = Column(String(50), default="OFFICIAL_WEBSITE")
+    source_domain = Column(String(100), default="")
     official_source = Column(Boolean, default=True)
     verified = Column(Boolean, default=True)
     verification_status = Column(String(50), default="PUBLISHED")  # DISCOVERED, DOWNLOADED, HASHED, VERIFIED, PUBLISHED, STALE, ARCHIVED

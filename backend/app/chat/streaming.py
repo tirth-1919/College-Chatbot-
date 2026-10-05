@@ -34,15 +34,19 @@ class SSEStreamManager:
         })
         await asyncio.sleep(0.02)
 
-        # 3. Stream text_delta chunks
-        words = text_content.split(" ")
-        chunk_size = 4
-        for i in range(0, len(words), chunk_size):
-            chunk = " ".join(words[i:i+chunk_size])
-            if i + chunk_size < len(words):
-                chunk += " "
-            yield cls.format_sse("text_delta", {"delta": chunk})
-            await asyncio.sleep(0.03)
+        # 3. Multi-college answers are assembled exclusively from dedicated
+        # college_answer events. Suppress the aggregate text path so clients
+        # cannot render a second answer with leaked active-college evidence.
+        is_multi_college = any(block.get("type") == "college_answer" for block in blocks)
+        if not is_multi_college:
+            words = text_content.split(" ")
+            chunk_size = 4
+            for i in range(0, len(words), chunk_size):
+                chunk = " ".join(words[i:i+chunk_size])
+                if i + chunk_size < len(words):
+                    chunk += " "
+                yield cls.format_sse("text_delta", {"delta": chunk})
+                await asyncio.sleep(0.03)
 
         # 4. Stream structured blocks (images, tables, citations, provenance)
         for block in blocks:
@@ -59,10 +63,9 @@ class SSEStreamManager:
             elif b_type == "provenance":
                 yield cls.format_sse("provenance_metadata", block)
                 await asyncio.sleep(0.02)
-            elif b_type in ("college_switch_prompt", "suggested_action"):
-                # FIX: interactive blocks were silently dropped, so the [Switch]
-                # button never rendered during a live session (§22/§61). Stream
-                # them under their own typed event names.
+            elif b_type in ("college_switch_prompt", "college_answer", "suggested_action"):
+                # Stream interactive and tenant-separated answer blocks without
+                # collapsing their per-college provenance into one badge.
                 yield cls.format_sse(b_type, block)
                 await asyncio.sleep(0.02)
 

@@ -21,6 +21,7 @@ const SUPER_ADMIN_NAV = [
       { key: 'colleges', label: 'Colleges', icon: Building2 },
       { key: 'approval_center', label: 'Approval Center', icon: CheckCircle, badge: 'pending' },
       { key: 'change_requests', label: 'Change Requests', icon: GitMerge, badge: 'change_requests' },
+      { key: 'learning', label: 'Learning Queue', icon: TrendingUp },
       { key: 'users', label: 'All Users', icon: Users },
       { key: 'audit', label: 'Audit & Security', icon: Lock },
     ]
@@ -73,6 +74,7 @@ const COLLEGE_ADMIN_NAV = [
       { key: 'conflicts', label: 'Conflicts', icon: AlertTriangle, badge: 'conflicts' },
       { key: 'gaps', label: 'Knowledge Gaps', icon: GitMerge, badge: 'gaps' },
       { key: 'change_requests', label: 'Change Requests', icon: GitMerge },
+      { key: 'learning', label: 'Learning Queue', icon: TrendingUp },
     ]
   },
   {
@@ -207,8 +209,12 @@ export default function AdminLayout({ children, activeView, onNavChange, metrics
                     key={item.key}
                     id={`nav-${item.key}`}
                     onClick={() => {
-                      // URL matches navigation (§2): Colleges uses /super-admin/colleges
-                      const target = item.key === 'colleges' ? '/super-admin/colleges' : '/';
+                      // Keep direct platform routes addressable while other views remain client-side.
+                      const target = item.key === 'colleges'
+                        ? '/super-admin/colleges'
+                        : item.key === 'approval_center'
+                        ? '/super-admin/approval-center'
+                        : '/';
                       if (target !== window.location.pathname) {
                         window.history.pushState({}, '', target);
                       }

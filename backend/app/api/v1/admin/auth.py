@@ -60,10 +60,17 @@ def admin_login(req: AdminLoginRequest, request: Request, db: Session = Depends(
         db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin credentials")
 
-    # Verify role
+    # Verify role and tenant lifecycle before issuing any admin token.
     role = (user.role or "").upper()
     if role not in ["ADMIN", "SUPER_ADMIN", "COLLEGE_ADMIN"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Not an administrator account.")
+    if role != "SUPER_ADMIN":
+        if not user.college_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator account is not linked to a college.")
+        from backend.app.models.college import College
+        college = db.query(College).filter(College.id == user.college_id).first()
+        if not college or college.status != "ACTIVE" or college.registration_status != "APPROVED":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="College account is not active and approved.")
 
     # Check 2FA
     if user.mfa_enabled:
@@ -117,7 +124,8 @@ def admin_login(req: AdminLoginRequest, request: Request, db: Session = Depends(
             "full_name": user.full_name,
             "role": user.role,
             "college_id": user.college_id,
-            "mfa_enabled": user.mfa_enabled
+            "mfa_enabled": user.mfa_enabled,
+            "must_change_password": bool(user.must_change_password)
         }
     }
 
@@ -171,7 +179,8 @@ def verify_mfa_challenge(req: AdminMfaVerifyRequest, request: Request, db: Sessi
             "full_name": user.full_name,
             "role": user.role,
             "college_id": user.college_id,
-            "mfa_enabled": True
+            "mfa_enabled": True,
+            "must_change_password": bool(user.must_change_password)
         }
     }
 

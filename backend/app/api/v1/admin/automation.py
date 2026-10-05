@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
 from backend.app.core.database import get_db
+from backend.app.core.permissions import require_super_admin
 from backend.app.api.v1.admin.auth import get_current_admin
 from backend.app.automation.engine import automation_engine
 from backend.app.automation.jobs import JOBS_MAP
@@ -16,10 +17,10 @@ class JobTriggerRequest(BaseModel):
     payload: Optional[Dict[str, Any]] = None
 
 JOB_METADATA = {
-    "ait_website_sync": "Synchronizes official AIT website announcements & pages into snapshot store",
-    "website_change_detection": "Detects content changes across crawled college URLs",
-    "image_sync": "Synchronizes local campus images with official AIT repository",
-    "image_verification": "Verifies imagery provenance and tags official AIT visual assets",
+    "website_sync": "Synchronizes configured college websites into the tenant snapshot store",
+    "website_change_detection": "Detects content changes across configured college URLs",
+    "image_sync": "Synchronizes verified tenant image assets",
+    "image_verification": "Verifies tenant image provenance and official source assets",
     "document_ingestion": "Processes pending circulars, brochures, and academic PDFs",
     "ocr_processing": "Isolates and executes OCR text extraction on uploaded scans",
     "rag_indexing": "Incrementally indexes published chunks into vector embeddings",
@@ -34,7 +35,7 @@ JOB_METADATA = {
     "temporary_file_cleanup": "Purges temporary session uploads older than 24 hours",
     "backup_creation": "Creates an encrypted database and metadata backup archive",
     "restore_verification": "Automates isolated restore test to verify database integrity",
-    "knowledge_evaluation": "Executes golden evaluation suite across 16 core AIT academic domains",
+    "knowledge_evaluation": "Executes the platform golden evaluation suite across configured college domains",
     "regression_evaluation": "Evaluates accuracy delta against previous version before publication",
     "security_scans": "Analyzes traffic for prompt injections, oversized uploads, and token abuse",
     "alert_processing": "Aggregates and escalates critical unacknowledged system alerts",
@@ -43,7 +44,7 @@ JOB_METADATA = {
 }
 
 @router.get("/jobs")
-def list_available_jobs(db: Session = Depends(get_db), current_admin = Depends(get_current_admin)):
+def list_available_jobs(db: Session = Depends(get_db), current_admin = Depends(require_super_admin)):
     """Lists all 24 registered automated jobs, their descriptions, and recent execution statuses."""
     recent_jobs = db.query(AutomationJob).order_by(AutomationJob.created_at.desc()).limit(50).all()
     recent_by_type = {}
@@ -69,7 +70,7 @@ def list_available_jobs(db: Session = Depends(get_db), current_admin = Depends(g
     return {"total_jobs": len(result), "jobs": result}
 
 @router.post("/jobs/trigger")
-def trigger_job(req: JobTriggerRequest, db: Session = Depends(get_db), current_admin = Depends(get_current_admin)):
+def trigger_job(req: JobTriggerRequest, db: Session = Depends(get_db), current_admin = Depends(require_super_admin)):
     """Manually triggers any of the 24 automated background jobs."""
     if req.job_type not in JOBS_MAP:
         raise HTTPException(status_code=400, detail=f"Job type '{req.job_type}' is not recognized.")
@@ -88,7 +89,7 @@ def trigger_job(req: JobTriggerRequest, db: Session = Depends(get_db), current_a
     }
 
 @router.get("/dead-letter")
-def list_dead_letter_queue(db: Session = Depends(get_db), current_admin = Depends(get_current_admin)):
+def list_dead_letter_queue(db: Session = Depends(get_db), current_admin = Depends(require_super_admin)):
     """Retrieves all failed jobs resting in the Dead-Letter Queue."""
     dlq_jobs = db.query(AutomationJob).filter(AutomationJob.status == "DEAD_LETTER").order_by(AutomationJob.created_at.desc()).all()
     return {
@@ -110,7 +111,7 @@ def list_dead_letter_queue(db: Session = Depends(get_db), current_admin = Depend
     }
 
 @router.post("/dead-letter/{job_id}/retry")
-def retry_dead_letter_job(job_id: str, db: Session = Depends(get_db), current_admin = Depends(get_current_admin)):
+def retry_dead_letter_job(job_id: str, db: Session = Depends(get_db), current_admin = Depends(require_super_admin)):
     """Retries a failed job from the Dead-Letter Queue."""
     job = db.query(AutomationJob).filter(AutomationJob.job_id == job_id).first()
     if not job:
@@ -126,7 +127,7 @@ def retry_dead_letter_job(job_id: str, db: Session = Depends(get_db), current_ad
     return {"success": True, "message": f"Job {job_id} re-queued for execution."}
 
 @router.delete("/dead-letter/{job_id}")
-def cancel_dead_letter_job(job_id: str, db: Session = Depends(get_db), current_admin = Depends(get_current_admin)):
+def cancel_dead_letter_job(job_id: str, db: Session = Depends(get_db), current_admin = Depends(require_super_admin)):
     """Cancels or purges a dead-letter job from the queue."""
     job = db.query(AutomationJob).filter(AutomationJob.job_id == job_id).first()
     if not job:
@@ -137,7 +138,7 @@ def cancel_dead_letter_job(job_id: str, db: Session = Depends(get_db), current_a
     return {"success": True, "message": f"Job {job_id} marked as CANCELLED."}
 
 @router.get("/worker-status")
-def get_worker_status(db: Session = Depends(get_db), current_admin = Depends(get_current_admin)):
+def get_worker_status(db: Session = Depends(get_db), current_admin = Depends(require_super_admin)):
     """Returns the worker daemon status, queue depth, and active distributed locks."""
     locks = db.query(DistributedLock).all()
     return {

@@ -1,0 +1,31 @@
+if college_id and topic_query:
+                        # FACILITIES is the classifier label for transportation
+                        # questions, but querying the broad "facilities" synonym
+                        # loses the transport topic and reintroduces contact,
+                        # program, and fee records. Preserve the original query
+                        # for this fallback so query_entities applies its topic
+                        # guard to the actual request.
+                        fallback_query = search_query if is_transport_query else topic_query
+                        retrieved_entities = knowledge_db.query_entities(
+                            db,
+                            fallback_query,
+                            college_id=college_id,
+                        )
+
+                    # For transportation queries, apply a tight relevance filter
+                    # after fallback retrieval. This prevents unrelated placement,
+                    # faculty, library, event, or other facility records from being
+                    # returned.
+                    if is_transport_query and retrieved_entities:
+                        retrieved_entities = [
+                            e
+                            for e in retrieved_entities
+                            if knowledge_db.topic_relevance_score(
+                                search_query,
+                                f"{e.get('name', '')} {e.get('category', '')} {e.get('details', '')}",
+                                title=e.get('name', ''),
+                                url=e.get('source_url', ''),
+                            ) is not None
+                        ]
+
+                if admission_category == "admission_eligibility" and retrieved_entities:

@@ -16,9 +16,17 @@ def list_website_snapshots(
     db: Session = Depends(get_db)
 ):
     q = db.query(WebsiteSnapshot)
-    # Phase 9: scope to college
-    if current_user.role != "SUPER_ADMIN" and current_user.college_id:
-        q = q.filter(WebsiteSnapshot.college_id == current_user.college_id)
+    # Legacy NULL-tenant snapshots are quarantined from College Admin views.
+    if current_user.role != "SUPER_ADMIN":
+        if not current_user.college_id:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403, detail="A college context is required")
+        q = q.filter(
+            WebsiteSnapshot.college_id == current_user.college_id,
+            WebsiteSnapshot.college_id.isnot(None),
+        )
+    else:
+        q = q.filter(WebsiteSnapshot.college_id.isnot(None))
     snapshots = q.order_by(WebsiteSnapshot.last_crawled_at.desc()).all()
     return [
         {
@@ -40,6 +48,7 @@ def list_website_snapshots(
 
 @router.post("/sync")
 async def trigger_website_sync(
+    college_id: str | None = None,
     current_user: User = Depends(require_permission(PERM_WEBSITE_SYNC)),
     db: Session = Depends(get_db)
 ):
@@ -51,8 +60,16 @@ async def trigger_website_sync(
     import traceback
 
     logger = logging.getLogger(__name__)
+    role = (current_user.role or "").upper()
+    target_college_id = college_id if role == "SUPER_ADMIN" else current_user.college_id
+    if not target_college_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="An explicit college tenant is required for website synchronization")
+    if role != "SUPER_ADMIN" and college_id and college_id != current_user.college_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Cannot synchronize another college's website")
     try:
-        sync_result = await website_crawler.synchronize_website(db)
+        sync_result = await website_crawler.synchronize_website(db, college_id=target_college_id)
         conflicts_found = conflict_detector.scan_for_conflicts(db)
     except Exception as exc:
         # Log the full traceback server-side and return a structured error
@@ -72,7 +89,7 @@ async def trigger_website_sync(
 
     return {
         "status": "success",
-        "message": "AIT website synchronization completed.",
+        "message": "College website synchronization completed.",
         "details": sync_result,
         "new_conflicts_detected": len(conflicts_found)
     }

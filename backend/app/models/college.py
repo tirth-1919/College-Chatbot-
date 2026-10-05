@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, JSON, Integer
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, JSON, Integer, Float
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
 
@@ -79,6 +79,7 @@ class College(Base):
     aliases = relationship("CollegeAlias", back_populates="college", cascade="all, delete-orphan")
     change_requests = relationship("ChangeRequest", back_populates="college", cascade="all, delete-orphan")
     sync_histories = relationship("WebsiteSyncHistory", back_populates="college", cascade="all, delete-orphan")
+    learning_candidates = relationship("LearningCandidate", back_populates="college", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -169,6 +170,12 @@ class ChangeRequest(Base):
     reviewed_by = Column(String(36), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
     review_notes = Column(Text, nullable=True)
+    # Provenance for workflow extensions such as continuous learning. These fields
+    # are informational links; production materialisation still happens only in
+    # the existing Super Admin approval transaction.
+    proposal_origin = Column(String(50), nullable=True, index=True)
+    learning_candidate_id = Column(String(36), nullable=True, index=True)
+    provenance_json = Column("provenance", JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -192,6 +199,9 @@ class ChangeRequest(Base):
             "reviewed_by": self.reviewed_by,
             "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
             "review_notes": self.review_notes,
+            "proposal_origin": self.proposal_origin,
+            "learning_candidate_id": self.learning_candidate_id,
+            "provenance": self.provenance_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -239,7 +249,10 @@ class StagedUploadRecord(Base):
     course_department = Column(String(100), nullable=True)
     extracted_data = Column(JSON, default=dict)
     raw_snippet = Column(Text, nullable=True)
-    confidence_score = Column(Integer, default=90)
+    # Confidence is stored as a normalized probability in the inclusive range
+    # [0, 1].  Keeping the API contract in probability units prevents the UI
+    # from turning 0.85 into 8500%.
+    confidence_score = Column(Float, default=0.90)
     status = Column(String(30), default="PENDING_REVIEW", index=True)  # PENDING_REVIEW, APPROVED, REJECTED
     reviewed_by = Column(String(36), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)

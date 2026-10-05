@@ -41,20 +41,35 @@ def get_dashboard_metrics(
     total_documents = _cs(db.query(Document), Document).count()
     total_users = _cs(db.query(User), User).count()
     total_conversations = _cs(db.query(Conversation), Conversation).count()
-    total_messages = db.query(Message).count()
+    # Messages have no direct tenant column; derive scope through their
+    # authoritative Conversation relationship.
+    total_messages_q = db.query(Message).join(
+        Conversation, Message.conversation_id == Conversation.id
+    )
+    if not is_super:
+        total_messages_q = total_messages_q.filter(Conversation.college_id == cid)
+    total_messages = total_messages_q.count()
 
     unresolved_gaps = _cs(db.query(KnowledgeGap).filter(KnowledgeGap.resolved == False), KnowledgeGap).count()
-    unresolved_conflicts = db.query(KnowledgeConflict).filter(KnowledgeConflict.resolution_status == "UNRESOLVED").count()
+    conflicts_q = db.query(KnowledgeConflict).filter(KnowledgeConflict.resolution_status == "UNRESOLVED")
+    if not is_super:
+        conflicts_q = conflicts_q.filter(KnowledgeConflict.college_id == cid)
+    unresolved_conflicts = conflicts_q.count()
     total_snapshots = _cs(db.query(WebsiteSnapshot), WebsiteSnapshot).count()
 
-    active_models = db.query(AiModelRegistry).filter(AiModelRegistry.is_enabled == True).all()
+    # Model registry and circuit state are platform-global resources. They are
+    # intentionally not exposed in a College Admin dashboard.
+    active_models = (
+        db.query(AiModelRegistry).filter(AiModelRegistry.is_enabled == True).all()
+        if is_super else []
+    )
     circuit_healthy = sum(1 for m in active_models if m.health_status == "HEALTHY")
     circuit_open = sum(1 for m in active_models if m.health_status == "OPEN")
 
     # Recent AI usage (last 24h)
     one_day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
     ai_usage_q = db.query(AiUsageLog).filter(AiUsageLog.timestamp >= one_day_ago)
-    if not is_super and cid and hasattr(AiUsageLog, "college_id"):
+    if not is_super:
         ai_usage_q = ai_usage_q.filter(AiUsageLog.college_id == cid)
     recent_logs = ai_usage_q.all()
     ai_requests_24h = len(recent_logs)

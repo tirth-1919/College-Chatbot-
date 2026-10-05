@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from backend.app.core.database import get_db
-from backend.app.core.permissions import get_current_admin_user, require_permission, log_admin_audit, PERM_CONFLICTS_REVIEW
+from backend.app.core.permissions import (
+    get_current_admin_user, require_permission, require_super_admin,
+    log_admin_audit, PERM_CONFLICTS_REVIEW,
+)
 from backend.app.models.admin_system import KnowledgeConflict
 from backend.app.models.user import User
 from backend.app.knowledge.conflict_detector import conflict_detector
@@ -22,6 +25,8 @@ def list_conflicts(
     db: Session = Depends(get_db)
 ):
     query = db.query(KnowledgeConflict)
+    if (current_user.role or "").upper() != "SUPER_ADMIN":
+        query = query.filter(KnowledgeConflict.college_id == current_user.college_id)
     if status_filter and status_filter != "ALL":
         query = query.filter(KnowledgeConflict.resolution_status == status_filter)
 
@@ -45,7 +50,7 @@ def list_conflicts(
 
 @router.post("/scan")
 def trigger_conflict_scan(
-    current_user: User = Depends(require_permission(PERM_CONFLICTS_REVIEW)),
+    current_user: User = Depends(require_super_admin),
     db: Session = Depends(get_db)
 ):
     detected = conflict_detector.scan_for_conflicts(db)
@@ -63,7 +68,10 @@ def resolve_conflict(
     current_user: User = Depends(require_permission(PERM_CONFLICTS_REVIEW)),
     db: Session = Depends(get_db)
 ):
-    existing = db.query(KnowledgeConflict).filter(KnowledgeConflict.id == conflict_id).first()
+    conflict_query = db.query(KnowledgeConflict).filter(KnowledgeConflict.id == conflict_id)
+    if (current_user.role or "").upper() != "SUPER_ADMIN":
+        conflict_query = conflict_query.filter(KnowledgeConflict.college_id == current_user.college_id)
+    existing = conflict_query.first()
     if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conflict record not found")
     if existing.resolution_status != "UNRESOLVED":

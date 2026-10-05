@@ -8,9 +8,13 @@ import {
 
 const ENTITY_TYPES = ['FEES', 'FACULTY', 'COURSES', 'DEPARTMENT', 'CALENDAR', 'EVENT', 'KNOWLEDGE'];
 
+const normalizeStatus = (status) => String(status || '').trim().toUpperCase();
+const isPendingRequest = (request) => normalizeStatus(request?.status) === 'PENDING';
+
 export default function ChangeRequestsView() {
   const { user } = useAdminAuth();
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = normalizeStatus(user?.role) === 'SUPER_ADMIN';
+  const [allRequests, setAllRequests] = useState([]);
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +22,8 @@ export default function ChangeRequestsView() {
   const [filter, setFilter] = useState('ALL');
   const [showCreate, setShowCreate] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [reviewNotes, setReviewNotes] = useState({});
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -32,8 +38,16 @@ export default function ChangeRequestsView() {
     setLoading(true);
     setError('');
     try {
-      const data = await adminApi.listChangeRequests(filter);
-      setRequests(data || []);
+      // Load the complete response for both the table and the bulk action. The
+      // active tab only controls which loaded rows are displayed; it must not
+      // change the pending set used by Approve All & Apply.
+      const data = await adminApi.listChangeRequests('ALL');
+      const nextRequests = Array.isArray(data) ? data : [];
+      setAllRequests(nextRequests);
+      setRequests(nextRequests.filter(request =>
+        filter === 'ALL' || normalizeStatus(request.status) === filter
+      ));
+      return nextRequests;
     } catch (err) {
       setError(err.message || 'Failed to load change requests');
     } finally {
@@ -71,15 +85,27 @@ export default function ChangeRequestsView() {
   };
 
   const review = async (id, decision) => {
+    // Keep the action guard in the handler as well as on the buttons. This
+    // prevents duplicate submissions from rapid clicks before React re-renders.
+    if (actionLoadingId === id) return;
     setActionLoadingId(id);
     setError('');
     try {
-      await (decision === 'approve'
+      const processedRequest = await (decision === 'approve'
         ? adminApi.approveChangeRequest(id, reviewNotes[id] || null)
         : adminApi.rejectChangeRequest(id, reviewNotes[id] || null));
+
+      // Reflect the confirmed API response immediately, then reconcile with
+      // the server list. This keeps the action from appearing stuck while the
+      // refresh is in flight and never treats a failed API call as success.
+      if (processedRequest?.id === id) {
+        setRequests(current => current.map(request =>
+          request.id === id ? { ...request, ...processedRequest } : request
+        ));
+      }
       setSuccessMsg(`Change request ${decision}d.`);
       setTimeout(() => setSuccessMsg(''), 4000);
-      load();
+      await load();
     } catch (err) {
       setError(err.message || `Failed to ${decision} change request`);
     } finally {
@@ -101,7 +127,32 @@ export default function ChangeRequestsView() {
     );
   };
 
-  const pendingCount = requests.filter(r => r.status === 'PENDING').length;
+  const pendingRequests = allRequests.filter(isPendingRequest);
+  const pendingCount = pendingRequests.length;
+
+  const approveAll = async () => {
+    if (bulkLoading || pendingRequests.length === 0) return;
+    setBulkLoading(true);
+    setShowBulkConfirm(false);
+    setError('');
+    try {
+      const response = await adminApi.approveAllChangeRequests(null);
+      const resultById = new Map((response?.results || []).map(result => [result.request_id, result]));
+      setAllRequests(current => current.map(request => {
+        const result = resultById.get(request.id);
+        return result ? { ...request, status: result.status, review_notes: result.message || request.review_notes } : request;
+      }));
+      const failed = response?.failed ?? (response?.results || []).filter(result => result.status === 'FAILED').length;
+      const processed = response?.processed ?? (response?.results || []).filter(result => result.status !== 'FAILED').length;
+      setSuccessMsg(`Approved & Applied: ${processed}  |  Failed: ${failed}`);
+      setTimeout(() => setSuccessMsg(''), 6000);
+      await load();
+    } catch (err) {
+      setError(err.message || 'Failed to approve all pending change requests');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -127,7 +178,13 @@ export default function ChangeRequestsView() {
               <Plus size={15} /> New Change Request
             </button>
           )}
-          <button className="btn-secondary" onClick={load} disabled={loading} style={{ gap: 8 }}>
+          {isSuperAdmin && (
+            <button className="btn-primary" onClick={() => setShowBulkConfirm(true)}
+              disabled={bulkLoading || pendingCount === 0} style={{ gap: 8 }}>
+              <Check size={15} /> {bulkLoading ? 'Approving All…' : `Approve All & Apply${pendingCount ? ` (${pendingCount})` : ''}`}
+            </button>
+          )}
+          <button className="btn-secondary" onClick={load} disabled={loading || bulkLoading} style={{ gap: 8 }}>
             <RefreshCw size={15} className={loading ? 'spin' : ''} /> Refresh
           </button>
         </div>
@@ -141,6 +198,19 @@ export default function ChangeRequestsView() {
       {error && (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '12px 16px', marginBottom: 20, color: '#fca5a5', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertCircle size={16} /> <span>{error}</span>
+        </div>
+      )}
+
+      {showBulkConfirm && (
+        <div role="dialog" aria-modal="true" className="glass-card" style={{ padding: 24, marginBottom: 20, border: '1px solid rgba(240,133,24,0.4)' }}>
+          <h3 style={{ color: '#fff', marginBottom: 8 }}>Approve and apply all {pendingCount} pending change requests?</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 18 }}>
+            Approved changes will be applied to production data. Requests that cannot be applied will remain FAILED with their reason.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <button type="button" className="btn-secondary" onClick={() => setShowBulkConfirm(false)}>Cancel</button>
+            <button type="button" className="btn-primary" onClick={approveAll}>Approve All & Apply</button>
+          </div>
         </div>
       )}
 
@@ -221,7 +291,7 @@ export default function ChangeRequestsView() {
           {requests.map(cr => (
             <div key={cr.id} className="glass-card" style={{
               padding: '18px 22px',
-              borderLeft: `4px solid ${cr.status === 'PENDING' ? '#f08518' : cr.status === 'APPROVED' ? '#10b981' : '#ef4444'}`
+              borderLeft: `4px solid ${normalizeStatus(cr.status) === 'PENDING' ? '#f08518' : normalizeStatus(cr.status) === 'APPROVED' ? '#10b981' : '#ef4444'}`
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                 <div>
@@ -262,7 +332,7 @@ export default function ChangeRequestsView() {
                 </div>
               )}
 
-              {isSuperAdmin && cr.status === 'PENDING' && (
+              {isSuperAdmin && isPendingRequest(cr) && (
                 <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
                   <input
                     className="input-field"
@@ -272,17 +342,22 @@ export default function ChangeRequestsView() {
                     style={{ fontSize: '0.82rem', marginBottom: 10 }}
                   />
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                    <button className="btn-secondary" disabled={actionLoadingId === cr.id}
+                    <button type="button" className="btn-secondary" disabled={actionLoadingId === cr.id}
                       onClick={() => review(cr.id, 'reject')}
                       style={{ gap: 6, color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', fontSize: '0.8rem', padding: '6px 14px' }}>
                       <X size={14} /> Reject
                     </button>
-                    <button className="btn-primary" disabled={actionLoadingId === cr.id}
+                    <button type="button" className="btn-primary" disabled={actionLoadingId === cr.id}
                       onClick={() => review(cr.id, 'approve')}
                       style={{ gap: 6, fontSize: '0.8rem', padding: '6px 14px' }}>
                       <Check size={14} /> Approve & Apply
                     </button>
                   </div>
+                </div>
+              )}
+              {isSuperAdmin && !isPendingRequest(cr) && (
+                <div style={{ marginTop: 14, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                  This request has already been processed.
                 </div>
               )}
             </div>

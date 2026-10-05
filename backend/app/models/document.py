@@ -1,8 +1,18 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON, Integer
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON, Integer, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
 from backend.app.core.database import Base
+try:
+    from pgvector.sqlalchemy import Vector
+except ImportError:  # SQLite/dev environments keep the existing JSON fallback.
+    class Vector(TypeDecorator):
+        impl = JSON
+        cache_ok = True
+        def __init__(self, dimensions=None, **kwargs):
+            super().__init__(**kwargs)
+            self.dimensions = dimensions
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -38,6 +48,10 @@ class Document(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="documents")
+    __table_args__ = (
+        UniqueConstraint("college_id", "content_hash", "visibility", name="uq_documents_college_hash_visibility"),
+    )
+
     chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
 
 class DocumentChunk(Base):
@@ -48,9 +62,19 @@ class DocumentChunk(Base):
     document_id = Column(String(36), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
-    # Serialized vector representation for portability across SQLite and PostgreSQL
+    # Kept as a compatibility/backfill source for SQLite and existing rows.
     embedding_json = Column(Text, nullable=True)
+    # Production PostgreSQL retrieval uses this native pgvector column.
+    embedding_vector = Column(Vector(64), nullable=True)
     metadata_ = Column(JSON, default=dict)
+    embedding_model = Column(String(120), nullable=True, index=True)
+    embedding_version = Column(String(50), nullable=True)
+    indexed_at = Column(DateTime, nullable=True)
+    active = Column(Boolean, default=True, nullable=False, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        UniqueConstraint("document_id", "chunk_index", name="uq_document_chunks_document_index"),
+    )
 
     document = relationship("Document", back_populates="chunks")

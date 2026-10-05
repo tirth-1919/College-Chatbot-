@@ -1,0 +1,140 @@
+[MIGRATION] knowledge_categories rows are clean, nothing to repair
+[MIGRATION] colleges table nullability matches model, nothing to repair
+[MIGRATION] Starting category uniqueness fix (sqlite)...
+[MIGRATION] SQLite detected: recreating table with new constraints...
+[MIGRATION] Old table columns: ['college_id', 'created_at', 'created_by', 'description', 'display_order', 'icon', 'id', 'key', 'name', 'status', 'updated_at', 'updated_by']
+[MIGRATION] Full Copy SQL: 
+                INSERT INTO knowledge_categories_new (id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at)
+                SELECT id, name, key, description, icon, display_order, status, college_id, created_by, updated_by, created_at, updated_at
+                FROM knowledge_categories
+            
+[MIGRATION] SQLite migration complete
+[MIGRATION] Category uniqueness constraints successfully migrated to tenant-scoped
+SQLite migration check and table creation completed successfully.
+========================================================================
+[*] AHMEDABAD INSTITUTE OF TECHNOLOGY (AIT) - ADMIN CONSOLE
+========================================================================
+[*] Admin API Backend:  http://localhost:8001/api/v1/admin
+[*] Admin Health Check: http://localhost:8001/health
+[*] Admin Web Portal:   http://localhost:8001 (Self-Hosted)
+========================================================================
+INFO:     127.0.0.1:51890 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50815 - "POST /api/v1/admin/knowledge-gaps/resolve-all HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /assets/index-DayIvo90.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56075 - "GET /api/v1/admin/monitoring/live-stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/website/snapshots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/knowledge HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58349 - "GET /api/v1/admin/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/knowledge-gaps HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58349 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/colleges/?per_page=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/change-requests/?status_filter=ALL HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64715 - "GET /api/v1/admin/monitoring/live-stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54293 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54584 - "GET /api/v1/admin/change-requests/?status_filter=ALL HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59471 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59471 - "GET /assets/index-DayIvo90.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59471 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59471 - "GET /api/v1/admin/monitoring/live-stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52182 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52182 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50940 - "GET /api/v1/admin/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52182 - "GET /api/v1/admin/knowledge-gaps HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52376 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52376 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52376 - "GET /api/v1/admin/monitoring/live-stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51358 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51358 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64295 - "GET /api/v1/admin/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51358 - "GET /api/v1/admin/knowledge-gaps HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65470 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65470 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65470 - "GET /api/v1/admin/monitoring/live-stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49851 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49851 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52149 - "POST /api/v1/admin/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52149 - "POST /api/v1/admin/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52149 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52149 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59238 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59238 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52149 - "GET /api/v1/admin/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59238 - "GET /api/v1/admin/knowledge-gaps HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "POST /api/v1/admin/knowledge-gaps/resolve-all HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56274 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56274 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET /api/v1/admin/images HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET /api/v1/admin/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET /api/v1/admin/website/snapshots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET /api/v1/admin/knowledge HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56679 - "GET /api/v1/admin/smart-upload/staged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge-db/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge-db/categories/951fcaae-9177-4a8c-87ed-7220872244a5/records?skip=0&limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge-db/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge-db/categories/aceab666-8054-4d3a-820b-fb788343f93b/records?skip=0&limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge-db/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge-db/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/knowledge HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "GET /api/v1/admin/website/snapshots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57500 - "POST /api/v1/admin/website/sync HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:52099 - "GET /api/v1/admin/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61579 - "POST /api/v1/admin/documents/upload HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55140 - "GET /api/v1/admin/images HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55140 - "GET /api/v1/admin/conflicts?status_filter=UNRESOLVED HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65036 - "GET /api/v1/admin/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55140 - "GET /api/v1/admin/knowledge-gaps HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55140 - "GET /api/v1/admin/change-requests/?status_filter=ALL HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65036 - "GET /api/v1/admin/learning-candidates?status=ALL&search=&page=1&per_page=50&sort=priority HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:55140 - "GET /api/v1/admin/learning-candidates/dashboard/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55525 - "GET /api/v1/admin/learning-candidates?status=PENDING_REVIEW&search=&page=1&per_page=50&sort=priority HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/learning-candidates/dashboard/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55732 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/colleges/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/dashboard/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/knowledge-gaps HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/automation/jobs HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/automation/worker-status HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/automation/dead-letter HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/alerts?severity= HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/security/security-events HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/automation/jobs HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/automation/worker-status HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/automation/dead-letter HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/automation/jobs HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/automation/dead-letter HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/automation/worker-status HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/automation/worker-status HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/automation/jobs HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/automation/dead-letter HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/automation/dead-letter HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/automation/jobs HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/automation/worker-status HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/automation/worker-status HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/automation/jobs HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/automation/dead-letter HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/automation/dead-letter HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/automation/jobs HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/automation/worker-status HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/security/audit-logs HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/security/security-events HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50268 - "GET /api/v1/admin/settings/backups HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/settings/feature-flags HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/settings/prompts HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55732 - "GET /api/v1/admin/alerts?severity= HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:60239 - "GET /api/v1/admin/security/security-events HTTP/1.1" 403 Forbidden

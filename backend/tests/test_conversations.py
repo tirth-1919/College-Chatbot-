@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from backend.app.api.v1.conversations import router
 from backend.app.core.database import Base, get_db
 from backend.app.core.security import create_access_token
+from backend.app.models.college import College
 from backend.app.models.conversation import Conversation, Message
 from backend.app.models.user import User
 
@@ -21,9 +22,11 @@ def conversation_client():
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, autoflush=False)
     db = factory()
+    college = College(id=str(uuid.uuid4()), name="Conversation College", code="CONV",
+                      slug="conversation-college", status="ACTIVE", registration_status="APPROVED")
     owner = User(id=str(uuid.uuid4()), email="conversation-owner@example.test", full_name="Owner", role="STUDENT")
     other = User(id=str(uuid.uuid4()), email="conversation-other@example.test", full_name="Other", role="STUDENT")
-    db.add_all([owner, other])
+    db.add_all([college, owner, other])
     db.commit()
 
     app = FastAPI()
@@ -39,7 +42,8 @@ def conversation_client():
     app.dependency_overrides[get_db] = override_db
 
     def create(owner_id=owner.id, title="Original title"):
-        conversation = Conversation(id=str(uuid.uuid4()), user_id=owner_id, title=title)
+        conversation = Conversation(id=str(uuid.uuid4()), user_id=owner_id,
+                                    college_id=college.id, conversation_type="NORMAL", title=title)
         db.add(conversation)
         db.add(Message(conversation_id=conversation.id, sender="user", content="persisted message"))
         db.commit()

@@ -1,0 +1,16 @@
+﻿..FFF.....FFF...FFFFF.F.......F..                                        [100%]
+=========================== short test summary info ===========================
+FAILED backend/tests/test_final_answer_source_routing.py::test_smart_upload_admission_documents_answer_uses_complete_approved_section
+FAILED backend/tests/test_final_answer_source_routing.py::test_smart_upload_dynamic_admission_documents_answer_does_not_duplicate
+FAILED backend/tests/test_final_answer_source_routing.py::test_ait_bca_eligibility_answer_contains_only_eligibility
+FAILED backend/tests/test_final_answer_source_routing.py::test_real_chat_ait_departments_require_academic_snapshot_through_sse
+FAILED backend/tests/test_final_answer_source_routing.py::test_real_chat_ait_departments_without_valid_snapshot_does_not_use_irrelevant_pages
+FAILED backend/tests/test_final_answer_source_routing.py::test_ait_dbms_official_snapshot_beats_library_through_sse
+FAILED backend/tests/test_final_answer_source_routing.py::test_ait_transportation_gemini_guidance_is_separate_from_missing_verified_evidence
+FAILED backend/tests/test_final_answer_source_routing.py::test_general_ait_advice_uses_gemini_warning_path[What career paths can an AIT computer engineering student pursue after graduation?]
+FAILED backend/tests/test_final_answer_source_routing.py::test_general_ait_advice_uses_gemini_warning_path[What skills should an AIT student develop to prepare for a software development internship?]
+FAILED backend/tests/test_final_answer_source_routing.py::test_exact_general_programming_question_uses_gemini_warning_path
+FAILED backend/tests/test_final_answer_source_routing.py::test_real_chat_stream_exact_programming_question_has_only_unverified_gemini_guidance
+FAILED backend/tests/test_final_answer_source_routing.py::test_real_chat_stream_general_ait_python_question_calls_gemini_unverified
+FAILED backend/tests/test_final_answer_source_routing.py::test_official_snapshots_are_synthesized_into_a_focused_grounded_answer
+13 failed, 20 passed in 26.45s

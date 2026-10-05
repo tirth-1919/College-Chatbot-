@@ -10,7 +10,7 @@ services:
     environment:
       - ENVIRONMENT=production
       - DEBUG=false
-      - DATABASE_URL=postgresql+psycopg2://ait_admin:${POSTGRES_PASSWORD:-ait_secure_pass_2026}@postgres:5432/ait_db
+      - DATABASE_URL=postgresql+psycopg2://ait_admin:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/ait_db
       - REDIS_URL=redis://redis:6379/0
       - USE_REDIS=true
       - ADMIN_BOOTSTRAP_PASSWORD=${ADMIN_BOOTSTRAP_PASSWORD:-}
@@ -52,7 +52,7 @@ services:
     environment:
       POSTGRES_DB: ait_db
       POSTGRES_USER: ait_admin
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ait_secure_pass_2026}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:

@@ -27,6 +27,14 @@ from backend.app.ai.credential_registry import (
 )
 from backend.app.models.admin_system import AiCredential
 
+def tenant_scoped_usage_query(db: Session, current_user: User):
+    # Exclude legacy NULL-tenant rows from analytics; ownership is not inferred.
+    query = db.query(AiUsageLog).filter(AiUsageLog.college_id.is_not(None))
+    if (current_user.role or "").upper() != "SUPER_ADMIN":
+        if not current_user.college_id:
+            return query.filter(AiUsageLog.college_id == "__no_tenant__")
+        query = query.filter(AiUsageLog.college_id == current_user.college_id)
+    return query
 router = APIRouter(prefix="/ai", tags=["Admin AI Providers & Failover"])
 
 class PriorityUpdateRequest(BaseModel):
@@ -236,7 +244,8 @@ def get_failover_events(
     """Full automatic decision chains grouped by request_id."""
     recent_ids = [
         row[0] for row in (
-            db.query(AiUsageLog.request_id)
+            tenant_scoped_usage_query(db, current_user)
+            .with_entities(AiUsageLog.request_id)
             .order_by(AiUsageLog.timestamp.desc())
             .limit(limit * 10)
             .all()
@@ -250,7 +259,7 @@ def get_failover_events(
     events = []
     for rid in unique_ids:
         logs = (
-            db.query(AiUsageLog)
+            tenant_scoped_usage_query(db, current_user)
             .filter(AiUsageLog.request_id == rid)
             .order_by(AiUsageLog.timestamp.asc())
             .all()
@@ -286,7 +295,7 @@ def get_usage_logs(
     db: Session = Depends(get_db)
 ):
     logs = (
-        db.query(AiUsageLog)
+        tenant_scoped_usage_query(db, current_user)
         .order_by(AiUsageLog.timestamp.desc())
         .limit(limit)
         .all()

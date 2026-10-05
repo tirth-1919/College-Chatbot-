@@ -58,11 +58,15 @@ export const apiClient = {
   async authFetch(url, options = {}, allowRefresh = true) {
     const { skipAuth, skipRefresh, ...fetchOptions } = options;
     const requestOptions = { ...fetchOptions, headers: new Headers(fetchOptions.headers || {}) };
-    if (!skipAuth) {
-      const token = this.getToken();
-      if (token) requestOptions.headers.set('Authorization', `Bearer ${token}`);
+    const tokenAtRequestStart = skipAuth ? null : this.getToken();
+    if (tokenAtRequestStart) {
+      requestOptions.headers.set('Authorization', `Bearer ${tokenAtRequestStart}`);
     }
     const response = await fetch(url, requestOptions);
+    // A request made before login is not evidence that the newly established
+    // session expired. Do not clear a session for a request that carried no
+    // credentials, even if the user logged in while it was in flight.
+    if (response.status === 401 && !tokenAtRequestStart) return response;
     if (response.status !== 401 || !allowRefresh || skipRefresh || url.includes('/auth/refresh') || url.includes('/auth/logout')) return response;
 
     try {
@@ -158,12 +162,19 @@ export const apiClient = {
     return await res.json();
   },
 
-  async createConversation(title = 'New Conversation') {
+  async createConversation(title = 'New Conversation', college_id = null) {
     const res = await this.authFetch(`${API_BASE}/conversations`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ title })
+      body: JSON.stringify({ title, college_id })
     });
+    if (!res.ok) {
+      let detail = `Conversation creation failed (HTTP ${res.status})`;
+      try { detail = (await res.json()).detail || detail; } catch {}
+      const error = new Error(detail);
+      error.status = res.status;
+      throw error;
+    }
     return await res.json();
   },
 
@@ -171,7 +182,13 @@ export const apiClient = {
     const res = await this.authFetch(`${API_BASE}/conversations/${id}`, {
       headers: this.getHeaders()
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      let detail = `Conversation could not be loaded (HTTP ${res.status})`;
+      try { detail = (await res.json()).detail || detail; } catch {}
+      const error = new Error(detail);
+      error.status = res.status;
+      throw error;
+    }
     return await res.json();
   },
 
@@ -230,12 +247,14 @@ export const apiClient = {
 
     if (!response.ok) {
       let message = 'Streaming failed';
-      try {
-        const err = await response.json();
-        message = err.detail || message;
-      } catch {
-        const text = await response.text();
-        if (text) message = text;
+      const text = await response.text();
+      if (text) {
+        try {
+          const err = JSON.parse(text);
+          message = err.detail || text;
+        } catch {
+          message = text;
+        }
       }
       throw new Error(message);
     }

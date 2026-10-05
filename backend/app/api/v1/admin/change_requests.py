@@ -19,11 +19,12 @@ from backend.app.core.database import get_db
 from backend.app.core.permissions import get_current_admin_user, log_admin_audit
 from backend.app.models.college import ChangeRequest, Notification
 from backend.app.models.knowledge import AitEntity
+from backend.app.models.knowledge_categories import KnowledgeCategory, KnowledgeRecord
 from backend.app.models.user import User
 
 router = APIRouter(prefix="/change-requests", tags=["Change Requests"])
 
-VALID_ENTITY_TYPES = {"FEES", "FACULTY", "COURSES", "DEPARTMENT", "CALENDAR", "EVENT", "KNOWLEDGE"}
+VALID_ENTITY_TYPES = {"FEES", "FACULTY", "COURSES", "DEPARTMENT", "CALENDAR", "EVENT", "KNOWLEDGE", "KNOWLEDGE_CATEGORY"}
 VALID_ACTIONS = {"CREATE", "UPDATE", "DELETE"}
 ACTIONABLE_STATUSES = {"PENDING", "NEEDS_CLARIFICATION"}
 
@@ -105,8 +106,68 @@ def _apply_change(db: Session, cr: ChangeRequest) -> ChangeRequest:
             entity = db.query(AitEntity).filter(
                 AitEntity.id == cr.entity_id, AitEntity.college_id == cr.college_id
             ).first()
+            if not entity and cr.entity_type == "KNOWLEDGE":
+                entity = db.query(KnowledgeRecord).filter(
+                    KnowledgeRecord.id == cr.entity_id,
+                    KnowledgeRecord.college_id == cr.college_id,
+                ).first()
+            if not entity and cr.entity_type == "KNOWLEDGE_CATEGORY":
+                entity = db.query(KnowledgeCategory).filter(
+                    KnowledgeCategory.id == cr.entity_id,
+                    KnowledgeCategory.college_id == cr.college_id,
+                ).first()
 
-        if cr.action == "UPDATE":
+        if cr.action == "CREATE":
+            if cr.entity_type == "KNOWLEDGE_CATEGORY":
+                payload = dict(cr.new_value or {})
+                allowed = {"name", "key", "description", "icon", "display_order", "status"}
+                category = KnowledgeCategory(
+                    college_id=cr.college_id, created_by=cr.requested_by,
+                    updated_by=cr.requested_by,
+                    **{k: v for k, v in payload.items() if k in allowed},
+                )
+                db.add(category)
+                db.flush()
+                cr.entity_id = category.id
+            elif cr.entity_type != "KNOWLEDGE" or not cr.new_value:
+                raise ValueError("CREATE requests require a knowledge or category payload")
+            else:
+                payload = dict(cr.new_value)
+                category_id = payload.pop("category_id", None)
+                category = db.query(KnowledgeCategory).filter(
+                    KnowledgeCategory.id == category_id,
+                    KnowledgeCategory.college_id == cr.college_id,
+                ).first()
+                if not category:
+                    raise ValueError("Target knowledge category no longer exists")
+                allowed = {"title", "field_name", "value", "description", "metadata_json",
+                           "course", "academic_year", "source_url", "source_title",
+                           "valid_from", "valid_until"}
+                payload.pop("learning_candidate_id", None)
+                record = KnowledgeRecord(
+                    category_id=category.id,
+                    college_id=cr.college_id,
+                    created_by=cr.requested_by,
+                    updated_by=cr.requested_by,
+                    status="ACTIVE",
+                    verified=True,
+                    verified_by=cr.reviewed_by,
+                    verified_at=datetime.now(timezone.utc),
+                    source_type="ADMIN_VERIFIED",
+                    **{k: v for k, v in payload.items() if k in allowed},
+                )
+                db.add(record)
+                db.flush()
+                from backend.app.api.v1.admin.knowledge_categories import _mirror_to_retrieval
+                _mirror_to_retrieval(db, record, category)
+                cr.entity_id = record.id
+                if cr.learning_candidate_id:
+                    from backend.app.models.learning import LearningCandidate
+                    candidate = db.query(LearningCandidate).filter(LearningCandidate.id == cr.learning_candidate_id, LearningCandidate.college_id == cr.college_id).first()
+                    if candidate:
+                        candidate.metadata_json = {**(candidate.metadata_json or {}), "knowledge_record_id": record.id, "approved_by": cr.reviewed_by}
+                        db.add(candidate)
+        elif cr.action == "UPDATE":
             if not entity:
                 raise ValueError("Target record no longer exists")
             stale = _check_stale(cr, entity)
@@ -117,6 +178,11 @@ def _apply_change(db: Session, cr: ChangeRequest) -> ChangeRequest:
             for k, v in cr.new_value.items():
                 if k in ("id", "college_id"):
                     continue  # never allow tenant/identity overwrite
+                if isinstance(entity, KnowledgeRecord) and k == "metadata":
+                    k = "metadata_json"
+                if isinstance(entity, KnowledgeRecord) and k == "verified" and v:
+                    entity.verified_by = cr.reviewed_by
+                    entity.verified_at = datetime.now(timezone.utc)
                 if hasattr(entity, k) and k != "details":
                     setattr(entity, k, v)
                 else:
@@ -127,6 +193,9 @@ def _apply_change(db: Session, cr: ChangeRequest) -> ChangeRequest:
                     merged[k] = v
                     entity.details = merged
                     flag_modified(entity, "details")
+            if isinstance(entity, KnowledgeRecord):
+                from backend.app.api.v1.admin.knowledge_categories import _mirror_to_retrieval
+                _mirror_to_retrieval(db, entity, entity.category)
         elif cr.action == "DELETE":
             if not entity:
                 raise ValueError("Target record no longer exists")
@@ -134,7 +203,14 @@ def _apply_change(db: Session, cr: ChangeRequest) -> ChangeRequest:
             if stale:
                 raise ValueError(stale)
             # Soft-delete where supported, physical delete otherwise
-            if hasattr(entity, "is_active"):
+            if isinstance(entity, KnowledgeRecord):
+                entity.status = "INACTIVE"
+                entity.verified = False
+                from backend.app.api.v1.admin.knowledge_categories import _mirror_to_retrieval
+                _mirror_to_retrieval(db, entity, entity.category)
+            elif isinstance(entity, KnowledgeCategory):
+                entity.status = "INACTIVE"
+            elif hasattr(entity, "is_active"):
                 entity.is_active = False
             elif hasattr(entity, "verified"):
                 entity.verified = False
@@ -353,6 +429,28 @@ def _require_super(current_user: User) -> None:
                             detail="You do not have permission to approve changes.")
 
 
+def _approve_pending_request(db: Session, cr: ChangeRequest, current_user: User,
+                             notes: Optional[str] = None) -> ChangeRequest:
+    # Run the same review and production-application workflow for one request.
+    if cr.status not in ACTIONABLE_STATUSES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="This request has already been processed.")
+    cr.review_notes = notes or cr.review_notes
+    cr.reviewed_by = current_user.id
+    cr.reviewed_at = datetime.now(timezone.utc)
+    cr.updated_at = cr.reviewed_at
+    db.commit()
+
+    # _apply_change preserves the existing validation, transaction, and FAILED behavior.
+    cr = _apply_change(db, cr)
+    log_admin_audit(db, current_user, "CHANGE_REQUEST_APPROVED", "CHANGE_REQUEST", {
+        "change_request_id": cr.id, "entity_type": cr.entity_type,
+        "entity_id": cr.entity_id,
+    }, college_id=cr.college_id)
+    _notify(db, cr.college_id, cr.requested_by, "Change request approved",
+            f"Your change request '{cr.title or cr.id}' was approved and applied.", "SUCCESS")
+    db.commit()
+    return cr
 @router.post("/{request_id}/approve", summary="Approve change request and apply to production (SUPER_ADMIN only)")
 def approve_change_request(
     request_id: str,
@@ -364,27 +462,48 @@ def approve_change_request(
     cr = db.query(ChangeRequest).filter(ChangeRequest.id == request_id).first()
     if not cr:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Change request not found")
-    if cr.status not in ACTIONABLE_STATUSES:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="This request has already been processed.")
+    return _approve_pending_request(db, cr, current_user, req.notes).to_dict()
 
-    cr.review_notes = req.notes or cr.review_notes
-    cr.reviewed_by = current_user.id
-    cr.reviewed_at = datetime.now(timezone.utc)
-    cr.updated_at = cr.reviewed_at
-    db.commit()
-
-    # Transactional apply; raises HTTPException (and marks FAILED) on stale/missing targets.
-    cr = _apply_change(db, cr)
-
-    log_admin_audit(db, current_user, "CHANGE_REQUEST_APPROVED", "CHANGE_REQUEST", {
-        "change_request_id": cr.id, "entity_type": cr.entity_type,
-        "entity_id": cr.entity_id,
-    }, college_id=cr.college_id)
-    _notify(db, cr.college_id, cr.requested_by, "Change request approved",
-            f"Your change request '{cr.title or cr.id}' was approved and applied.", "SUCCESS")
-    db.commit()
-    return cr.to_dict()
+@router.post("/approve-all", summary="Approve and apply all pending change requests (SUPER_ADMIN only)")
+def approve_all_change_requests(
+    req: ReviewRequest,
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    _require_super(current_user)
+    # The query is deliberately restricted to PENDING. Already applied, approved,
+    # rejected, failed, and clarification requests are never included.
+    pending = db.query(ChangeRequest).filter(ChangeRequest.status == "PENDING").all()
+    results = []
+    for cr in pending:
+        # Re-check state in the same session so a repeated request cannot reprocess it.
+        db.refresh(cr)
+        if cr.status != "PENDING":
+            continue
+        try:
+            processed = _approve_pending_request(db, cr, current_user, req.notes)
+            results.append({"request_id": processed.id, "status": processed.status})
+        except HTTPException as exc:
+            db.refresh(cr)
+            results.append({
+                "request_id": cr.id,
+                "status": cr.status,
+                "message": str(exc.detail),
+            })
+        except Exception as exc:
+            db.refresh(cr)
+            results.append({
+                "request_id": cr.id,
+                "status": cr.status,
+                "message": str(exc),
+            })
+    failed = sum(1 for result in results if result["status"] == "FAILED")
+    return {
+        "total_pending": len(pending),
+        "processed": len(results) - failed,
+        "failed": failed,
+        "results": results,
+    }
 
 
 @router.post("/{request_id}/reject", summary="Reject change request (SUPER_ADMIN only)")

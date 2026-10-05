@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 
 from backend.app.core.database import SessionLocal, Base, engine
 from backend.app.models.college import College, CollegeAlias
+from backend.app.models.image import AitImage, ImageProvenance
 from backend.app.models.knowledge import AitEntity, WebsiteSnapshot
 from backend.app.models.user import User
 from backend.app.core.security import get_password_hash
@@ -102,6 +103,23 @@ MANUAL_ADMIN_ENTITIES = [
 
 # Secondary official department-level source (§4). Kept as metadata only — the
 # primary institute website remains https://www.rcti.ac.in/.
+# Images are taken from the official RCTI homepage and department pages.
+# These URLs were verified from https://www.rcti.ac.in/ and retain source URLs.
+OFFICIAL_IMAGES = [
+    {"title": "RCTI Official Logo", "category": "logo", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/04/RCTI_Logo.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Campus Nature", "category": "campus", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/04/RCTI_Nature1.jpg", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Computer Engineering Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/computer.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Electrical Engineering Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/Electrical.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Information Technology Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/IT.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Applied Mechanics Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/Applied.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Civil Engineering Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/civil.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI ICT Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/ICT1.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Printing Technology Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/Printing.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Science and Humanities Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/Science.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Textile Technology Department", "category": "department", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/05/Textile.png", "page": "https://www.rcti.ac.in/"},
+    {"title": "RCTI Institute Founder Portrait", "category": "campus", "url": "https://www.rcti.ac.in/wp-content/uploads/2025/06/Ranchhodlal_Chhotalal-e1753323589157-223x300.png", "page": "https://www.rcti.ac.in/"},
+]
+
 SECONDARY_OFFICIAL_SOURCES = [
     {
         "url": "https://it.rcti.ac.in/",
@@ -256,6 +274,22 @@ def seed_rcti(db):
             ))
     db.flush()
 
+    # Official RCTI images, keyed by tenant and deduplicated by URL hash.
+    for item in OFFICIAL_IMAGES:
+        image_hash = _hash(item["url"])
+        image = db.query(AitImage).filter(AitImage.college_id == college.id, AitImage.content_hash == image_hash).first()
+        if not image:
+            image = AitImage(
+                college_id=college.id, title=item["title"], category=item["category"],
+                image_url=item["url"], thumbnail_url=item["url"], source_url=item["url"],
+                source_page=item["page"], source_type="OFFICIAL_WEBSITE", source_domain="rcti.ac.in",
+                official_source=True, verified=True, verification_status="PUBLISHED",
+                content_hash=image_hash, description=item["title"], retrieved_at=now,
+            )
+            db.add(image)
+            db.flush()
+            db.add(ImageProvenance(image_id=image.id, source_url=item["url"], source_domain="rcti.ac.in", extracted_page=item["page"], verified_by="RCTI Official Website", verification_method="Official Domain Whitelist"))
+
     # Secondary official department source recorded as metadata (§4)
     for src in SECONDARY_OFFICIAL_SOURCES:
         exists = db.query(WebsiteSnapshot).filter(WebsiteSnapshot.url == src["url"]).first()
@@ -271,29 +305,51 @@ def seed_rcti(db):
     db.flush()
 
     # Development college admin (§6) — hashed password only, forced change on first login.
-    # Credential is for DEVELOPMENT/TESTING ONLY (rc@gmail.com / username rc_admin / temp password "rc").
+    # The email is configurable; passwords must be supplied through the protected
+    # RCTI_ADMIN_PASSWORD environment variable and are never stored in source.
     import os
-    admin_email = os.environ.get("RCTI_ADMIN_EMAIL", "rc@gmail.com")
+    admin_email = os.environ.get("RCTI_ADMIN_EMAIL", "4@gmail.com")
     admin = db.query(User).filter(User.email == admin_email).first()
     if not admin:
-        temp_password = os.environ.get("RCTI_ADMIN_PASSWORD", "rc")
-        admin = User(
-            email=admin_email,
-            full_name="RCTI College Admin",
-            role="COLLEGE_ADMIN",
-            college_id=college.id,
-            is_active=True,
-            hashed_password=get_password_hash(temp_password),
-            must_change_password=True,  # "rc" stops working after the forced change
-        )
-        db.add(admin)
-        log.info("Created RCTI development college admin %s (temporary password set; must change at first login)", admin_email)
-    else:
-        # Fill missing configuration on the existing account
-        if admin.role != "COLLEGE_ADMIN" or admin.college_id != college.id or not admin.is_active:
-            admin.role = "COLLEGE_ADMIN"
-            admin.college_id = college.id
-            admin.is_active = True
+        # Migrate the existing RCTI admin identity when the configured email is
+        # changed, without creating a duplicate tenant administrator.
+        admin = db.query(User).filter(
+            User.college_id == college.id,
+            User.role == "COLLEGE_ADMIN",
+        ).first()
+        if admin:
+            admin.email = admin_email
+        else:
+            temp_password = os.environ.get("RCTI_ADMIN_PASSWORD", "").strip()
+            if not temp_password:
+                raise RuntimeError(
+                    "RCTI_ADMIN_PASSWORD must be provided through the environment "
+                    "when creating the RCTI College Admin account."
+                )
+            admin = User(
+                email=admin_email,
+                full_name="RCTI College Admin",
+                role="COLLEGE_ADMIN",
+                college_id=college.id,
+                is_active=True,
+                hashed_password=get_password_hash(temp_password),
+                must_change_password=True,
+            )
+            db.add(admin)
+            log.info("Created RCTI college admin %s; must change password at first login", admin_email)
+    # Fill missing configuration on the existing account. Do not reset its
+    # password unless an explicit protected bootstrap/reset operation supplies one.
+    if admin.role != "COLLEGE_ADMIN" or admin.college_id != college.id or not admin.is_active:
+        admin.role = "COLLEGE_ADMIN"
+        admin.college_id = college.id
+        admin.is_active = True
+    # Website synchronization is a tenant-scoped College Admin operation.
+    # Preserve any existing explicit permissions while ensuring the seeded RCTI
+    # account can use the website sync action without granting wildcard access.
+    permissions = list(admin.permissions) if isinstance(admin.permissions, list) else []
+    if "website.sync" not in permissions:
+        permissions.append("website.sync")
+    admin.permissions = permissions
     db.flush()
     return college
 

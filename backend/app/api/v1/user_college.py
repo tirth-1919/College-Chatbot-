@@ -247,15 +247,23 @@ def switch_conversation_college(
     else:
         raise HTTPException(status_code=400, detail="college_name or college_id required")
 
-    college_context_manager.set_conversation_college(db, conv, college.id)
-
+    # Validate knowledge before mutating the conversation.  The mutation and
+    # onboarding message are then committed together; any failure rolls back
+    # the entire switch and preserves the previous tenant.
+    knowledge = _knowledge_snapshot(db, college)
+    previous_college_id = conv.college_id
+    try:
+        with db.begin_nested():
+            college_context_manager.set_conversation_college(db, conv, college.id)
+            _post_switch_onboarding(db, conv, college, knowledge)
+        db.commit()
+    except Exception:
+        db.rollback()
+        conv.college_id = previous_college_id
+        raise
     # §3/§11: switch succeeds regardless of knowledge state — but the UI needs
     # a structured TENANT-SCOPED knowledge-availability snapshot to decide the
     # post-switch onboarding message (knowledge case vs Gemini-fallback case).
-    knowledge = _knowledge_snapshot(db, college)
-    _post_switch_onboarding(db, conv, college, knowledge)
-    db.commit()
-
     log_admin_audit(db, user=current_user, action="COLLEGE_CONTEXT_SWITCHED",
               resource="college_context", status_str="SUCCESS", college_id=college.id)
     return {
@@ -297,7 +305,13 @@ def change_default_college(
     if not college:
         raise HTTPException(status_code=400, detail="Unknown college")
 
-    college_context_manager.set_user_default(db, current_user, college.id)
+    try:
+        with db.begin_nested():
+            college_context_manager.set_user_default(db, current_user, college.id)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     log_admin_audit(db, user=current_user, action="COLLEGE_DEFAULT_CHANGED",
               resource="college_context", status_str="SUCCESS", college_id=college.id)
     return {"status": "RESOLVED", "college": _college_dict(college),
@@ -310,7 +324,13 @@ def forget_default_college(
     db: Session = Depends(get_db),
 ):
     """Forget college (§26): next new chat asks the college question again."""
-    college_context_manager.forget_user_default(db, current_user)
+    try:
+        with db.begin_nested():
+            college_context_manager.forget_user_default(db, current_user)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     log_admin_audit(db, user=current_user, action="COLLEGE_DEFAULT_FORGOTTEN",
               resource="college_context", status_str="SUCCESS", college_id=None)
     return {"status": "FORGOTTEN", "message": ONBOARDING_QUESTION}

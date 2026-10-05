@@ -101,9 +101,11 @@ export function ChatTopBar({ onToggleSidebar, activeTitle, onNewChat, conversati
           </div>
         )}
         <button 
-          className="composer-tool-btn" 
-          onClick={onNewChat} 
+          type="button"
+          className="composer-tool-btn"
+          onClick={onNewChat}
           title="New conversation"
+          aria-label="Start a new chat"
           style={{ background: 'rgba(255,255,255,0.05)' }}
         >
           <Plus size={18} />

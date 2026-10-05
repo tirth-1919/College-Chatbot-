@@ -87,23 +87,26 @@ def get_current_admin_user(
             detail="Access denied. Administrator privileges required."
         )
     
-    # If user belongs to a college, check college suspension status
-    if user.college_id and user_role != "SUPER_ADMIN":
+    # Every non-Super admin must be linked to an approved, active tenant.
+    # Without this fail-closed check, legacy admin routes whose filters are
+    # conditional on college_id could expose platform-wide data to an orphaned
+    # administrator account.
+    if user_role != "SUPER_ADMIN":
+        if not user.college_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Administrator account is not linked to a college."
+            )
         college = db.query(College).filter(College.id == user.college_id).first()
         if not college:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="College record not found."
             )
-        if college.status == "SUSPENDED":
+        if college.status != "ACTIVE" or college.registration_status != "APPROVED":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="College account is suspended. Contact platform administrator."
-            )
-        if college.status in ["REJECTED", "ARCHIVED"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"College account status is {college.status}. Access denied."
+                detail="College account is not active and approved."
             )
     
     return user
@@ -148,8 +151,11 @@ def require_permission(permission: str) -> Callable:
         if user_role == "SUPER_ADMIN":
             return current_user
         
-        user_perms = current_user.permissions or []
-        allowed_permissions = ALL_ADMIN_PERMISSIONS if current_user.permissions is None else user_perms
+        # Missing, null, empty, unknown, and malformed permission sets are
+        # default-deny.  Never substitute platform-wide permissions for absent
+        # user data.
+        user_perms = current_user.permissions if isinstance(current_user.permissions, list) else []
+        allowed_permissions = {p for p in user_perms if isinstance(p, str)}
         if "*" in allowed_permissions or permission in allowed_permissions:
             return current_user
         

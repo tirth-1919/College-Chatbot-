@@ -107,9 +107,13 @@ class CollegeContextManager:
         norm = normalize(raw)
         norm_squashed = norm.replace(" ", "")
 
-        active_colleges = db.query(College).filter(College.status == "ACTIVE").all()
-        if not active_colleges:
-            active_colleges = db.query(College).all()
+        # Only active and approved tenants participate in user-facing context
+        # resolution.  An empty active set is an unresolved context, never an
+        # invitation to fall back to pending/rejected tenants.
+        active_colleges = db.query(College).filter(
+            College.status == "ACTIVE",
+            College.registration_status == "APPROVED",
+        ).all()
 
         # Exact normalized name/code matches must also be unambiguous (§9): if
         # two active colleges share the same identifier, ask, don't guess.
@@ -228,6 +232,57 @@ class CollegeContextManager:
     # Explicit mention detection (§22, §61)
     # ------------------------------------------------------------------
     @classmethod
+    def detect_mentions(cls, db: Session, message: str) -> List[Dict[str, Any]]:
+        # Return every explicit active-college mention in a question.
+        # This read-only scan never mutates the conversation tenant and supports
+        # independently tenant-scoped retrieval for explicit multi-college asks.
+        raw = (message or "").strip()
+        if not raw:
+            return []
+        norm_msg = normalize(raw)
+        squashed = norm_msg.replace(" ", "")
+        colleges = db.query(College).filter(
+            College.status == "ACTIVE",
+            College.registration_status == "APPROVED",
+        ).all()
+        matches = []
+        seen = set()
+        for college in colleges:
+            identifiers = [college.name, college.code] + [
+                a.alias for a in getattr(college, "aliases", [])
+            ]
+            for identifier in identifiers:
+                normalized = normalize(identifier)
+                if not normalized:
+                    continue
+                # Use the same token-sequence semantics as the single-college
+                # resolver. Raw substring matching would treat an alias/code as
+                # a mention inside an unrelated word and is not alias-aware.
+                if _contains_token_sequence(raw, identifier):
+                    if college.id not in seen:
+                        matches.append(cls._resolved(college, 1.0))
+                        seen.add(college.id)
+                    break
+        return matches
+    @classmethod
+    def remove_mentions(cls, db: Session, message: str) -> str:
+        # Remove registered college identifiers from a branch query. The
+        # original wording is retained for persistence, while retrieval searches
+        # only the shared intent terms for the current tenant.
+        result = message or ""
+        colleges = db.query(College).filter(
+            College.status == "ACTIVE",
+            College.registration_status == "APPROVED",
+        ).all()
+        identifiers = []
+        for college in colleges:
+            identifiers.extend([college.name, college.code])
+            identifiers.extend(a.alias for a in getattr(college, "aliases", []))
+        for identifier in sorted((i for i in identifiers if i), key=len, reverse=True):
+            result = re.sub(rf"(?<![A-Za-z0-9]){re.escape(identifier)}(?![A-Za-z0-9])", " ", result, flags=re.IGNORECASE)
+        return re.sub(r"\s+", " ", result).strip()
+
+    @classmethod
     def detect_mention(cls, db: Session, message: str,
                        exclude_college_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
@@ -247,7 +302,10 @@ class CollegeContextManager:
         norm_msg = normalize(raw)
         squashed = norm_msg.replace(" ", "")
 
-        colleges = db.query(College).filter(College.status == "ACTIVE").all()
+        colleges = db.query(College).filter(
+            College.status == "ACTIVE",
+            College.registration_status == "APPROVED",
+        ).all()
         matches: List[Tuple[float, College]] = []
         for c in colleges:
             names = [c.name, c.code] + (
@@ -327,12 +385,12 @@ class CollegeContextManager:
     @classmethod
     def set_user_default(cls, db: Session, user: User, college_id: str) -> None:
         user.default_college_id = college_id
-        db.commit()
+        db.flush()
 
     @classmethod
     def forget_user_default(cls, db: Session, user: User) -> None:
         user.default_college_id = None
-        db.commit()
+        db.flush()
 
     @classmethod
     def set_conversation_college(cls, db: Session, conversation: Conversation,
@@ -340,7 +398,7 @@ class CollegeContextManager:
         """Sets THIS conversation's college only. Never touches the user's
         permanent default (§23, §24)."""
         conversation.college_id = college_id
-        db.commit()
+        db.flush()
 
     @classmethod
     def resolve_and_persist(cls, db: Session, user: User,
@@ -355,10 +413,15 @@ class CollegeContextManager:
         """
         res = cls.resolve(db, college_name)
         if res["status"] == "RESOLVED":
-            if conversation:
-                cls.set_conversation_college(db, conversation, res["college_id"])
-            if set_default:
-                cls.set_user_default(db, user, res["college_id"])
+            try:
+                with db.begin_nested():
+                    if conversation:
+                        cls.set_conversation_college(db, conversation, res["college_id"])
+                    if set_default:
+                        cls.set_user_default(db, user, res["college_id"])
+            except Exception:
+                db.rollback()
+                raise
         return res
 
 

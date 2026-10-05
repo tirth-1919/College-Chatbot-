@@ -7,15 +7,26 @@ const ROLES = ['ALL','STUDENT','ADMIN','SUPER_ADMIN'];
 export default function UsersView() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
 
-  const load = () => {
+  const load = async () => {
     setLoading(true);
+    setError(null);
     const params = {};
     if (search) params.search = search;
     if (roleFilter !== 'ALL') params.role_filter = roleFilter;
-    adminApi.getUsers(params).then(setUsers).finally(() => setLoading(false));
+    try {
+      const response = await adminApi.getUsers(params);
+      const records = Array.isArray(response) ? response : (response?.items || response?.users || []);
+      setUsers(Array.isArray(records) ? records.filter(Boolean) : []);
+    } catch (err) {
+      setUsers([]);
+      setError(err?.message || 'Unable to load users.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [search, roleFilter]);
@@ -62,6 +73,14 @@ export default function UsersView() {
         <div style={{ textAlign:'center',padding:60,color:'var(--text-muted)' }}>
           <Users size={28} style={{ opacity:0.4,marginBottom:10 }} /><div>Loading users...</div>
         </div>
+      ) : error ? (
+        <div role="alert" className="glass-card" style={{ padding:40,textAlign:'center',color:'var(--text-muted)' }}>
+          <div style={{ marginBottom:14 }}>Unable to load users.</div>
+          <div style={{ fontSize:'0.82rem',marginBottom:16 }}>{error}</div>
+          <button className="btn-secondary" onClick={load}>Retry</button>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="glass-card" style={{ padding:40,textAlign:'center',color:'var(--text-muted)' }}>No users found.</div>
       ) : (
         <div className="data-table-container">
           <table className="data-table">
@@ -71,9 +90,9 @@ export default function UsersView() {
             <tbody>
               {users.map(u => (
                 <tr key={u.id}>
-                  <td style={{ fontWeight:600 }}>{u.full_name}</td>
-                  <td style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>{u.email}</td>
-                  <td>{roleBadge(u.role)}</td>
+                  <td style={{ fontWeight:600 }}>{u.full_name || 'Unnamed user'}</td>
+                  <td style={{ color:'var(--text-muted)',fontSize:'0.85rem' }}>{u.email || '—'}</td>
+                  <td>{roleBadge(u.role || 'UNKNOWN')}</td>
                   <td>
                     {u.mfa_enabled
                       ? <span className="badge badge-healthy" style={{ fontSize:'0.7rem' }}>2FA ON</span>

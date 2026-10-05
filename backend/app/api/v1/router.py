@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+﻿from fastapi import APIRouter
 from backend.app.api.v1.auth import router as auth_router
 from backend.app.api.v1.conversations import router as conversations_router
 from backend.app.api.v1.chat import router as chat_router

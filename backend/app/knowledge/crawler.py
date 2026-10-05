@@ -24,6 +24,8 @@ Fix:
 import hashlib
 import logging
 import re
+import ipaddress
+import socket
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List, Set
 from urllib.parse import urljoin, urlparse, urldefrag
@@ -33,7 +35,9 @@ from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
-from backend.app.models.knowledge import WebsiteSnapshot, AitEntity, AitKnowledgeVersion
+from backend.app.models.knowledge import WebsiteSnapshot, WebsiteSnapshotVersion, AitEntity, AitKnowledgeVersion
+from backend.app.models.college import College
+from backend.app.knowledge.database import KnowledgeDatabase
 
 log = logging.getLogger("ait.crawler")
 
@@ -47,9 +51,42 @@ _CSS_PATTERNS = re.compile(
 
 
 class AitWebsiteCrawler:
-    def __init__(self, base_url: str = "https://www.aitindia.in"):
-        self.base_url = base_url.rstrip("/")
+    _DEFAULT_AIT_BASE_URL = "https://www.aitindia.in"
+
+    @staticmethod
+    def _normalise_base_url(raw_url: Optional[str]) -> str:
+        '''Return a validated absolute HTTP(S) site URL.
+
+        The live AIT fallback uses the process-wide crawler instance, so it must
+        have an absolute seed URL even before tenant synchronization runs.
+        '''
+        value = (raw_url or "").strip().rstrip("/")
+        if not value:
+            return AitWebsiteCrawler._DEFAULT_AIT_BASE_URL
+        parsed = urlparse(value)
+        if not parsed.scheme:
+            # Only add a scheme to a hostname-shaped value; malformed values
+            # must fail closed rather than becoming a request target.
+            if not re.fullmatch(r"(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?::\d+)?(?:/.*)?", value):
+                raise ValueError("Crawler base URL must be an absolute HTTP(S) URL or a valid hostname")
+            hostname = value.split("/", 1)[0].split(":", 1)[0].lower()
+            if hostname == "aitindia.in":
+                value = "https://www." + value
+            else:
+                value = "https://" + value
+            parsed = urlparse(value)
+
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("Crawler base URL must use HTTP(S) and include a hostname")
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError("Crawler base URL must not contain credentials, query, or fragment")
+        return value
+    def __init__(self, base_url: Optional[str] = None):
+        # The process-wide crawler serves the AIT live fallback; tenant sync
+        # replaces this with the active college's validated official URL.
+        self.base_url = self._normalise_base_url(base_url)
         self.domain = urlparse(self.base_url).netloc
+        self.tenant_name = "College"
         self._bundle_text: Optional[str] = None
         self._bundle_url: Optional[str] = None
         self._route_map: Dict[str, List[str]] = {}
@@ -58,6 +95,7 @@ class AitWebsiteCrawler:
     # URL normalisation
     # ------------------------------------------------------------------
     def _normalise_url(self, raw: str) -> Optional[str]:
+        '''Normalize URLs and fail closed against SSRF/private targets.'''
         full = urljoin(self.base_url + "/", raw)
         defragged = urldefrag(full)[0]
         parsed = urlparse(defragged)
@@ -70,6 +108,16 @@ class AitWebsiteCrawler:
             f"www.{self.domain.replace('www.', '')}",
         }
         if parsed.netloc not in accepted_netlocs:
+            return None
+        hostname = (parsed.hostname or "").lower()
+        try:
+            resolved = socket.getaddrinfo(hostname, parsed.port or 443, type=socket.SOCK_STREAM)
+            for item in resolved:
+                address = ipaddress.ip_address(item[4][0])
+                if address.is_private or address.is_loopback or address.is_link_local or address.is_reserved:
+                    log.warning("Blocked crawler URL resolving to non-public address: %s", hostname)
+                    return None
+        except (socket.gaierror, ValueError, OSError):
             return None
         if parsed.path.lower().endswith(
             (".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp",
@@ -361,23 +409,23 @@ class AitWebsiteCrawler:
         """Extract intake data from the SPA bundle for the intake page with enhanced patterns."""
         # Search for specific intake-related number combinations in the bundle
         # The bundle contains many intake-related terms but we need to find structured data
-        
+
         extracted_data = {}
-        
+
         # Look for common intake-related numbers that might appear together
         # Search for patterns where intake, courses, total appear near numbers
         all_numbers = re.findall(r'\b(1[0-9]{3}|[1-9][0-9]{2})\b', bundle)
-        
+
         # Filter for plausible intake numbers (intake is typically 1000-2000)
         plausible_intake = [n for n in all_numbers if 1000 <= int(n) <= 2000]
         if plausible_intake:
             extracted_data['intake_candidates'] = plausible_intake[:5]
-        
+
         # Filter for plausible course counts (typically 10-50)
         plausible_courses = [n for n in all_numbers if 10 <= int(n) <= 50]
         if plausible_courses:
             extracted_data['course_candidates'] = plausible_courses[:5]
-        
+
         # Look for specific text patterns that might contain intake information
         # Search for phrases like "total intake", "courses offered", etc.
         text_patterns = [
@@ -386,14 +434,14 @@ class AitWebsiteCrawler:
             r'courses\s+offered[:\s]*([0-9]+)',
             r'program\s+count[:\s]*([0-9]+)',
         ]
-        
+
         for pattern in text_patterns:
             matches = re.findall(pattern, bundle, re.IGNORECASE)
             if matches:
                 key = pattern.split('[')[0].split('(')[0]
                 if key not in extracted_data:
                     extracted_data[key] = matches[0]
-        
+
         # Try to find any JSON-like structures that might contain intake data
         # Look for objects with intake-related keys
         json_intake_patterns = [
@@ -404,14 +452,14 @@ class AitWebsiteCrawler:
             r'["\']pg["\']\s*:\s*([0-9]+)',
             r'["\']diploma["\']\s*:\s*([0-9]+)',
         ]
-        
+
         for pattern in json_intake_patterns:
             matches = re.findall(pattern, bundle, re.IGNORECASE)
             if matches:
                 key = pattern.split('[')[0].split("'")[0]
                 if key not in extracted_data:
                     extracted_data[key] = matches[0]
-        
+
         # SPA bundle does not reliably expose structured intake data
         # Even if we find numbers, they may not be authoritative
         # Mark as INSUFFICIENT to rely on verified database fallback
@@ -462,19 +510,19 @@ class AitWebsiteCrawler:
             for s in sections
         ]
         content = "\n\n".join(blocks)
-        
+
         # Classify extraction status based on content quality
         # If content is very short (< 100 chars) or contains only navigation terms, mark as insufficient
         nav_terms = {'home', 'about', 'contact', 'departments', 'engineering', 'menu', 'navigation'}
         is_navigation_only = any(term in content.lower() for term in nav_terms) and len(content) < 150
-        
+
         if is_navigation_only or len(content) < 50:
             extraction_status = "EMPTY"
         elif len(content) < 200:
             extraction_status = "INSUFFICIENT"
         else:
             extraction_status = "EXTRACTED"
-        
+
         log.info(
             "EXTRACTION: %s → %d chars, extraction_status=%s",
             path, len(content), extraction_status
@@ -539,7 +587,7 @@ class AitWebsiteCrawler:
         label = path.rsplit("/", 1)[-1].replace("-", " ").title()
         content = "SECTION: Placement — " + label + "\n" + "\n".join(texts[:80])
         return {
-            "title": f"Ahmedabad Institute of Technology — Placement {label}",
+            "title": f"{self.tenant_name} — Placement {label}",
             "content": content,
             "sections": [{"section_title": f"Placement — {label}", "content": texts[:80]}],
             "extraction_status": "EXTRACTED" if len(content) >= 100 else "INSUFFICIENT",
@@ -549,7 +597,7 @@ class AitWebsiteCrawler:
         # Committee page has a dedicated rich extractor
         if path in {"/about/committee", "/about/committees"}:
             return self._extract_committee_page(bundle)
-        
+
         # Intake page has a dedicated rich extractor
         if path == "/about/intake":
             return self._extract_intake_page(bundle)
@@ -702,6 +750,10 @@ class AitWebsiteCrawler:
             for url in sorted(urls):
                 page = await self.fetch_page(url, client)
                 content = (page.get("content") or "").lower()
+                if KnowledgeDatabase.topic_relevance_score(
+                    query, content, title=page.get("title", ""), url=url
+                ) is None:
+                    continue
                 score = sum(
                     1 for term in query_terms
                     if term in content or term in url.lower()
@@ -728,15 +780,35 @@ class AitWebsiteCrawler:
     # ------------------------------------------------------------------
     # synchronize_website — main sync entry point
     # ------------------------------------------------------------------
-    async def synchronize_website(self, db: Session) -> Dict[str, Any]:
+    async def synchronize_website(self, db: Session, college_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Full sync:
+        Full sync for one explicit college tenant.  A crawler without an
+        explicit tenant must never read or write tenant-owned data.
         1. Discover all official AIT pages (bundle + sitemap + BFS).
         2. Extract structured content for each page.
         3. Upsert WebsiteSnapshot records.
         4. Emit comprehensive debug stats.
         """
+        if not college_id:
+            raise ValueError("An explicit college tenant is required for website synchronization")
+        tenant = db.query(College).filter(
+            College.id == college_id,
+            College.status == "ACTIVE",
+            College.registration_status == "APPROVED",
+        ).first()
+        if not tenant:
+            raise ValueError("Requested college tenant is not active and approved")
+        self.tenant_name = tenant.name
+        if not tenant.official_website:
+            raise ValueError("Requested college has no official website configured")
+        self.base_url = self._normalise_base_url(tenant.official_website)
+        self.domain = urlparse(self.base_url).netloc
+        self._bundle_text = None
+        self._bundle_url = None
+        self._route_map = {}
+
         stats = {
+            "college_id": college_id,
             "total_seed_urls": 1,
             "total_discovered_urls": 0,
             "total_unique_urls": 0,
@@ -794,6 +866,12 @@ class AitWebsiteCrawler:
                 if data["status_code"] == 0:
                     stats["http_failures"] += 1
                     stats["errors"] += 1
+                    failed = db.query(WebsiteSnapshot).filter(
+                        WebsiteSnapshot.url == url, WebsiteSnapshot.college_id == college_id
+                    ).first()
+                    if failed:
+                        failed.crawl_error = data.get("error") or "HTTP fetch failed"
+                        failed.last_crawled_at = datetime.now(timezone.utc)
                     continue
 
                 if not data["content"] or data.get("extraction_status") != "EXTRACTED":
@@ -805,12 +883,20 @@ class AitWebsiteCrawler:
 
                 # Upsert snapshot
                 log.info("PERSISTING URL: %s", url)
-                existing = db.query(WebsiteSnapshot).filter(
-                    WebsiteSnapshot.url == url
-                ).first()
+                if not college_id:
+                    stats["errors"] += 1
+                    stats["indexing_failures"] += 1
+                    log.warning("Skipping snapshot persistence without an explicit college tenant: %s", url)
+                    continue
+                existing_query = db.query(WebsiteSnapshot).filter(
+                    WebsiteSnapshot.url == url,
+                    WebsiteSnapshot.college_id == college_id,
+                )
+                existing = existing_query.first()
 
                 if not existing:
                     db.add(WebsiteSnapshot(
+                        college_id=college_id,
                         url=url,
                         title=data["title"],
                         content_hash=data["hash"],
@@ -820,10 +906,21 @@ class AitWebsiteCrawler:
                     stats["new_pages"] += 1
                     stats["successfully_persisted"] += 1
                 elif existing.content_hash != data["hash"]:
+                    previous_version = existing.version_number or 1
+                    db.add(WebsiteSnapshotVersion(
+                        college_id=college_id, snapshot_id=existing.id,
+                        version_number=previous_version,
+                        content_hash=existing.content_hash,
+                        title=existing.title, text_content=existing.text_content,
+                        status_code=existing.status_code,
+                    ))
                     existing.title = data["title"]
                     existing.content_hash = data["hash"]
                     existing.text_content = data["content"][:100000]
                     existing.status_code = data["status_code"]
+                    existing.version_number = previous_version + 1
+                    existing.active = True
+                    existing.crawl_error = None
                     existing.last_crawled_at = datetime.now(timezone.utc)
                     stats["updated_pages"] += 1
                     stats["successfully_persisted"] += 1
@@ -836,8 +933,14 @@ class AitWebsiteCrawler:
                     committee_track["indexed"] = True
                     committee_track["persisted"] = True
 
-        db.commit()
-
+        # One transaction covers all successful page upserts.  A database
+        # failure rolls back the entire indexing batch rather than leaving a
+        # partially updated crawl visible to retrieval.
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
         # Debug report
         log.info(
             "\n========== SYNC REPORT ==========\n"

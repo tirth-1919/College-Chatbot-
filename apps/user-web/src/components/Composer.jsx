@@ -12,6 +12,7 @@ export function Composer({ onSendMessage, isStreaming, onStopStreaming }) {
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
+  const submitLockRef = useRef(false);
 
   // Web Speech API Voice Recognition setup
   useEffect(() => {
@@ -122,13 +123,19 @@ export function Composer({ onSendMessage, isStreaming, onStopStreaming }) {
   };
 
   const handleSubmit = () => {
-    if ((!text.trim() && attachments.length === 0) || isStreaming) return;
-    onSendMessage(text.trim(), attachments);
+    if (submitLockRef.current || (!text.trim() && attachments.length === 0) || isStreaming) return;
+
+    submitLockRef.current = true;
+    const submission = onSendMessage(text.trim(), attachments);
     setText('');
     setAttachments([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
+
+    Promise.resolve(submission).finally(() => {
+      submitLockRef.current = false;
+    });
   };
 
   return (

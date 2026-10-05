@@ -393,8 +393,9 @@ def test_paid_mode_allows_paid_credentials(db, provider_row, router, monkeypatch
     assert result == "ok"
 
 
-def test_legacy_env_key_still_works_without_registry_credentials(db, provider_row, router):
+def test_legacy_env_key_still_works_without_registry_credentials(db, provider_row, router, monkeypatch):
     """Existing single-env-key behavior preserved when no credentials in DB."""
+    monkeypatch.setenv("GEMINI_API_KEY", "env")
     StubAdapter.outcomes = {("env", "gemini-3.7-flash"): [FakeResponse()]}
     result = _run(router, [_gemini_model(provider_row)])
     assert result == "ok"

@@ -1,4 +1,4 @@
-﻿import os
+import os
 from pydantic import field_validator, model_validator, ValidationError
 from pydantic_settings import BaseSettings
 from typing import List
@@ -80,7 +80,7 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT.lower() in ("production", "prod"):
             return
         if not (self.SECRET_KEY or "").strip():
-            fallback_dir = os.path.join(os.path.expanduser("~"), ".ait_assistant")
+            fallback_dir = os.path.join(os.path.expanduser("~"), ".ai_faq_college_chat_bot")
             os.makedirs(fallback_dir, exist_ok=True)
             fallback_file = os.path.join(fallback_dir, "dev_secret_key")
             try:
@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     def __init__(self, **data):
         super().__init__(**data)
         self._ensure_development_secret()
-    INSTITUTION_NAME: str = "Multi-College Platform"
+    INSTITUTION_NAME: str = "AI FAQ College Chat Bot"
     INSTITUTION_SHORT_NAME: str = "AI FAQ"
     INSTITUTION_URL: str = ""
 
@@ -128,6 +128,11 @@ class Settings(BaseSettings):
     # Defaults to SQLite for immediate local plug-and-play development,
     # fully compatible with production PostgreSQL URL
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./backend/ait_assistant.db")
+    DB_POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE", "10"))
+    DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+    DB_POOL_TIMEOUT: int = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    DB_POOL_RECYCLE: int = int(os.getenv("DB_POOL_RECYCLE", "1800"))
+    DB_SSLMODE: str = os.getenv("DB_SSLMODE", "")
 
     # Redis
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -169,6 +174,23 @@ class Settings(BaseSettings):
     PROVIDER_MAX_ATTEMPTS: int = int(os.getenv("PROVIDER_MAX_ATTEMPTS", "6"))
     GEMINI_PROVIDER_TIMEOUT_THRESHOLD: int = int(os.getenv("GEMINI_PROVIDER_TIMEOUT_THRESHOLD", "2"))
     PROVIDER_HEALTH_CHECK_INTERVAL: int = int(os.getenv("PROVIDER_HEALTH_CHECK_INTERVAL", "60"))
+
+    # Retrieval/model quality gates and automated maintenance cadence.
+    RETRIEVAL_HIGH_CONFIDENCE_THRESHOLD: float = float(os.getenv("RETRIEVAL_HIGH_CONFIDENCE_THRESHOLD", "0.72"))
+    RETRIEVAL_MEDIUM_CONFIDENCE_THRESHOLD: float = float(os.getenv("RETRIEVAL_MEDIUM_CONFIDENCE_THRESHOLD", "0.48"))
+    RETRAINING_MIN_EXAMPLES: int = int(os.getenv("RETRAINING_MIN_EXAMPLES", "100"))
+    RETRAINING_SCHEDULE_HOURS: int = int(os.getenv("RETRAINING_SCHEDULE_HOURS", "168"))
+    MODEL_DEPLOYMENT_MIN_ACCURACY: float = float(os.getenv("MODEL_DEPLOYMENT_MIN_ACCURACY", "0.90"))
+    MODEL_MAX_LATENCY_MS: int = int(os.getenv("MODEL_MAX_LATENCY_MS", "2500"))
+
+    # Phase 3 — Continuous Learning: semantic similarity threshold.
+    # A question whose cosine similarity to an existing LearningCandidate is
+    # >= this value is treated as a duplicate variation rather than a new topic.
+    # Starting value of 0.88 should be tuned from real data in production.
+    # Override with the LEARNING_SIMILARITY_THRESHOLD environment variable.
+    LEARNING_SIMILARITY_THRESHOLD: float = float(os.getenv("LEARNING_SIMILARITY_THRESHOLD", "0.88"))
+    CHAT_RATE_LIMIT_PER_MINUTE: int = int(os.getenv("CHAT_RATE_LIMIT_PER_MINUTE", "30"))
+    COLLEGE_RATE_LIMIT_PER_MINUTE: int = int(os.getenv("COLLEGE_RATE_LIMIT_PER_MINUTE", "300"))
 
     # Storage & Uploads
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./backend/storage/uploads")

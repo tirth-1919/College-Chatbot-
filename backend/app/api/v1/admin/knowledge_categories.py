@@ -20,11 +20,12 @@ from sqlalchemy import or_, cast, String as SAString
 
 from backend.app.core.database import get_db
 from backend.app.core.permissions import (
-    get_current_admin_user, require_permission, log_admin_audit,
+    get_current_admin_user, require_permission, require_super_admin, log_admin_audit,
     PERM_KNOWLEDGE_CREATE, PERM_KNOWLEDGE_UPDATE, PERM_KNOWLEDGE_DELETE,
 )
 from backend.app.models.knowledge import AitEntity
 from backend.app.models.knowledge_categories import KnowledgeCategory, KnowledgeRecord
+from backend.app.models.college import ChangeRequest
 from backend.app.models.user import User
 from backend.app.knowledge.semantic_cache import semantic_cache
 
@@ -198,8 +199,16 @@ def _mirror_to_retrieval(db: Session, rec: KnowledgeRecord, cat: KnowledgeCatego
     if rec.academic_year:
         details["academic_year"] = rec.academic_year
     details["source_type"] = rec.source_type
-
+    # Only approved+verified records enter retrieval. Draft or unverified data
+    # remains available for the approval workflow but is never indexed.
+    if not (rec.status == "ACTIVE" and rec.verified):
+        if mirrored:
+            db.delete(mirrored)
+        return
     if mirrored:
+        # KnowledgeRecord is the authoritative tenant source. This must not use
+        # the logged-in admin's college: a Super Admin can manage many tenants.
+        mirrored.college_id = rec.college_id
         mirrored.name = rec.title
         mirrored.category = cat.key
         mirrored.code = rec.course
@@ -212,6 +221,7 @@ def _mirror_to_retrieval(db: Session, rec: KnowledgeRecord, cat: KnowledgeCatego
         mirrored.updated_at = datetime.now(timezone.utc)
     else:
         db.add(AitEntity(
+            college_id=rec.college_id,
             category=cat.key,
             name=rec.title,
             code=rec.course,  # real course code ('BCA'), not a free-text field
@@ -277,6 +287,20 @@ def create_category(
     if dup:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail=f"A category with this {'key' if dup.key == req.key else 'name'} already exists")
+    if not _is_super(current_user):
+        if not current_user.college_id:
+            raise HTTPException(status_code=400, detail="Account is not linked to a college tenant")
+        request = ChangeRequest(
+            college_id=current_user.college_id, requested_by=current_user.id,
+            entity_type="KNOWLEDGE_CATEGORY", action="CREATE",
+            title=f"Create category: {req.name}",
+            new_value=req.model_dump(), status="PENDING",
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return {"message": "Category submitted for Super Admin approval", "request_id": request.id, "status": request.status}
     cat = KnowledgeCategory(
         name=req.name.strip(), key=req.key, description=req.description,
         icon=req.icon, display_order=req.display_order, status=req.status,
@@ -328,6 +352,19 @@ def update_category(
     cat = q.first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
+    if not _is_super(current_user):
+        request = ChangeRequest(
+            college_id=current_user.college_id, requested_by=current_user.id,
+            entity_type="KNOWLEDGE_CATEGORY", entity_id=cat.id, action="UPDATE",
+            title=f"Update category: {cat.name}",
+            old_value={"name": cat.name, "description": cat.description, "status": cat.status},
+            new_value=req.model_dump(exclude_unset=True), status="PENDING",
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return {"message": "Category update submitted for Super Admin approval", "request_id": request.id, "status": request.status}
     if req.name is not None:
         dup = db.query(KnowledgeCategory).filter(
             KnowledgeCategory.name == req.name.strip(), KnowledgeCategory.id != category_id).first()
@@ -363,6 +400,18 @@ def delete_category(
     cat = q.first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
+    if not _is_super(current_user):
+        request = ChangeRequest(
+            college_id=current_user.college_id, requested_by=current_user.id,
+            entity_type="KNOWLEDGE_CATEGORY", entity_id=cat.id, action="DELETE",
+            title=f"Delete category: {cat.name}",
+            old_value={"name": cat.name, "status": cat.status}, new_value={},
+            status="PENDING", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return {"message": "Category deletion submitted for Super Admin approval", "request_id": request.id, "status": request.status}
     count = db.query(KnowledgeRecord).filter(KnowledgeRecord.category_id == category_id).count()
     if count > 0:
         raise HTTPException(
@@ -377,6 +426,31 @@ def delete_category(
 
 # ---------------------------------------------------------------- records
 
+def _is_super(user: User) -> bool:
+    return (user.role or "").upper() == "SUPER_ADMIN"
+
+
+def _submit_record_request(db: Session, user: User, action: str, rec: KnowledgeRecord,
+                           payload: Optional[dict] = None):
+    # Store a College Admin proposal without touching production or retrieval.
+    request = ChangeRequest(
+        college_id=user.college_id,
+        requested_by=user.id,
+        entity_type="KNOWLEDGE",
+        entity_id=rec.id if action != "CREATE" else None,
+        action=action,
+        title=f"{action.title()} knowledge: {rec.title}",
+        old_value={"title": rec.title, "value": rec.value, "status": rec.status,
+                   "verified": rec.verified} if action != "CREATE" else None,
+        new_value=payload,
+        status="PENDING",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    db.add(request)
+    db.commit()
+    db.refresh(request)
+    return request
 @router.get("/categories/{category_id}/records")
 def list_records(
     category_id: str,
@@ -449,7 +523,7 @@ def list_records(
 def create_record(
     category_id: str,
     req: RecordCreateRequest,
-    current_user: User = Depends(require_permission(PERM_KNOWLEDGE_CREATE)),
+    current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ):
     cat = db.query(KnowledgeCategory).filter(KnowledgeCategory.id == category_id).first()
@@ -474,11 +548,37 @@ def create_record(
         valid_from=req.valid_from, valid_until=req.valid_until,
         status=req.status, created_by=current_user.id, updated_by=current_user.id,
     )
+    if not _is_super(current_user):
+        request_payload = {
+            "category_id": cat.id,
+            "title": req.title.strip(), "field_name": req.field_name,
+            "value": req.value, "description": req.description,
+            "metadata_json": req.metadata, "course": req.course,
+            "academic_year": req.academic_year, "source_type": req.source_type,
+            "source_url": req.source_url, "source_title": req.source_title, "valid_from": req.valid_from,
+            "valid_until": req.valid_until,
+        }
+        request = ChangeRequest(
+            college_id=current_user.college_id, requested_by=current_user.id,
+            entity_type="KNOWLEDGE", action="CREATE", title=f"Create knowledge: {req.title}",
+            new_value=request_payload, status="PENDING",
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return {"message": "Knowledge record submitted for Super Admin approval", "request_id": request.id, "status": request.status}
+
     db.add(rec)
     db.flush()
     _mirror_to_retrieval(db, rec, cat)
     db.commit()
-    semantic_cache.invalidate_all()
+    semantic_cache.invalidate_college(rec.college_id)
+    from backend.app.automation.engine import automation_engine
+    automation_engine.enqueue_job(
+        "rag_indexing", payload={"college_id": rec.college_id, "record_id": rec.id},
+        priority=2, idempotency_key=f"knowledge-index:{rec.id}:{rec.updated_at or rec.created_at}",
+    )
     log_admin_audit(db, current_user, "CREATE_KNOWLEDGE_RECORD", "KNOWLEDGE_RECORD",
                     {"id": rec.id, "category": cat.key, "title": rec.title})
     return {"message": "Record created successfully", "id": rec.id}
@@ -517,6 +617,20 @@ def update_record(
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
     data = req.model_dump(exclude_unset=True)
+    if not _is_super(current_user):
+        request = ChangeRequest(
+            college_id=current_user.college_id, requested_by=current_user.id,
+            entity_type="KNOWLEDGE", entity_id=rec.id, action="UPDATE",
+            title=f"Update knowledge: {rec.title}",
+            old_value={"title": rec.title, "value": rec.value, "status": rec.status,
+                       "verified": rec.verified},
+            new_value=data, status="PENDING",
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return {"message": "Knowledge update submitted for Super Admin approval", "request_id": request.id, "status": request.status}
     if "verified" in data and data["verified"] and not rec.verified:
         data["verified_by"] = current_user.id
         data["verified_at"] = datetime.now(timezone.utc)
@@ -529,7 +643,12 @@ def update_record(
     db.flush()
     _mirror_to_retrieval(db, rec, rec.category)
     db.commit()
-    semantic_cache.invalidate_all()
+    semantic_cache.invalidate_college(rec.college_id)
+    from backend.app.automation.engine import automation_engine
+    automation_engine.enqueue_job(
+        "rag_indexing", payload={"college_id": rec.college_id, "record_id": rec.id},
+        priority=2, idempotency_key=f"knowledge-index:{rec.id}:{rec.updated_at or rec.created_at}",
+    )
     log_admin_audit(db, current_user, "UPDATE_KNOWLEDGE_RECORD", "KNOWLEDGE_RECORD",
                     {"id": rec.id, "fields": list(data.keys())})
     return {"message": "Updated successfully"}
@@ -549,9 +668,19 @@ def delete_record(
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
     cat_key = rec.category.key if rec.category else None
-    if rec.verified and (current_user.role or "").upper() != "SUPER_ADMIN":
-        raise HTTPException(status_code=403,
-                            detail="Verified records can only be deleted by a Super Administrator. Disable or archive instead.")
+    if not _is_super(current_user):
+        request = ChangeRequest(
+            college_id=current_user.college_id, requested_by=current_user.id,
+            entity_type="KNOWLEDGE", entity_id=rec.id, action="DELETE",
+            title=f"Delete knowledge: {rec.title}",
+            old_value={"title": rec.title, "value": rec.value, "status": rec.status,
+                       "verified": rec.verified}, new_value={}, status="PENDING",
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return {"message": "Knowledge deletion submitted for Super Admin approval", "request_id": request.id, "status": request.status}
     mirrored = db.query(AitEntity).filter(AitEntity.source_page == f"knowledge-record:{rec.id}").first()
     if mirrored:
         db.delete(mirrored)
@@ -572,6 +701,20 @@ def _record_action(record_id: str, current_user, db, action: str, new_status: st
     rec = q.first()
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
+    if not _is_super(current_user):
+        requested = {"status": new_status} if new_status is not None else {"verified": verify}
+        request = ChangeRequest(
+            college_id=current_user.college_id, requested_by=current_user.id,
+            entity_type="KNOWLEDGE", entity_id=rec.id, action="UPDATE",
+            title=f"{action.title()} knowledge: {rec.title}",
+            old_value={"status": rec.status, "verified": rec.verified},
+            new_value=requested, status="PENDING",
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return {"message": "Knowledge action submitted for Super Admin approval", "request_id": request.id, "status": request.status}
     if new_status is not None:
         rec.status = new_status
     if verify is not None:
@@ -591,7 +734,7 @@ def _record_action(record_id: str, current_user, db, action: str, new_status: st
 @router.post("/records/{record_id}/duplicate")
 def duplicate_record(
     record_id: str,
-    current_user: User = Depends(require_permission(PERM_KNOWLEDGE_CREATE)),
+    current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ):
     q = db.query(KnowledgeRecord).filter(KnowledgeRecord.id == record_id)
@@ -601,8 +744,24 @@ def duplicate_record(
     rec = q.first()
     if not rec:
         raise HTTPException(status_code=404, detail="Record not found")
+    if not _is_super(current_user):
+        request = ChangeRequest(
+            college_id=current_user.college_id, requested_by=current_user.id,
+            entity_type="KNOWLEDGE", action="CREATE",
+            title=f"Duplicate knowledge: {rec.title}",
+            new_value={"category_id": rec.category_id, "title": f"{rec.title} (Copy)",
+                       "field_name": rec.field_name, "value": rec.value,
+                       "description": rec.description, "metadata_json": rec.metadata_json,
+                       "course": rec.course, "academic_year": rec.academic_year,
+                       "source_url": rec.source_url, "source_title": rec.source_title},
+            status="PENDING", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return {"message": "Duplicate submitted for Super Admin approval", "request_id": request.id, "status": request.status}
     clone = KnowledgeRecord(
-        category_id=rec.category_id, 
+        category_id=rec.category_id,
         college_id=rec.college_id,  # CRITICAL FIX: preserve college_id in duplicate
         course=rec.course, academic_year=rec.academic_year,
         title=f"{rec.title} (Copy)", field_name=rec.field_name, value=rec.value,
@@ -621,17 +780,17 @@ def duplicate_record(
 
 
 @router.post("/records/{record_id}/verify")
-def verify_record(record_id: str, current_user=Depends(require_permission(PERM_KNOWLEDGE_UPDATE)), db=Depends(get_db)):
+def verify_record(record_id: str, current_user=Depends(require_super_admin), db=Depends(get_db)):
     return _record_action(record_id, current_user, db, "VERIFY", verify=True)
 
 
 @router.post("/records/{record_id}/enable")
-def enable_record(record_id: str, current_user=Depends(require_permission(PERM_KNOWLEDGE_UPDATE)), db=Depends(get_db)):
+def enable_record(record_id: str, current_user=Depends(require_super_admin), db=Depends(get_db)):
     return _record_action(record_id, current_user, db, "ENABLE", new_status="ACTIVE")
 
 
 @router.post("/records/{record_id}/disable")
-def disable_record(record_id: str, current_user=Depends(require_permission(PERM_KNOWLEDGE_UPDATE)), db=Depends(get_db)):
+def disable_record(record_id: str, current_user=Depends(require_super_admin), db=Depends(get_db)):
     return _record_action(record_id, current_user, db, "DISABLE", new_status="INACTIVE")
 
 

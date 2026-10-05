@@ -60,9 +60,11 @@ def env(db_session):
 
     now = datetime.now(timezone.utc)
     ait = College(id="ait-tenant-001", name="Ahmedabad Institute of Technology",
-                  code="AIT", slug="ait", status="ACTIVE", created_at=now, updated_at=now)
+                  code="AIT", slug="ait", status="ACTIVE", registration_status="APPROVED",
+                  created_at=now, updated_at=now)
     abc = College(id="abc-tenant-002", name="ABC College of Engineering",
-                  code="ABC", slug="abc-college", status="ACTIVE", created_at=now, updated_at=now)
+                  code="ABC", slug="abc-college", status="ACTIVE", registration_status="APPROVED",
+                  created_at=now, updated_at=now)
     db_session.add_all([ait, abc])
 
     ait_admin = User(id="user-ait-admin", email="admin@aitindia.in", full_name="AIT Admin",
@@ -199,7 +201,7 @@ def test_role_and_tampering_guards(client, env):
     env["db"].commit()
     resp = client.post("/api/v1/admin/change-requests/", headers=_headers(orphan),
                        json={"entity_type": "FEES", "action": "CREATE", "new_value": {"fee": "1"}})
-    assert resp.status_code == 400
+    assert resp.status_code in (400, 403)
 
 
 # ──────────────── Cancel flow (College Admin owns pending request) ───────────
@@ -215,3 +217,56 @@ def test_cancel_own_pending_request(client, env):
                         headers=_headers(env["ait_admin"]))
     assert resp.status_code == 200
     assert resp.json()["status"] == "CANCELLED"
+
+
+def test_bulk_approve_processes_only_pending_and_reports_failures(client, env):
+    from backend.app.models.college import ChangeRequest
+    now = datetime.now(timezone.utc)
+    db = env["db"]
+    pending = ChangeRequest(
+        id="bulk-pending-success", college_id=env["ait"].id,
+        requested_by=env["ait_admin"].id, entity_type="FEES",
+        entity_id=env["fee_record"].id, action="UPDATE",
+        old_value={"fee": env["fee_record"].details.get("fee")},
+        new_value={"fee": "36000"}, status="PENDING", created_at=now, updated_at=now,
+    )
+    failed = ChangeRequest(
+        id="bulk-pending-failure", college_id=env["ait"].id,
+        requested_by=env["ait_admin"].id, entity_type="FEES",
+        entity_id="missing-target", action="UPDATE", new_value={"fee": "1"},
+        status="PENDING", created_at=now, updated_at=now,
+    )
+    already_approved = ChangeRequest(
+        id="bulk-already-approved", college_id=env["ait"].id,
+        requested_by=env["ait_admin"].id, entity_type="FEES", action="UPDATE",
+        status="APPROVED", created_at=now, updated_at=now,
+    )
+    already_failed = ChangeRequest(
+        id="bulk-already-failed", college_id=env["ait"].id,
+        requested_by=env["ait_admin"].id, entity_type="FEES", action="UPDATE",
+        status="FAILED", created_at=now, updated_at=now,
+    )
+    db.add_all([pending, failed, already_approved, already_failed])
+    db.commit()
+
+    response = client.post("/api/v1/admin/change-requests/approve-all",
+                           headers=_headers(env["super_admin"]), json={"notes": None})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total_pending"] == 2
+    assert body["processed"] == 1
+    assert body["failed"] == 1
+    assert {item["request_id"] for item in body["results"]} == {pending.id, failed.id}
+    db.refresh(pending)
+    db.refresh(failed)
+    db.refresh(already_approved)
+    db.refresh(already_failed)
+    assert pending.status == "APPLIED"
+    assert failed.status == "FAILED"
+    assert already_approved.status == "APPROVED"
+    assert already_failed.status == "FAILED"
+
+    duplicate = client.post("/api/v1/admin/change-requests/approve-all",
+                            headers=_headers(env["super_admin"]), json={"notes": None})
+    assert duplicate.status_code == 200
+    assert duplicate.json()["total_pending"] == 0

@@ -1,0 +1,368 @@
+C:\Users\HP\OneDrive\Desktop\college chatbot\user.py:81: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @user_app.on_event("startup")
+INFO:     Started server process [11612]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+Official website check failed
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\knowledge\crawler.py", line 716, in fetch_relevant_page
+    urls = await self._discover_urls(client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\knowledge\crawler.py", line 250, in _discover_urls
+    r = await client.get(
+        ^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1643, in send
+    raise exc
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1637, in send
+    await response.aread()
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_models.py", line 979, in aread
+    self._content = b"".join([part async for part in self.aiter_bytes()])
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_models.py", line 997, in aiter_bytes
+    async for raw_bytes in self.aiter_raw():
+    ...<2 lines>...
+            yield chunk
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_models.py", line 1055, in aiter_raw
+    async for raw_stream_bytes in self.stream:
+    ...<2 lines>...
+            yield chunk
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 176, in __aiter__
+    async for chunk in self._stream:
+        yield chunk
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_transports\default.py", line 271, in __aiter__
+    async for part in self._httpcore_stream:
+        yield part
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 407, in __aiter__
+    raise exc from None
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 403, in __aiter__
+    async for part in self._stream:
+        yield part
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\http11.py", line 342, in __aiter__
+    raise exc
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\http11.py", line 334, in __aiter__
+    async for chunk in self._connection._receive_response_body(**kwargs):
+        yield chunk
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\http11.py", line 203, in _receive_response_body
+    event = await self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\http11.py", line 217, in _receive_event
+    data = await self._network_stream.read(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.READ_NUM_BYTES, timeout=timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_backends\anyio.py", line 35, in read
+    return await self._stream.receive(max_bytes=max_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\streams\tls.py", line 254, in receive
+    data = await self._call_sslobject_method(self._ssl_object.read, max_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\streams\tls.py", line 194, in _call_sslobject_method
+    data = await self.transport_stream.receive()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1407, in receive
+    await self._protocol.read_event.wait()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\locks.py", line 213, in wait
+    await fut
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\chat\orchestrator.py", line 475, in process_chat
+    page = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+    )
+    ^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 506, in wait_for
+    async with timeouts.timeout(timeout):
+               ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\timeouts.py", line 117, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+Official website check failed
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\knowledge\crawler.py", line 720, in fetch_relevant_page
+    page = await self.fetch_page(url, client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\knowledge\crawler.py", line 593, in fetch_page
+    resp = await client.get(
+           ^^^^^^^^^^^^^^^^^
+        url, headers={"User-Agent": "AIT-AI-KnowledgeBot/1.0"}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_transports\default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pool_request.request
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection.py", line 103, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\http11.py", line 72, in handle_async_request
+    async with self._state_lock:
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_synchronization.py", line 77, in __aenter__
+    await self._anyio_lock.acquire()
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1963, in acquire
+    await AsyncIOBackend.cancel_shielded_checkpoint()
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2588, in cancel_shielded_checkpoint
+    await sleep(0)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 708, in sleep
+    await __sleep0()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 702, in __sleep0
+    yield
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\chat\orchestrator.py", line 475, in process_chat
+    page = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+    )
+    ^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 506, in wait_for
+    async with timeouts.timeout(timeout):
+               ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\timeouts.py", line 117, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+EXTRACTION: /about/intake → SPA bundle does not contain authoritative intake data, marking INSUFFICIENT
+Official website check failed
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\knowledge\crawler.py", line 720, in fetch_relevant_page
+    page = await self.fetch_page(url, client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\knowledge\crawler.py", line 593, in fetch_page
+    resp = await client.get(
+           ^^^^^^^^^^^^^^^^^
+        url, headers={"User-Agent": "AIT-AI-KnowledgeBot/1.0"}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_transports\default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pool_request.request
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection.py", line 103, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\http11.py", line 72, in handle_async_request
+    async with self._state_lock:
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_synchronization.py", line 77, in __aenter__
+    await self._anyio_lock.acquire()
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1963, in acquire
+    await AsyncIOBackend.cancel_shielded_checkpoint()
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2588, in cancel_shielded_checkpoint
+    await sleep(0)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 708, in sleep
+    await __sleep0()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 702, in __sleep0
+    yield
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\chat\orchestrator.py", line 475, in process_chat
+    page = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+    )
+    ^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 506, in wait_for
+    async with timeouts.timeout(timeout):
+               ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\timeouts.py", line 117, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+EXTRACTION: /about/intake → SPA bundle does not contain authoritative intake data, marking INSUFFICIENT
+Official website check failed
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\knowledge\crawler.py", line 720, in fetch_relevant_page
+    page = await self.fetch_page(url, client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\knowledge\crawler.py", line 593, in fetch_page
+    resp = await client.get(
+           ^^^^^^^^^^^^^^^^^
+        url, headers={"User-Agent": "AIT-AI-KnowledgeBot/1.0"}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpx\_transports\default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pool_request.request
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\connection.py", line 103, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_async\http11.py", line 72, in handle_async_request
+    async with self._state_lock:
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\httpcore\_synchronization.py", line 77, in __aenter__
+    await self._anyio_lock.acquire()
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1963, in acquire
+    await AsyncIOBackend.cancel_shielded_checkpoint()
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2588, in cancel_shielded_checkpoint
+    await sleep(0)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 708, in sleep
+    await __sleep0()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 702, in __sleep0
+    yield
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\OneDrive\Desktop\college chatbot\backend\app\chat\orchestrator.py", line 475, in process_chat
+    page = await asyncio.wait_for(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+    )
+    ^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\tasks.py", line 506, in wait_for
+    async with timeouts.timeout(timeout):
+               ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\timeouts.py", line 117, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError

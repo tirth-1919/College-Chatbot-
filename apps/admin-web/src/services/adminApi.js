@@ -216,12 +216,23 @@ class AdminAPI {
   changeUserRole(id, role) { return this.post(`/users/${id}/role`, { role }); }
   toggleUserStatus(id, is_active) { return this.post(`/users/${id}/status`, { is_active }); }
 
+  // --- Continuous Learning ---
+  getLearningCandidates(params = {}) { const q = new URLSearchParams(params).toString(); return this.get(`/learning-candidates${q ? '?' + q : ''}`); }
+  getLearningCandidate(id) { return this.get(`/learning-candidates/${id}`); }
+  getLearningSummary() { return this.get('/learning-candidates/dashboard/summary'); }
+  approveLearningCandidate(id, data = {}) { return this.post(`/learning-candidates/${id}/approve`, data); }
+  rejectLearningCandidate(id, reason) { return this.post(`/learning-candidates/${id}/reject`, { reason }); }
+  duplicateLearningCandidate(id, target_candidate_id) { return this.post(`/learning-candidates/${id}/duplicate`, { target_candidate_id }); }
+  mergeLearningCandidate(id, target_candidate_id) { return this.post(`/learning-candidates/${id}/merge`, { target_candidate_id }); }
+  prepareLearningTraining() { return this.post('/learning-candidates/training/prepare'); }
+
   // --- Gaps & Feedback ---
   getKnowledgeGaps(params = {}) {
     const q = new URLSearchParams(params).toString();
     return this.get(`/knowledge-gaps${q ? '?' + q : ''}`);
   }
   resolveGap(id) { return this.post(`/knowledge-gaps/${id}/resolve`); }
+  resolveAllKnowledgeGaps() { return this.post('/knowledge-gaps/resolve-all'); }
   dismissGap(id) { return this.post(`/knowledge-gaps/${id}/dismiss`); }
   updateGap(id, data) { return this.patch(`/knowledge-gaps/${id}`, data); }
   createGapDraft(id, data) { return this.post(`/knowledge-gaps/${id}/create-draft`, data); }
@@ -315,7 +326,7 @@ class AdminAPI {
   getCollegeAnalytics(id) { return this.get(`/colleges/${id}/analytics`); }
   getCollegeAudit(id) { return this.get(`/colleges/${id}/audit`); }
   async listColleges(params = {}) {
-    const res = await this.getColleges({ ...params, per_page: 200 });
+    const res = await this.getColleges({ ...params, per_page: 100 });
     // API returns { total, colleges: [...] } - unwrap to array
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.colleges)) return res.colleges;
@@ -364,6 +375,7 @@ class AdminAPI {
     }
     createChangeRequest(data) { return this.post('/change-requests/', data); }
     approveChangeRequest(id, notes) { return this.post(`/change-requests/${id}/approve`, { notes }); }
+    approveAllChangeRequests(notes = null) { return this.post('/change-requests/approve-all', { notes }); }
     rejectChangeRequest(id, notes) { return this.post(`/change-requests/${id}/reject`, { notes }); }
   }
   export const adminApi = new AdminAPI();

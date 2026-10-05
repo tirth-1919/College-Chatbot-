@@ -13,13 +13,19 @@ class ConflictDetector:
         (e.g., fee amounts, intake capacities, contact numbers).
         """
         conflicts_created = []
-        entities = db.query(AitEntity).all()
+        # Conflicts are tenant-owned. Legacy NULL-tenant entities cannot be
+        # safely attributed and are therefore excluded from production scans.
+        entities = db.query(AitEntity).filter(AitEntity.college_id.isnot(None)).all()
 
         for entity in entities:
-            # Find relevant snapshot by matching URL or category
+            # Match the snapshot within the same tenant; URL alone is not an
+            # authoritative tenant boundary.
             snapshot = (
                 db.query(WebsiteSnapshot)
-                .filter(WebsiteSnapshot.url == entity.source_url)
+                .filter(
+                    WebsiteSnapshot.url == entity.source_url,
+                    WebsiteSnapshot.college_id == entity.college_id,
+                )
                 .first()
             )
             if not snapshot:
@@ -33,6 +39,7 @@ class ConflictDetector:
                 existing_conflict = (
                     db.query(KnowledgeConflict)
                     .filter(
+                        KnowledgeConflict.college_id == entity.college_id,
                         KnowledgeConflict.topic == f"{entity.name} Fees",
                         KnowledgeConflict.resolution_status == "UNRESOLVED"
                     )
@@ -46,6 +53,7 @@ class ConflictDetector:
                         if web_fee not in entity_fee:
                             # Flag potential discrepancy
                             conflict = KnowledgeConflict(
+                                college_id=entity.college_id,
                                 topic=f"{entity.name} Fees",
                                 source_a=f"Website: {snapshot.url}",
                                 source_b=f"Verified DB: {entity.name} (Code: {entity.code})",
@@ -60,21 +68,6 @@ class ConflictDetector:
                                 "discrepancy": conflict.detected_discrepancy
                             })
 
-        # Pre-seed a demonstrative real conflict if none exists for admin review testing
-        existing_sample = db.query(KnowledgeConflict).first()
-        if not existing_sample:
-            demo_conflict = KnowledgeConflict(
-                topic="BCA Annual Tuition Fee Discrepancy",
-                source_a="Official Website (/departments/computer-apps/bca)",
-                source_b="Institutional Accounts DB (Entity ID: BCA-FEE-2026)",
-                value_a="INR 48,000 / annum (Updated June 2026 Advisory)",
-                value_b="INR 45,000 to 52,000 per year (GTU Base Regulation)",
-                detected_discrepancy="Website published fixed ₹48,000 rate while Institutional DB records tiered ₹45,000-₹52,000 range.",
-                resolution_status="UNRESOLVED"
-            )
-            db.add(demo_conflict)
-            conflicts_created.append({"topic": demo_conflict.topic, "discrepancy": demo_conflict.detected_discrepancy})
-
         db.commit()
         return conflicts_created
 
@@ -87,7 +80,10 @@ class ConflictDetector:
         admin_id: str,
         notes: str = ""
     ) -> Optional[KnowledgeConflict]:
-        conflict = db.query(KnowledgeConflict).filter(KnowledgeConflict.id == conflict_id).first()
+        conflict = db.query(KnowledgeConflict).filter(
+            KnowledgeConflict.id == conflict_id,
+            KnowledgeConflict.college_id.isnot(None),
+        ).first()
         if not conflict:
             return None
 

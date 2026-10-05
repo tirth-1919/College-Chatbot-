@@ -15,10 +15,10 @@ def db():
 
 def test_source_router():
     # Visual query route
-    assert source_router.route_query("Show me AIT library", {"intent": "image_request"}, {}) == "ait_visual"
+    assert source_router.route_query("Show me AIT library", {"intent": "image_request"}, {}) == "visual"
 
     # Institutional query route
-    assert source_router.route_query("What are the BCA fees?", {"intent": "fee_lookup"}, {"programs": ["BCA"]}) == "ait_institutional"
+    assert source_router.route_query("What are the BCA fees?", {"intent": "fee_lookup"}, {"programs": ["BCA"]}) == "institutional"
 
     # General educational route
     assert source_router.route_query("Explain B+ trees in databases", {"intent": "general_educational"}, {}) == "general_educational"
@@ -38,7 +38,7 @@ def test_grounding_zero_hallucination():
     # If no evidence is found for an institutional query, grounding validator must not invent
     unverified = grounding_validator.validate_answer(
         query="What is the fee for NASA astronaut course at AIT?",
-        route="ait_institutional",
+        route="institutional",
         retrieved_evidence=[],
         candidate_answer=None
     )

@@ -26,8 +26,35 @@ DEFAULT_CATEGORIES = [
     {
         "key": "admissions",
         "name": "Admissions",
-        "description": "College admission process information",
+        "description": "College admission information",
     },
+    # Admission intents are separate tenant-scoped categories so a documents
+    # question can never be answered by fees, facilities, or another admission
+    # topic.  Each college receives its own copy.
+    *[
+        {"key": key, "name": label, "description": f"College {label.lower()} information"}
+        for key, label in [
+            ("admission_process", "Admission Process"),
+            ("admission_eligibility", "Admission Eligibility"),
+            ("admission_documents", "Admission Documents"),
+            ("admission_fees", "Admission Fees"),
+            ("admission_application", "Admission Application"),
+            ("admission_entrance_exam", "Admission Entrance Exam"),
+            ("admission_merit", "Admission Merit"),
+            ("admission_counselling", "Admission Counselling"),
+            ("admission_deadline", "Admission Deadline"),
+            ("admission_reservation", "Admission Reservation"),
+            ("admission_confirmation", "Admission Confirmation"),
+            ("admission_cancellation", "Admission Cancellation"),
+            ("admission_refund", "Admission Refund"),
+            ("admission_contact", "Admission Contact"),
+            ("admission_programs", "Admission Programs"),
+            ("admission_hostel", "Admission Hostel"),
+            ("admission_scholarship", "Admission Scholarship"),
+            ("admission_nri", "Admission NRI"),
+            ("admission_international", "Admission International"),
+        ]
+    ],
     {
         "key": "departments",
         "name": "Departments",
