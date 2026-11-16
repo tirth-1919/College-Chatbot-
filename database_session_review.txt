@@ -1,0 +1,1792 @@
+﻿
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 9
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 10
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 13
+from app.dependencies.auth import get_current_user, require_super_admin, require_role
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 35
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 36
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 58
+current_user: User = Depends(require_role("COLLEGE_ADMIN", "SUPER_ADMIN")),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 59
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 63
+if current_user.role == "COLLEGE_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 65
+membership = await membership_repo.get_by_user_id(current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 99
+current_user: User = Depends(require_role("COLLEGE_ADMIN", "SUPER_ADMIN")),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 100
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 104
+if current_user.role == "COLLEGE_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 106
+membership = await membership_repo.get_by_user_id(current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 130
+current_user: User = Depends(require_role("COLLEGE_ADMIN", "SUPER_ADMIN")),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 131
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 135
+if current_user.role == "COLLEGE_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 137
+membership = await membership_repo.get_by_user_id(current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 160
+current_user: User = Depends(require_role("COLLEGE_ADMIN", "SUPER_ADMIN")),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\analytics.py
+LINE: 161
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 7
+from fastapi import APIRouter, Depends, HTTPException, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 8
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 26
+from app.dependencies.auth import get_current_user
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 38
+dependencies=[Depends(rate_limit(max_requests=10, window_seconds=60))],
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 42
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 65
+dependencies=[Depends(rate_limit(max_requests=10, window_seconds=60))],
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 69
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 89
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 120
+dependencies=[Depends(rate_limit(max_requests=5, window_seconds=60))],
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 124
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 140
+dependencies=[Depends(rate_limit(max_requests=5, window_seconds=60))],
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 144
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 162
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 168
+data=UserResponse.model_validate(current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 176
+dependencies=[Depends(rate_limit(max_requests=10, window_seconds=60))],
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 180
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 199
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 225
+dependencies=[Depends(rate_limit(max_requests=10, window_seconds=60))],
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\auth.py
+LINE: 229
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 8
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 10
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 28
+from app.dependencies.auth import get_current_user, get_optional_current_user
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 41
+current_user: Optional[User] = Depends(get_optional_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 42
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 64
+user_id=current_user.id if current_user else None,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 85
+current_user: Optional[User] = Depends(get_optional_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 86
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 89
+if not current_user:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 96
+sessions = await chat_repo.list_user_sessions(current_user.id, college_id=college_id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 111
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 134
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 159
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 185
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 254
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 302
+current_user: Optional[User] = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 303
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\chat.py
+LINE: 318
+user_id=current_user.id if current_user else None,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 5
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 6
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 20
+from app.dependencies.auth import get_current_user, require_super_admin
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 43
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 164
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 240
+current_user: Optional[User] = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 241
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 248
+if not current_user or current_user.role != "SUPER_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 270
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 299
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 300
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 312
+initial_status = "APPROVED" if current_user.role == "SUPER_ADMIN" else "PENDING"
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 342
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 343
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 353
+if current_user.role != "SUPER_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\colleges.py
+LINE: 370
+if req.is_active is not None and current_user.role == "SUPER_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 10
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 12
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 23
+from app.dependencies.auth import get_current_user, require_role
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 86
+current_user: User = Depends(require_role("COLLEGE_ADMIN", "SUPER_ADMIN")),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 87
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 99
+if current_user.role == "COLLEGE_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 100
+membership = await membership_repo.get_by_user_id(current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 158
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 159
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 193
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 210
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 211
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 233
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 234
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 254
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 255
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 309
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 310
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 332
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 333
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 357
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 358
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 386
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 387
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 405
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 406
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 429
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 430
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 457
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 458
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 477
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 478
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 502
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 503
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 526
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 527
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 561
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 562
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 563
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 576
+user_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 624
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 625
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 626
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 648
+uploaded_by_user_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 678
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 679
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 704
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 705
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 728
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 729
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 765
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 766
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 801
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 802
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 834
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 835
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 861
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 896
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 897
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 926
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 927
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 953
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 954
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 955
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 972
+reviewer_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 994
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 995
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 996
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1006
+reviewer_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1028
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1029
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1052
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1053
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1054
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1058
+chunk = await repo.publish_knowledge_chunk(college.id, chunk_id, reviewer_id=current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1077
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1078
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1079
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1085
+chunk = await repo.publish_knowledge_chunk(college.id, chunk_id, reviewer_id=current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1103
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1104
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1105
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1109
+chunk = await repo.unpublish_knowledge_chunk(college.id, chunk_id, reviewer_id=current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1129
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1130
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1174
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1175
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1195
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1196
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1226
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1227
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1249
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1250
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1272
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1273
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1296
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1297
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1317
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1318
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1339
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1340
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1372
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1373
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1430
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1431
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1455
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1456
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1487
+college: College = Depends(get_authorized_college),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1488
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1489
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_admin.py
+LINE: 1495
+admin_email=current_user.email,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_registrations.py
+LINE: 8
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_registrations.py
+LINE: 9
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_registrations.py
+LINE: 38
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_registrations.py
+LINE: 127
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_registrations.py
+LINE: 159
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\college_registrations.py
+LINE: 195
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 8
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 10
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 15
+from app.dependencies.auth import get_optional_current_user, require_role
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 34
+current_user: Optional[User] = Depends(get_optional_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 35
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 58
+user_id=current_user.id if current_user else None,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 84
+current_user: User = Depends(require_role("COLLEGE_ADMIN", "SUPER_ADMIN")),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 85
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 89
+if current_user.role == "COLLEGE_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\feedback.py
+LINE: 91
+membership = await membership_repo.get_by_user_id(current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\health.py
+LINE: 7
+from fastapi import APIRouter, Depends, Response, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\health.py
+LINE: 9
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\health.py
+LINE: 23
+async def check_liveness(session: AsyncSession = Depends(get_db)):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\health.py
+LINE: 50
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\memberships.py
+LINE: 5
+from fastapi import APIRouter, Depends, HTTPException, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\memberships.py
+LINE: 6
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\memberships.py
+LINE: 28
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\memberships.py
+LINE: 29
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\memberships.py
+LINE: 79
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 8
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 9
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 12
+from app.dependencies.auth import get_current_user
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 32
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 33
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 37
+user_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 62
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 63
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 68
+user_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 87
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 88
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\notifications.py
+LINE: 92
+user_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 11
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 13
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 82
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 83
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 120
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 121
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 169
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 170
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 217
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 218
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 268
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 269
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 319
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 320
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 358
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 359
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 378
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 379
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 418
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 419
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 453
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 454
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 482
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 483
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 506
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 507
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 529
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 530
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 558
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 559
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 584
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 585
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 610
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 611
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 631
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 632
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 675
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 676
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 723
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 724
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 772
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 773
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 820
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 821
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 844
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 845
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 909
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 910
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 944
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 961
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\super_admin.py
+LINE: 962
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 9
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 10
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 13
+from app.dependencies.auth import get_current_user, get_optional_current_user
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 36
+current_user: Optional[User] = Depends(get_optional_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 37
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 40
+student_name = req.student_name or (current_user.full_name if current_user else "Visitor Student")
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 41
+student_email = req.student_email or (current_user.email if current_user else "student@college.edu")
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 52
+user_id=current_user.id if current_user else None,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 73
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 74
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 79
+if current_user.role == "COLLEGE_ADMIN" and not c_id:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 82
+membership = await mem_repo.get_by_user_id(current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 87
+current_user=current_user,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 111
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 112
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 117
+current_user=current_user,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 148
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 149
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 154
+current_user=current_user,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 179
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 180
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\support.py
+LINE: 185
+current_user=current_user,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 5
+from fastapi import APIRouter, Depends, HTTPException, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 6
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 13
+from app.dependencies.auth import require_super_admin, get_current_user
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 24
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 25
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 28
+user_prefs = current_user.preferences or {}
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 30
+user_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 31
+preferred_language=current_user.preferred_language or "en",
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 50
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 51
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 55
+user = await user_repo.get_by_id(current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 97
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 98
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 117
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 118
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 141
+current_admin: User = Depends(require_super_admin),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\api\v1\users.py
+LINE: 142
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\connection.py
+LINE: 7
+from sqlalchemy import create_engine
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\connection.py
+LINE: 8
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\connection.py
+LINE: 14
+async_engine: AsyncEngine = create_async_engine(
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\connection.py
+LINE: 25
+async_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\connection.py
+LINE: 32
+sync_engine = create_engine(
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\connection.py
+LINE: 38
+sync_engine = create_engine("sqlite:///:memory:")
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\session.py
+LINE: 8
+AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\session.py
+LINE: 9
+async_sessionmaker,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\session.py
+LINE: 14
+AsyncSessionFactory = async_sessionmaker(
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\session.py
+LINE: 16
+class_=AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\session.py
+LINE: 23
+AsyncSessionLocal = AsyncSessionFactory
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\session.py
+LINE: 26
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\database\session.py
+LINE: 31
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 8
+from fastapi import Depends, HTTPException, Security, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 10
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 20
+async def get_current_user(
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 22
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 72
+async def get_optional_current_user(
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 74
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 97
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 100
+if not current_user.is_verified:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 105
+return current_user
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 111
+async def role_checker(current_user: User = Depends(get_current_user)) -> User:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 112
+if current_user.role not in permitted_roles:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\auth.py
+LINE: 117
+return current_user
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\tenant.py
+LINE: 8
+from fastapi import Depends, Header, HTTPException, status
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\tenant.py
+LINE: 9
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\tenant.py
+LINE: 13
+from app.dependencies.auth import get_current_user
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\tenant.py
+LINE: 36
+college_id: uuid.UUID = Depends(get_requested_college_id),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\tenant.py
+LINE: 37
+current_user: User = Depends(get_current_user),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\tenant.py
+LINE: 38
+session: AsyncSession = Depends(get_db),
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\tenant.py
+LINE: 42
+return await tenant_service.validate_user_access_to_college(current_user, college_id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\__init__.py
+LINE: 4
+get_current_user,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\dependencies\__init__.py
+LINE: 16
+"get_current_user",
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\chat_repository.py
+LINE: 10
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\chat_repository.py
+LINE: 18
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\college_admin_repository.py
+LINE: 12
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\college_admin_repository.py
+LINE: 25
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\college_repository.py
+LINE: 9
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\college_repository.py
+LINE: 16
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\membership_repository.py
+LINE: 9
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\membership_repository.py
+LINE: 16
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\registration_repository.py
+LINE: 8
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\registration_repository.py
+LINE: 28
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\super_admin_repository.py
+LINE: 10
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\super_admin_repository.py
+LINE: 25
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\user_repository.py
+LINE: 9
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\repositories\user_repository.py
+LINE: 16
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\ai_provider_service.py
+LINE: 14
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\ai_provider_service.py
+LINE: 44
+session: Optional[AsyncSession] = None,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\ai_provider_service.py
+LINE: 219
+session: Optional[AsyncSession] = None,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\ai_provider_service.py
+LINE: 282
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\analytics_service.py
+LINE: 12
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\analytics_service.py
+LINE: 52
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\analytics_service.py
+LINE: 130
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\analytics_service.py
+LINE: 233
+session: Optional[AsyncSession] = None,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\analytics_service.py
+LINE: 278
+session: Optional[AsyncSession] = None,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\analytics_service.py
+LINE: 337
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\auth_service.py
+LINE: 11
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\auth_service.py
+LINE: 26
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 19
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 21
+from app.database.session import AsyncSessionFactory
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 58
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 108
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 131
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 147
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 161
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 177
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 190
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 209
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 231
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 265
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 405
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 466
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 490
+self, session: AsyncSession, job_id: uuid.UUID, discovered: int, crawled: int, failed: int
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 506
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\crawler_service.py
+LINE: 523
+async def _fail_job(self, session: AsyncSession, job_id: uuid.UUID, reason: str) -> None:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\document_service.py
+LINE: 13
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\document_service.py
+LINE: 15
+from app.database.session import AsyncSessionFactory
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\document_service.py
+LINE: 54
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\document_service.py
+LINE: 111
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\document_service.py
+LINE: 138
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\document_service.py
+LINE: 192
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\document_service.py
+LINE: 208
+async with AsyncSessionFactory() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\in_app_notification_service.py
+LINE: 11
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\in_app_notification_service.py
+LINE: 25
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\in_app_notification_service.py
+LINE: 48
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\in_app_notification_service.py
+LINE: 87
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\in_app_notification_service.py
+LINE: 108
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\knowledge_service.py
+LINE: 13
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\knowledge_service.py
+LINE: 35
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\knowledge_service.py
+LINE: 111
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\knowledge_service.py
+LINE: 195
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\knowledge_service.py
+LINE: 226
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\knowledge_service.py
+LINE: 256
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\knowledge_service.py
+LINE: 286
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\knowledge_service.py
+LINE: 317
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\notification_service.py
+LINE: 11
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\notification_service.py
+LINE: 19
+def __init__(self, session: Optional[AsyncSession] = None):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\rag_service.py
+LINE: 14
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\rag_service.py
+LINE: 78
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\rag_service.py
+LINE: 197
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\rag_service.py
+LINE: 226
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\rag_service.py
+LINE: 308
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 13
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 37
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 77
+current_user: User,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 78
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 95
+if current_user.role == "STUDENT":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 96
+query = query.where(SupportTicket.user_id == current_user.id)
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 97
+elif current_user.role == "COLLEGE_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 101
+elif current_user.role == "SUPER_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 116
+current_user: User,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 117
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 132
+if current_user.role == "STUDENT" and ticket.user_id != current_user.id:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 134
+if current_user.role == "COLLEGE_ADMIN" and ticket.college_id != authorized_college_id:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 140
+if r.is_internal and current_user.role == "STUDENT":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 152
+current_user: User,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 154
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 166
+if current_user.role == "STUDENT":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 167
+if ticket.user_id != current_user.id:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 171
+elif current_user.role == "COLLEGE_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 176
+elif current_user.role == "SUPER_ADMIN":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 183
+sender_user_id=current_user.id,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 184
+sender_name=current_user.full_name,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 185
+sender_role=current_user.role,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 195
+if not is_internal and ticket.user_id and current_user.role in ("COLLEGE_ADMIN", "SUPER_ADMIN"):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 211
+current_user: User,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 212
+session: AsyncSession,
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 227
+if current_user.role == "STUDENT":
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\support_service.py
+LINE: 229
+if current_user.role == "COLLEGE_ADMIN" and ticket.college_id != authorized_college_id:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\tenant_service.py
+LINE: 10
+from sqlalchemy.ext.asyncio import AsyncSession
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\services\tenant_service.py
+LINE: 20
+def __init__(self, session: AsyncSession):
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\tasks\knowledge_tasks.py
+LINE: 12
+from app.database.session import AsyncSessionLocal
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\tasks\knowledge_tasks.py
+LINE: 28
+async with AsyncSessionLocal() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\tasks\knowledge_tasks.py
+LINE: 48
+async with AsyncSessionLocal() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\tasks\knowledge_tasks.py
+LINE: 62
+async with AsyncSessionLocal() as session:
+
+FILE: C:\Users\HP\OneDrive\Desktop\College Chatbot\backend\app\tasks\knowledge_tasks.py
+LINE: 73
+async with AsyncSessionLocal() as session:

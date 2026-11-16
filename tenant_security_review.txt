@@ -1,0 +1,69 @@
+Tenant Security Review
+=====================
+
+Scope
+-----
+Review of the application’s multi-tenant isolation model, database session scoping, and RLS enforcement across FastAPI request handlers and background workers for the AI FAQ College Chat Bot.
+
+Executive summary
+-----------------
+The platform is designed as a multi-tenant SaaS system, but the current runtime behavior does not consistently establish a trusted, database-authoritative tenant context. The core risk is that the application can use a database role that bypasses RLS and/or can execute queries without setting the PostgreSQL session GUCs that power tenant isolation. When that happens, any query that omits a correct tenant filter can expose data across colleges.
+
+The immediate conclusion is: the application is not production-safe for multi-tenant enforcement until request-scoped and worker-scoped database session context is consistently established and verified.
+
+Key findings
+------------
+1. RLS must be driven by database session context, not by untrusted request headers.
+   - The database layer should rely on app.current_college_id / app.is_super_admin (or equivalent transaction-local session configuration) for tenant checks.
+   - The client-provided X-College-ID header is not authoritative and must never be treated as the database truth.
+   - Any handler that accepts a header value but does not replace it with the tenant fetched from the authenticated DB state is vulnerable to tenant confusion.
+
+2. The application should never connect as a privileged superuser for standard request traffic.
+   - If the backend connects as postgres or equivalent with BYPASSRLS privileges, PostgreSQL will ignore tenant-specific row security rules for application queries.
+   - The normal app role must be non-superuser and must not be able to bypass RLS.
+
+3. Every database session needs explicit tenant scoping.
+   - FastAPI request sessions must set transaction-local tenant context before the first query.
+   - Background tasks and Celery workers must do the same; they must not open unmanaged sessions that bypass the request lifecycle.
+   - Session context must be established with is_local=true / per-transaction scoping to avoid leaking tenant state across requests.
+
+4. Background workers require strict tenant enforcement.
+   - Crawl jobs, document-processing tasks, knowledge indexing, and chat insert flows all need the same tenant context rule.
+   - A worker cannot trust the caller’s college_id without re-establishing the authoritative DB tenant context from the college/session record it fetched.
+
+5. Silent fallback to a non-production database is not acceptable for multi-tenant enforcement.
+   - If PostgreSQL is unavailable, the application should fail closed with an explicit operational error rather than silently switching to in-memory SQLite, because that loses tenant isolation and creates split-brain behavior.
+
+6. Telemetry/logging should not silently discard failures.
+   - AI provider telemetry and other operational writes must surface errors so that operators can detect dropped events.
+   - A production system should not continue as though telemetry succeeded when the insert failed.
+
+7. The reliance on an application-level tenant convention is insufficient.
+   - The application should not assume that filtering by college_id in ORM queries alone protects data.
+   - The database must enforce the boundary through RLS and session-scoped policies, with app-level checks as a defense-in-depth layer only.
+
+Current status
+--------------
+The repository contains the correct architectural direction for a secure approach: tenant context should be transaction-local and DB-authoritative. The remaining risk is not in the concept, but in ensuring every request and worker path sets that context consistently before issuing data operations.
+
+In practical terms, the secure implementation should adhere to the following:
+- Authenticate the user and fetch the authoritative tenant from the DB.
+- Set the tenant session GUC from that DB record, not from any client header.
+- Validate membership/role access explicitly in the application.
+- Keep the tenant context local to the transaction.
+- Use non-BYPASSRLS database credentials for normal app access.
+- Fail closed on DB failure rather than silently switching to a fallback store.
+- Verify with integration tests covering cross-college access, chat insert authorization, and background-worker tenant scoping.
+
+Production recommendation
+------------------------
+Before launch, the project should require:
+- A verified request/worker tenant-context test suite.
+- A non-superuser app database role with RLS enforced.
+- No silent SQLite fallback in production.
+- Tenant-only DB queries backed by `current_app_tenant()` checks in the database session.
+- Explicit failover and audit logging for telemetry and provider execution.
+
+Conclusion
+----------
+The platform has the correct security model in principle, but it is not yet ready to trust the tenant boundary in production. The fix is not simply a policy change in Python; it requires consistent, transaction-scoped database session configuration and a strict fail-closed posture in every access path.

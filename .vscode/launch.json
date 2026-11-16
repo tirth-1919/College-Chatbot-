@@ -1,0 +1,58 @@
+{
+  // VS Code debugger configurations for the AI FAQ College Chat Bot.
+  //
+  // Backend Debugger: Python / debugpy listening on 127.0.0.1:5678
+  // Student Portal:   Next.js running on http://localhost:3000
+  // Admin Portal:     Next.js running on http://localhost:3001
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to FastAPI Backend (debugpy :5678)",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "127.0.0.1",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/backend",
+          "remoteRoot": "."
+        }
+      ],
+      "justMyCode": true
+    },
+    {
+      "name": "Debug Student Portal (Browser)",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://localhost:3000/login?autologin=true",
+      "webRoot": "${workspaceFolder}/apps/user-frontend"
+    },
+    {
+      "name": "Debug Admin Portal (Browser)",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://localhost:3001/login?autologin=superadmin",
+      "webRoot": "${workspaceFolder}/apps/admin-frontend"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug All (Backend + Student Portal)",
+      "configurations": [
+        "Attach to FastAPI Backend (debugpy :5678)",
+        "Debug Student Portal (Browser)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Debug All (Backend + Admin Portal)",
+      "configurations": [
+        "Attach to FastAPI Backend (debugpy :5678)",
+        "Debug Admin Portal (Browser)"
+      ],
+      "stopAll": true
+    }
+  ]
+}

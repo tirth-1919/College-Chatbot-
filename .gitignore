@@ -1,0 +1,70 @@
+# Environment & Secret files
+.env
+.env.*
+!.env.example
+.env.local
+.env.*.local
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Build artifacts
+.next/
+out/
+build/
+dist/
+*.egg-info/
+*.tsbuildinfo
+
+# Next.js telemetry
+.next/cache/
+
+# Testing & Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Local databases and uploaded documents
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.backup
+*.bak
+storage/college-documents/
+
+# Local credentials and generated runtime output
+.ait_*.tmp
+.devin/config.local.json
+backend/*_out.txt
+backend/inspect_output.txt
+reports/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+celerybeat-schedule
+celerybeat.pid
+
+# Supabase Local
+.supabase/
+

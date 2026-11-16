@@ -1,0 +1,10 @@
+cd "C:\Users\HP\OneDrive\Desktop\College Chatbot"
+
+Get-ChildItem ".\database\migrations\*.sql" |
+    Sort-Object Name |
+    ForEach-Object {
+        "`r`n========================================"
+        "FILE: $($_.Name)"
+        "========================================"
+        Get-Content $_.FullName -Raw
+    } | Set-Content ".\database\migrations_review.txt"

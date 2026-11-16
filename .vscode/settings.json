@@ -1,0 +1,24 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/backend"
+  ],
+  // Debugpy attach port (matches scripts/start-dev.js DEBUG_PORTS.backend)
+  "python.debugger.defaultPort": 5678,
+
+  // Auto-attach Node.js debugger to any process started with --inspect.
+  // "always" means every `npm run dev` terminal gets a debugger automatically.
+  "debug.javascript.autoAttachFilter": "always",
+  "debug.javascript.autoAttachSmartPattern": [
+    "${workspaceFolder}/apps/**",
+    "!**/node_modules/**"
+  ],
+
+  // Show debug toolbar always so it's easy to pause/step
+  "debug.toolBarLocation": "docked",
+  "python.terminal.useEnvFile": true
+}
+

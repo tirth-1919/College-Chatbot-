@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Dev Server",
+      "type": "shell",
+      "command": "npm run dev",
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          // Signals "task is ready" when the FastAPI backend is up
+          "owner": "campusai-dev",
+          "pattern": {
+            "regexp": "^.*$",
+            "file": 1,
+            "line": 2,
+            "message": 3
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern":  "UNIFIED SAAS DEVELOPMENT RUNNER",
+            "endsPattern":    "debugpy listening on 127\\.0\\.0\\.1:5678"
+          }
+        }
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": true,
+        "focus": false
+      }
+    }
+  ]
+}
+

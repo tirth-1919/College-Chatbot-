@@ -1,0 +1,17 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": "F1",
+      "criterion": "AC-17",
+      "severity": "blocker",
+      "title": "httpx.TimeoutException and httpx.ConnectError bypass retry logic in _attempt_gemini and _attempt_xkiro — not fixed since prior review",
+      "file": "backend/app/services/ai_provider_service.py",
+      "lines": "244-246 (_attempt_gemini client.post), 359-361 (_attempt_xkiro client.post)",
+      "description": "_attempt_gemini and _attempt_xkiro call httpx.AsyncClient.post() with no surrounding try/except for transport exceptions. httpx.TimeoutException and httpx.ConnectError raised during those calls propagate to generate_response's bare 'except Exception' handler, which executes 'break', immediately abandoning the retry loop for that model. No retry with backoff is attempted. Grep for TimeoutException, ConnectError, and httpx.Timeout in ai_provider_service.py returns zero matches, confirming the fix was not applied.",
+      "consequence": "A single Gemini or xKiro network timeout consumes zero retry budget and immediately triggers failover to the next model, violating AC #17 and original task section 5 which require timeouts to be retried with bounded exponential backoff.",
+      "correction": "In _attempt_gemini and _attempt_xkiro, wrap the client.post() call: catch (httpx.TimeoutException, httpx.ConnectError) and re-raise as _RetriableFailure. Update test 18 (test_timeout_handled) to assert mock_tracker.record_retry.call_count >= 1 to prevent silent regression."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\HP\\OneDrive\\Desktop\\College Chatbot\\.agents\\tasks\\ai-answering-failover\\review.md"
+}

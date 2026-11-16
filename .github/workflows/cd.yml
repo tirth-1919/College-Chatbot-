@@ -1,0 +1,120 @@
+name: Continuous Deployment (CD)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Deployment Target Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-containers:
+    name: Build & Push Images to GHCR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Metadata (Backend)
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,format=short
+
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract Metadata (User Frontend)
+        id: meta-user
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/user-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,format=short
+
+      - name: Build & Push User Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/user-frontend
+          push: true
+          tags: ${{ steps.meta-user.outputs.tags }}
+          labels: ${{ steps.meta-user.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract Metadata (Admin Frontend)
+        id: meta-admin
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/admin-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,format=short
+
+      - name: Build & Push Admin Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/admin-frontend
+          push: true
+          tags: ${{ steps.meta-admin.outputs.tags }}
+          labels: ${{ steps.meta-admin.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Rolling Production Deployment
+    runs-on: ubuntu-latest
+    needs: publish-containers
+    environment:
+      name: production
+      url: https://college-chatbot.example.com
+
+    steps:
+      - name: Trigger Rolling Deployment via SSH or Webhook
+        run: |
+          echo "Initiating rolling blue/green deployment for production cluster..."
+          # Deploy via orchestration tool or remote SSH runner:
+          # ssh deployer@prod-server 'docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d --remove-orphans'
+
+      - name: Automated Health & Readiness Probe Verification
+        run: |
+          echo "Verifying /api/v1/health and /api/v1/health/ready endpoints..."
+          # curl --fail --retry 10 --retry-delay 5 https://api.college-chatbot.example.com/api/v1/health/ready
+

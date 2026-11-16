@@ -1,0 +1,29 @@
+{
+  "name": "ai-faq-college-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-tenant AI FAQ College Chat Bot SaaS platform with RAG, website crawling, and human-in-the-loop verification.",
+  "scripts": {
+    "dev": "node scripts/start-dev.js --open",
+    "start": "node scripts/start-dev.js --open",
+    "dev:all": "node scripts/start-dev.js --open",
+    "dev:autologin": "node scripts/start-dev.js --open",
+    "dev:no-open": "node scripts/start-dev.js",
+    "dev:backend": "node scripts/start-dev.js --target=backend",
+    "dev:user": "node scripts/start-dev.js --target=user --open",
+    "dev:admin": "node scripts/start-dev.js --target=admin --open",
+    "install:all": "node scripts/install-all.js"
+  },
+  "keywords": [
+    "ai",
+    "college-chatbot",
+    "rag",
+    "pgvector",
+    "fastapi",
+    "nextjs",
+    "supabase"
+  ],
+  "author": "CampusAI Team",
+  "license": "UNLICENSED"
+}
+

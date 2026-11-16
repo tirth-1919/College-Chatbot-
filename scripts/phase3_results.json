@@ -1,0 +1,212 @@
+[
+  {
+    "section": "1.Role",
+    "check": "Admin conn role",
+    "status": "INFO",
+    "detail": "Connected as: postgres superuser=False bypassrls=True",
+    "ref": "database"
+  },
+  {
+    "section": "1.Role",
+    "check": "App engine role = college_app_user",
+    "status": "PASS",
+    "detail": "current_user=college_app_user",
+    "ref": "database"
+  },
+  {
+    "section": "1.Role",
+    "check": "App role NOT superuser",
+    "status": "PASS",
+    "detail": "rolsuper=False",
+    "ref": "database"
+  },
+  {
+    "section": "1.Role",
+    "check": "App role NOT BYPASSRLS",
+    "status": "PASS",
+    "detail": "rolbypassrls=False",
+    "ref": "database"
+  },
+  {
+    "section": "1.Role",
+    "check": "App role owns no tables",
+    "status": "PASS",
+    "detail": "Owned tables: none",
+    "ref": "database"
+  },
+  {
+    "section": "2.RLS",
+    "check": "All application tables have RLS enabled",
+    "status": "FAIL",
+    "detail": "Tables WITHOUT RLS: ['ai_provider_configs', 'ai_provider_events', 'audit_logs']",
+    "ref": "database"
+  },
+  {
+    "section": "2.RLS",
+    "check": "All RLS-enabled tables have >= 1 policy",
+    "status": "PASS",
+    "detail": "Tables with ZERO policies: none",
+    "ref": "database"
+  },
+  {
+    "section": "2.RLS",
+    "check": "RLS table count",
+    "status": "INFO",
+    "detail": "24 tables with RLS: ['chat_messages', 'chat_sessions', 'college_admin_invitations', 'college_memberships', 'college_onboarding_progress', 'college_registrations', 'colleges', 'crawl_events', 'crawl_jobs', 'document_pages', 'document_paragraphs', 'documents', 'extracted_facts', 'feedback', 'in_app_notifications', 'knowledge_chunks', 'knowledge_reviews', 'notification_logs', 'registration_reviews', 'support_ticket_replies', 'support_tickets', 'users', 'website_pages', 'website_sources']",
+    "ref": "database"
+  },
+  {
+    "section": "2.RLS",
+    "check": "knowledge_chunks policy 'p_chunks_tenant_isolation' blocks NULL tenant",
+    "status": "PASS",
+    "detail": "USING: (is_platform_super_admin() OR (college_id = current_app_tenant()) OR ((status = 'PUBLISHED'::knowledge_status) AND (is_active = true) AND (current_app_tenant() IS NOT NULL) AND (college_id = current_a",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "NULL tenant \u2192 colleges count=2",
+    "status": "INFO",
+    "detail": "colleges visible without tenant (expected: only APPROVED ones)",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "NULL tenant \u2192 documents row count",
+    "status": "PASS",
+    "detail": "count=0 (expected 0 \u2014 no tenant GUC set)",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "NULL tenant \u2192 website_sources row count",
+    "status": "PASS",
+    "detail": "count=0 (expected 0 \u2014 no tenant GUC set)",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "NULL tenant \u2192 knowledge_chunks row count",
+    "status": "PASS",
+    "detail": "count=0 (expected 0 \u2014 no tenant GUC set)",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "NULL tenant \u2192 chat_sessions row count",
+    "status": "PASS",
+    "detail": "count=0 (expected 0 \u2014 no tenant GUC set)",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "NULL tenant \u2192 extracted_facts row count",
+    "status": "PASS",
+    "detail": "count=0 (expected 0 \u2014 no tenant GUC set)",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "AIT tenant sees its own documents",
+    "status": "PASS",
+    "detail": "AIT own docs visible: 0",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "AIT tenant CANNOT read RCTI documents (WHERE clause)",
+    "status": "PASS",
+    "detail": "RCTI docs visible via AIT context WHERE filter: 0",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "AIT tenant sees ONLY AIT total (no cross-tenant leak)",
+    "status": "PASS",
+    "detail": "Total visible=0, AIT own=0 \u2014 diff=0 leaked records",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "RCTI tenant CANNOT read AIT documents (WHERE clause)",
+    "status": "PASS",
+    "detail": "AIT docs visible via RCTI context WHERE filter: 0",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "RCTI tenant sees ONLY RCTI total (no cross-tenant leak)",
+    "status": "PASS",
+    "detail": "Total visible=0, RCTI own=0 \u2014 diff=0 leaked records",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "website_sources isolation (AIT sees only its own)",
+    "status": "PASS",
+    "detail": "Total visible=0, AIT own=0",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "knowledge_chunks: AIT sees no RCTI chunks",
+    "status": "PASS",
+    "detail": "Total visible=0, AIT own=0 \u2014 diff=0 cross-tenant chunks",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "Super admin can see all documents across tenants",
+    "status": "PASS",
+    "detail": "Super admin total visible=0 (AIT=0, RCTI=0)",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "users table with college admin context (no user_id GUC)",
+    "status": "INFO",
+    "detail": "Visible user count=0 (should be limited to AIT college members or 0)",
+    "ref": "database"
+  },
+  {
+    "section": "3.CrossTenant",
+    "check": "chat_messages: AIT sees only its own sessions' messages",
+    "status": "PASS",
+    "detail": "Total visible=0, AIT own=0",
+    "ref": "database"
+  },
+  {
+    "section": "4.GUC",
+    "check": "GUC visible during transaction",
+    "status": "PASS",
+    "detail": "Value during txn: 11111111-1111-1111-1111-111111111111",
+    "ref": "database"
+  },
+  {
+    "section": "4.GUC",
+    "check": "GUC cleared after COMMIT (is_local=true)",
+    "status": "PASS",
+    "detail": "Value after commit: '' (expected empty \u2014 asyncpg reuses connection)",
+    "ref": "database"
+  },
+  {
+    "section": "4.GUC",
+    "check": "RESET ALL clears session-level GUC",
+    "status": "PASS",
+    "detail": "Value after RESET ALL: ''",
+    "ref": "database"
+  },
+  {
+    "section": "5.Grants",
+    "check": "Zero anon/authenticated table grants remain",
+    "status": "PASS",
+    "detail": "Remaining grants: none",
+    "ref": "database"
+  },
+  {
+    "section": "5.Grants",
+    "check": "college_app_user has grants on application tables",
+    "status": "PASS",
+    "detail": "Tables with grants: 27",
+    "ref": "database"
+  }
+]
