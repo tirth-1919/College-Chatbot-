@@ -18,8 +18,8 @@ Available Test Commands:
 """
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from tests.runner import main as run_tests
 
