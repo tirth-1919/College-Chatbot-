@@ -17,16 +17,16 @@ Available Test Commands:
   python manage.py test-failed       - Retest only previously failing tests
 """
 
-import sys
 import argparse
 from pathlib import Path
+import sys
+
+from tests.runner import main as run_tests
 
 # Set up project path
 ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
-
-from tests.runner import main as run_tests
 
 
 VALID_COMMANDS = {
