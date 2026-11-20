@@ -56,6 +56,7 @@ export default function CollegesPage() {
   const handleSelectCollege = (college: College) => {
     localStorage.setItem("selected_college_id", college.id);
     localStorage.setItem("selected_college_name", college.name);
+    window.dispatchEvent(new Event("selected-college-change"));
     setSelectedId(college.id);
     router.push("/chat");
   };

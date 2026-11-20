@@ -1,17 +1,17 @@
 """College Membership Database Repository.
 
-Provides data access logic for College Administrator tenant memberships.
+Provides data access logic for college-scoped user memberships.
 """
 
 import uuid
 from typing import List, Optional
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.membership import CollegeMembership
 
 
 class MembershipRepository:
-    """Data access repository for college administrative memberships."""
+    """Data access repository for college memberships."""
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -25,6 +25,15 @@ class MembershipRepository:
         )
         return result.scalars().first()
 
+    async def list_by_user_id(self, user_id: uuid.UUID) -> List[CollegeMembership]:
+        """Fetches all college memberships assigned to a user."""
+        result = await self.session.execute(
+            select(CollegeMembership)
+            .where(CollegeMembership.user_id == user_id)
+            .order_by(CollegeMembership.is_primary.desc())
+        )
+        return list(result.scalars().all())
+
     async def get_membership(
         self, college_id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[CollegeMembership]:
@@ -36,6 +45,16 @@ class MembershipRepository:
             )
         )
         return result.scalar_one_or_none()
+
+    async def user_belongs_to_college(
+        self, user_id: uuid.UUID, college_id: uuid.UUID
+    ) -> bool:
+        """Checks membership through the database's RLS-safe security-definer helper."""
+        result = await self.session.execute(
+            text("SELECT public.user_belongs_to_tenant(:user_id, :college_id)"),
+            {"user_id": user_id, "college_id": college_id},
+        )
+        return bool(result.scalar_one())
 
     async def list_by_college(self, college_id: uuid.UUID) -> List[CollegeMembership]:
         """Lists all administrative memberships for a specific college."""

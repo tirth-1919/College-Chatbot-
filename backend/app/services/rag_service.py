@@ -5,8 +5,7 @@ similarity search, multi-source priority ranking, and verified citation synthesi
 
 Answer modes:
   COLLEGE_KNOWLEDGE — answer grounded in retrieved college chunks
-  GENERAL_AI        — no college chunks found; general AI answers the question
-  MIXED             — chunks found but all below the HIGH_SIMILARITY threshold
+  GENERAL_AI        — no sufficient relevant evidence; general AI answers the question
 """
 
 import json
@@ -15,7 +14,7 @@ import math
 import re
 import uuid
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.knowledge import KnowledgeChunk
@@ -27,9 +26,6 @@ from app.services.multilingual_config import multilingual_config
 
 logger = logging.getLogger(__name__)
 
-# Similarity threshold above which we consider college knowledge "high quality"
-_HIGH_SIMILARITY = 0.60
-
 # Feature flag: set to True after 002_ai_failover_columns.sql migration is confirmed applied.
 # Can also be driven by settings.AI_NEW_ENUM_ENABLED (bool, default False).
 _NEW_ENUM_VALUES_AVAILABLE: bool = getattr(settings, 'AI_NEW_ENUM_ENABLED', False)
@@ -37,6 +33,31 @@ _NEW_ENUM_VALUES_AVAILABLE: bool = getattr(settings, 'AI_NEW_ENUM_ENABLED', Fals
 
 class RAGService:
     """Enterprise RAG pipeline with strict tenant filtering and citation grounding."""
+
+    _RELEVANCE_STOPWORDS = frozenset(
+        {
+            "a", "an", "and", "are", "as", "at", "be", "been", "being", "but",
+            "by", "can", "could", "did", "do", "does", "for", "from", "had",
+            "has", "have", "he", "her", "here", "hers", "him", "his", "how",
+            "i", "if", "in", "into", "is", "it", "its", "me", "my", "of",
+            "on", "or", "our", "please", "should", "so", "than", "that",
+            "the", "their", "them", "there", "these", "they", "this", "those",
+            "through", "to", "us", "was", "we", "were", "what", "when",
+            "where", "which", "who", "whom", "why", "will", "with", "would",
+            "you", "your", "college", "university", "institute", "ait", "rcti",
+            "tell", "show", "give", "provide", "find", "explain", "information",
+            "details", "detail", "about", "available", "exact", "official",
+        }
+    )
+    _RELEVANCE_SYNONYM_GROUPS = (
+        ("application", "apply", "admission"),
+        ("deadline", "due", "date"),
+        ("seat", "intake", "capacity"),
+        ("fee", "tuition", "cost", "charge"),
+        ("program", "course", "branch"),
+        ("document", "transcript", "certificate", "declaration"),
+        ("time", "hour"),
+    )
 
     # Prompt injection and jailbreak signatures
     INJECTION_PATTERNS = [
@@ -97,6 +118,232 @@ class RAGService:
             return 0.0
         return max(0.0, min(1.0, dot / (norm_a * norm_b)))
 
+    @classmethod
+    def _meaningful_terms(cls, text: str) -> set[str]:
+        terms = set()
+        for term in re.findall(r"[^\W_]+", text.casefold(), flags=re.UNICODE):
+            if term in cls._RELEVANCE_STOPWORDS:
+                continue
+            if len(term) < 3 and not term.isdigit():
+                continue
+            if term.endswith("ies") and len(term) > 4:
+                term = term[:-3] + "y"
+            elif term.endswith("ing") and len(term) > 6:
+                term = term[:-3]
+                if len(term) > 3 and term[-1] == term[-2]:
+                    term = term[:-1]
+            elif term.endswith("ed") and len(term) > 5:
+                term = term[:-2]
+            elif term.endswith("es") and len(term) > 5:
+                term = term[:-2]
+            elif term.endswith("s") and len(term) > 4 and not term.endswith("ss"):
+                term = term[:-1]
+            terms.add(term)
+        return terms
+
+    @classmethod
+    def _canonical_relevance_term(cls, term: str) -> str:
+        for group in cls._RELEVANCE_SYNONYM_GROUPS:
+            if term in group:
+                return group[0]
+        return term
+
+    @classmethod
+    def _has_requested_value(cls, query: str, evidence_text: str) -> bool:
+        normalized_query = query.casefold()
+        query_terms = {
+            cls._canonical_relevance_term(term)
+            for term in cls._meaningful_terms(query)
+        }
+        asks_for_quantity = bool(
+            "how many" in normalized_query
+            or "how much" in normalized_query
+            or "number of" in normalized_query
+            or re.search(
+                r"\bwhat\s+(?:is|are)\b.{0,40}\b"
+                r"(?:counts?|amounts?|fees?|tuition|costs?|prices?|population|intake)\b",
+                normalized_query,
+            )
+            or re.search(
+                r"\bwhat\s+(?:seat|student|program|course|branch)\s+counts?\b",
+                normalized_query,
+            )
+        )
+        asks_for_date_or_time = bool(
+            re.search(
+                r"\bwhen\b|\bby what date\b|\bwhat date\b|\bwhich date\b|"
+                r"\bwhat (?:is|are) .{0,30}\b(?:date|dates|deadline|due|time|year)\b|"
+                r"\bapplication dates?\b|\badmission dates?\b|"
+                r"\bapplication period\b|\badmission period\b|\byear\b",
+                normalized_query,
+            )
+        )
+        asks_for_application_schedule = bool(
+            re.search(
+                r"\bapplication\s+(?:dates?|period|window|deadline)\b"
+                r"|\bapply\b.{0,30}\b(?:between|from|until|by)\b",
+                normalized_query,
+            )
+        )
+        if not (
+            asks_for_quantity
+            or asks_for_date_or_time
+            or asks_for_application_schedule
+        ):
+            return True
+
+        value_text = evidence_text.casefold()
+        has_application_schedule = bool(
+            re.search(
+                r"\bapplications?\b.{0,40}\b(?:dates?|period|window|deadline|open)\b"
+                r"|\bapply\b.{0,40}\b(?:between|from|until|by)\b"
+                r"|\b(?:application|admission)\s+(?:dates?|period|window|deadline)\b",
+                value_text,
+            )
+        )
+        quantity_text = re.sub(
+            r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b"
+            r"|\b\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|"
+            r"apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|"
+            r"oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4}\b"
+            r"|\b(?:19|20)\d{2}\b|\b\d{1,2}:\d{2}\s*(?:am|pm)?\b",
+            " ",
+            value_text,
+        )
+        has_number = bool(re.search(r"\b\d+(?:[,.]\d+)*(?:\+)?\b", quantity_text))
+        has_date_or_time = bool(
+            re.search(
+                r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b"
+                r"|\b\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|"
+                r"apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|"
+                r"oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4}\b"
+                r"|\b(?:19|20)\d{2}\b|\b\d{1,2}:\d{2}\s*(?:am|pm)?\b",
+                value_text,
+            )
+        )
+
+        has_quantity = False
+        if asks_for_quantity and has_number:
+            quantity_units = {
+                "seat": ("seat", "intake", "capacity"),
+                "fee": ("fee", "tuition", "cost", "charge"),
+                "program": ("program", "course", "branch"),
+                "population": ("population", "people", "students"),
+            }
+            requested_units = set()
+            if re.search(r"\b(?:fee|tuition|cost|charge|price)\b", normalized_query):
+                requested_units.update(quantity_units["fee"])
+            if re.search(r"\b(?:seat|seats|intake|capacity)\b", normalized_query):
+                requested_units.update(quantity_units["seat"])
+            if re.search(r"\b(?:population|people|students?)\b", normalized_query):
+                requested_units.update(quantity_units["population"])
+            if re.search(
+                r"\b(?:how many|number of|count of)\s+(?:programs?|courses?|branches?)\b"
+                r"|\b(?:program|course|branch)\s+count\b",
+                normalized_query,
+            ):
+                requested_units.update(quantity_units["program"])
+
+            if "|" in evidence_text and requested_units:
+                has_quantity = any(
+                    re.search(rf"\b{re.escape(unit)}s?\b", value_text)
+                    for unit in requested_units
+                )
+            elif requested_units:
+                unit_pattern = "|".join(
+                    re.escape(unit) + r"s?" for unit in requested_units
+                )
+                has_quantity = bool(
+                    re.search(
+                        rf"\b\d+(?:[,.]\d+)*(?:\+)?\s*(?:{unit_pattern})\b"
+                        rf"|\b(?:{unit_pattern})\b[^\d.!?]{{0,80}}\d+",
+                        quantity_text,
+                    )
+                )
+            else:
+                has_quantity = has_number
+
+        return (
+            (not asks_for_quantity or has_quantity)
+            and (not asks_for_date_or_time or has_date_or_time)
+            and (
+                not asks_for_application_schedule
+                or has_application_schedule
+            )
+        )
+
+    @classmethod
+    def _select_relevant_evidence(
+        cls,
+        query: str,
+        candidates: List[Tuple[KnowledgeChunk, float]],
+    ) -> List[Tuple[KnowledgeChunk, float]]:
+        """Require query-term evidence across multiple chunks before grounding an answer."""
+        query_terms = {
+            cls._canonical_relevance_term(term)
+            for term in cls._meaningful_terms(query)
+        }
+        if not query_terms:
+            return []
+
+        minimum_chunk_coverage = min(2, len(query_terms))
+        per_chunk_matches: List[Tuple[KnowledgeChunk, float, set[str]]] = []
+        for chunk, score in candidates:
+            evidence_text = f"{chunk.heading or ''} {chunk.chunk_text or ''}"
+            evidence_terms = {
+                cls._canonical_relevance_term(term)
+                for term in cls._meaningful_terms(evidence_text)
+            }
+            matches = query_terms.intersection(evidence_terms)
+            if len(matches) >= minimum_chunk_coverage:
+                per_chunk_matches.append((chunk, score, matches))
+
+        required_coverage = max(
+            1 if len(query_terms) == 1 else 2,
+            math.ceil(len(query_terms) * 0.5),
+        )
+        per_chunk_matches.sort(key=lambda item: (len(item[2]), item[1]), reverse=True)
+        selected: List[Tuple[KnowledgeChunk, float]] = []
+        covered_terms: set[str] = set()
+        for chunk, score, matches in per_chunk_matches:
+            current_text = " ".join(
+                f"{item.heading or ''} {item.chunk_text or ''}"
+                for item, _ in selected
+            )
+            evidence_text = f"{chunk.heading or ''} {chunk.chunk_text or ''}"
+            trial_text = f"{current_text} {evidence_text}"
+            adds_value = (
+                not cls._has_requested_value(query, current_text)
+                and cls._has_requested_value(query, trial_text)
+            )
+            if matches.difference(covered_terms) or adds_value:
+                selected.append((chunk, score))
+                covered_terms.update(matches)
+            if (
+                len(covered_terms) >= required_coverage
+                and cls._has_requested_value(
+                    query,
+                    " ".join(
+                        f"{item.heading or ''} {item.chunk_text or ''}"
+                        for item, _ in selected
+                    ),
+                )
+            ):
+                break
+
+        if (
+            len(covered_terms) < required_coverage
+            or not cls._has_requested_value(
+                query,
+                " ".join(
+                    f"{item.heading or ''} {item.chunk_text or ''}"
+                    for item, _ in selected
+                ),
+            )
+        ):
+            return []
+        return selected
+
     async def retrieve_relevant_chunks(
         self,
         college_id: uuid.UUID,
@@ -105,42 +352,64 @@ class RAGService:
         top_k: int = 5,
         min_similarity: float = 0.40,
     ) -> List[Tuple[KnowledgeChunk, float]]:
-        """Retrieves top-K published chunks scoped strictly to the college tenant."""
+        """Returns tenant-scoped chunks that pass both semantic and evidence checks."""
+        try:
+            candidates = await self._retrieve_candidate_chunks(
+                college_id=college_id,
+                query=query,
+                session=session,
+                min_similarity=min_similarity,
+            )
+            return self._select_relevant_evidence(query, candidates)[:top_k]
+        except Exception as exc:
+            logger.warning(
+                "Failed to retrieve vector chunks for college %s: %s. Falling back to general AI answering.",
+                college_id,
+                exc,
+            )
+            return []
+
+    async def _retrieve_candidate_chunks(
+        self,
+        college_id: uuid.UUID,
+        query: str,
+        session: AsyncSession,
+        min_similarity: float,
+    ) -> List[Tuple[KnowledgeChunk, float]]:
+        """Fetches tenant-scoped pgvector candidates before evidence filtering."""
         query_vector = await embedding_service.get_embedding(query)
 
-        stmt = (
-            select(KnowledgeChunk)
-            .where(
-                and_(
-                    KnowledgeChunk.college_id == college_id,
-                    KnowledgeChunk.status == "PUBLISHED",
-                    KnowledgeChunk.is_active == True,
-                )
-            )
-        )
-        result = await session.execute(stmt)
-        chunks = list(result.scalars().all())
-
-        if not chunks:
-            stmt_approved = (
-                select(KnowledgeChunk)
+        def candidate_statement(statuses: List[str]):
+            distance = KnowledgeChunk.embedding.cosine_distance(query_vector)
+            similarity = func.greatest(0.0, func.least(1.0, 1.0 - distance))
+            return (
+                select(KnowledgeChunk, similarity.label("similarity"))
                 .where(
                     and_(
                         KnowledgeChunk.college_id == college_id,
-                        KnowledgeChunk.status.in_(["APPROVED", "PUBLISHED"]),
+                        KnowledgeChunk.status.in_(statuses),
                         KnowledgeChunk.is_active == True,
                     )
                 )
+                .order_by(distance.asc())
             )
-            res_approved = await session.execute(stmt_approved)
-            chunks = list(res_approved.scalars().all())
 
-        if not chunks:
+        stmt = candidate_statement(["PUBLISHED"])
+        result = await session.execute(stmt)
+        rows = list(result.all())
+
+        if not rows:
+            result = await session.execute(
+                candidate_statement(["APPROVED", "PUBLISHED"])
+            )
+            rows = list(result.all())
+
+        if not rows:
             return []
 
         scored_chunks: List[Tuple[KnowledgeChunk, float]] = []
-        for chunk in chunks:
-            if not chunk.embedding:
+        for chunk, similarity in rows:
+            if similarity is None:
                 logger.warning(
                     "Skipping unembedded chunk %s for college %s; no deterministic fallback is allowed for live retrieval.",
                     chunk.id,
@@ -148,13 +417,11 @@ class RAGService:
                 )
                 continue
 
-            chunk_emb = list(chunk.embedding)
-            sim = self._cosine_similarity(query_vector, chunk_emb)
-            if sim >= min_similarity:
-                scored_chunks.append((chunk, round(sim, 3)))
+            score = float(similarity)
+            if score >= min_similarity:
+                scored_chunks.append((chunk, round(score, 3)))
 
-        scored_chunks.sort(key=lambda x: x[1], reverse=True)
-        return scored_chunks[:top_k]
+        return scored_chunks
 
     def build_citations(
         self,
@@ -167,10 +434,21 @@ class RAGService:
 
         for chunk, score in scored_chunks:
             source_type = chunk.source_type
-            title = chunk.heading or f"{college.name if college else 'College'} Verified Knowledge"
+            metadata = chunk.chunk_metadata or {}
+            if source_type in ("DOCUMENT", "PDF"):
+                source_name = metadata.get("original_filename") or (
+                    chunk.heading or (college.name if college else "College document")
+                )
+            elif source_type in ("WEBSITE", "OFFICIAL_WEBSITE"):
+                source_name = metadata.get("source_title") or (
+                    chunk.heading or (college.name if college else "Official College Website")
+                )
+            else:
+                source_name = college.name if college else "College Verified Knowledge"
 
             citation_item = {
-                "title": title,
+                "title": source_name,
+                "source_name": source_name,
                 "source_type": source_type,
                 "similarity_score": score,
                 "section": chunk.heading or chunk.category,
@@ -180,7 +458,6 @@ class RAGService:
                 citation_item["url"] = chunk.source_url
             elif source_type == "DOCUMENT" or source_type == "PDF":
                 citation_item["page_number"] = chunk.page_number or 1
-                citation_item["title"] = chunk.heading or "Official College Prospectus & Regulatory Circular"
             else:
                 citation_item["url"] = f"https://{domain}/admissions"
 
@@ -307,21 +584,18 @@ class RAGService:
             }
 
         # 2. Vector Retrieval (scoped to college tenant)
-        scored_chunks = await self.retrieve_relevant_chunks(
+        candidate_chunks = await self.retrieve_relevant_chunks(
             college_id=college_id,
             query=query,
             session=session,
-            top_k=4,
+            top_k=20,
             min_similarity=0.35,
         )
+        scored_chunks = self._select_relevant_evidence(query, candidate_chunks)[:8]
 
-        # 3. Determine answer mode
-        if not scored_chunks:
-            answer_mode = "GENERAL_AI"
-        elif all(score < _HIGH_SIMILARITY for _, score in scored_chunks):
-            answer_mode = "MIXED"
-        else:
-            answer_mode = "COLLEGE_KNOWLEDGE"
+        # 3. Similarity only retrieves candidates; lexical evidence coverage decides
+        # whether any college chunks may be cited or sent to the answer generator.
+        answer_mode = "COLLEGE_KNOWLEDGE" if scored_chunks else "GENERAL_AI"
 
         # 4. Build Citations & Evidence (only when we have chunks)
         citations = self.build_citations(scored_chunks, college=college) if scored_chunks else []
@@ -329,12 +603,14 @@ class RAGService:
         if scored_chunks:
             context_chunks = [
                 {
-                    "source_title": c["title"],
+                    "source_title": (
+                        f"{c['source_name']} — {c['section']}"
+                        if c["section"] != c["source_name"]
+                        else c["source_name"]
+                    ),
                     "text": chunk.chunk_text,
                 }
-                for chunk, _ in scored_chunks
-                for c in citations
-                if c["title"] == (chunk.heading or f"{college.name if college else 'College'} Verified Knowledge")
+                for (chunk, _), c in zip(scored_chunks, citations)
             ]
 
         # 5. Fetch Multi-Turn Dialogue Context
@@ -366,15 +642,11 @@ class RAGService:
         # 8. Determine source type and verification status
         if answer_mode == "GENERAL_AI" and settings.AI_GENERAL_ANSWERING_ENABLED:
             # General AI answers are never college-verified
-            if actual_provider == "UNAVAILABLE":
+            if actual_provider in ("UNAVAILABLE", "NO_RELIABLE_INFORMATION"):
                 final_source_type = "NO_RELIABLE_INFORMATION"
             else:
                 final_source_type = self._source_type_for_general_ai(actual_provider)
             is_verified = False
-        elif answer_mode == "MIXED":
-            # Partial match — use chunk-based source type hierarchy but mark unverified
-            final_source_type = self.resolve_source_type_hierarchy(scored_chunks, actual_provider)
-            is_verified = final_source_type in ("OFFICIAL_WEBSITE", "ADMIN_VERIFIED")
         else:
             # COLLEGE_KNOWLEDGE
             final_source_type = self.resolve_source_type_hierarchy(scored_chunks, actual_provider)
@@ -382,7 +654,7 @@ class RAGService:
 
         # 9. Handle complete unavailability (all providers failed)
         answer_text = ai_result.get("text", "")
-        if actual_provider == "UNAVAILABLE":
+        if actual_provider in ("UNAVAILABLE", "NO_RELIABLE_INFORMATION"):
             final_source_type = "NO_RELIABLE_INFORMATION"
             is_verified = False
             # Keep the controlled unavailability message from ai_provider_service
@@ -392,6 +664,13 @@ class RAGService:
             final_source_type = "NO_RELIABLE_INFORMATION"
             is_verified = False
             answer_text = multilingual_config.get_fallback_message(language)
+        elif answer_mode == "GENERAL_AI" and actual_provider not in (
+            "UNAVAILABLE",
+            "NO_RELIABLE_INFORMATION",
+        ):
+            guidance_label = "AI Guidance — Not verified by college"
+            if not answer_text.strip().startswith(guidance_label):
+                answer_text = f"{guidance_label}\n\n{answer_text.strip()}"
 
         return {
             "answer_text": answer_text,

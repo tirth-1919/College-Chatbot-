@@ -17,6 +17,7 @@ from fastapi import BackgroundTasks
 from app.database.session import tenant_session
 from app.services.knowledge_service import knowledge_service
 from app.tasks.celery_app import celery_app
+from app.tasks.document_tasks import run_async
 
 logger = logging.getLogger("college_chatbot.tasks.knowledge")
 
@@ -35,7 +36,7 @@ def process_website_knowledge_task(self, college_id_str: str, page_ids_str: Opti
                     college_id=college_id, session=session, page_ids=page_ids
                 )
 
-        return asyncio.run(_run())
+        return run_async(_run())
     except Exception as exc:
         logger.error("Celery website knowledge task failed: %s", exc)
         raise self.retry(exc=exc, countdown=15)
@@ -55,7 +56,7 @@ def process_document_knowledge_task(self, college_id_str: str, document_id_str: 
                     college_id=college_id, document_id=document_id, session=session
                 )
 
-        return asyncio.run(_run())
+        return run_async(_run())
     except Exception as exc:
         logger.error("Celery document knowledge task failed: %s", exc)
         raise self.retry(exc=exc, countdown=15)

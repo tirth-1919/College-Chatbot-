@@ -90,11 +90,12 @@ async def run_auth_rbac_suite() -> List[Dict[str, Any]]:
         if res.status_code == 200:
             data = res.json().get("data", {})
             student_token = data.get("access_token")
+            student_role_ok = data.get("role") == "STUDENT"
             results.append({
                 "category": "Authentication",
                 "name": "Student Login & Token Issuance (STUDENT role)",
                 "target": "POST /api/v1/auth/login",
-                "status": "PASS",
+                "status": "PASS" if student_role_ok else "FAIL",
                 "duration_ms": dur,
                 "detail": f"Status: 200, Role: {data.get('role')}",
             })
@@ -195,14 +196,19 @@ async def run_auth_rbac_suite() -> List[Dict[str, Any]]:
                 headers={"Authorization": f"Bearer {student_token}"},
             )
             dur = (time.perf_counter() - t0) * 1000
-            passed = res.status_code == 200 and res.json().get("data", {}).get("email") == STUDENT_EMAIL
+            profile = res.json().get("data", {})
+            passed = (
+                res.status_code == 200
+                and profile.get("email") == STUDENT_EMAIL
+                and profile.get("role") == "STUDENT"
+            )
             results.append({
                 "category": "Authorization",
                 "name": "Current User Profile Resolution (GET /auth/me)",
                 "target": "GET /api/v1/auth/me",
                 "status": "PASS" if passed else "FAIL",
                 "duration_ms": dur,
-                "detail": f"Status: {res.status_code}, Resolved User: {res.json().get('data', {}).get('email')}",
+                "detail": f"Status: {res.status_code}, Role: {profile.get('role')}",
             })
 
     # 8. Test: Unauthenticated Request Blocked (401)

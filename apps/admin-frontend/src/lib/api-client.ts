@@ -68,7 +68,8 @@ export async function adminApiRequest<T>(
       const refreshedToken = await refreshAccessToken();
       if (refreshedToken) {
         res = await makeRequest(refreshedToken);
-      } else {
+      } else if (localStorage.getItem("admin_auth_token") === token) {
+        // Do not let a delayed request from an older tab erase a newer login.
         localStorage.removeItem("admin_auth_token");
         localStorage.removeItem("admin_refresh_token");
         localStorage.removeItem("admin_college_id");
@@ -76,11 +77,44 @@ export async function adminApiRequest<T>(
       }
     }
 
-    const data = await res.json();
+    const contentType =
+      typeof res.headers?.get === "function"
+        ? res.headers.get("content-type") || ""
+        : "";
+    let data: any;
+    if (typeof res.json === "function" && (contentType.includes("application/json") || typeof res.text !== "function")) {
+      data = await res.json();
+    } else if (typeof res.text === "function") {
+      const text = await res.text();
+      data = text ? { message: text } : null;
+    } else if (typeof res.json === "function") {
+      data = await res.json();
+    } else {
+      data = null;
+    }
+
     if (!res.ok) {
+      if (res.status === 404) {
+        return {
+          success: false,
+          error: `API route not found (404): ${getApiBase()}${endpoint}. Make sure the backend API is running.`,
+        };
+      }
+      const detail =
+        typeof data?.detail === "string"
+          ? data.detail
+          : Array.isArray(data?.detail)
+            ? data.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join("; ")
+            : null;
       return {
         success: false,
-        error: data.detail || data.message || "An administrative API error occurred.",
+        error: detail || data?.message || data?.error || "An administrative API error occurred.",
+      };
+    }
+    if (!data || typeof data !== "object") {
+      return {
+        success: false,
+        error: "The backend returned an invalid administrative API response.",
       };
     }
     return data;

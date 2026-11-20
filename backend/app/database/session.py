@@ -92,7 +92,11 @@ async def set_rls_context(
     user_id_str = str(user_id) if user_id else ""
     is_super_str = "1" if is_super_admin else "0"
     email_verification_str = "1" if allow_email_verification else "0"
-    expires_at = int(datetime.now(timezone.utc).timestamp()) + 300
+    # Use a 120-second validity window. Setting exactly +300 risks failing the
+    # PostgreSQL upper bound check (expires_at <= statement_timestamp() + 300)
+    # whenever the application host clock is even a fraction of a second ahead
+    # of the remote database server clock (NTP clock drift).
+    expires_at = int(datetime.now(timezone.utc).timestamp()) + 120
     payload = (
         f"v1|{user_id_str}|{college_id_str}|{is_super_str}|"
         f"{email_verification_str}|{expires_at}"

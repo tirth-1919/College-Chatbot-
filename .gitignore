@@ -4,6 +4,7 @@
 !.env.example
 .env.local
 .env.*.local
+.env.test.local
 *.env
 *.pem
 *.key
@@ -23,6 +24,7 @@ env/
 
 # Build artifacts
 .next/
+.next-dev/
 out/
 build/
 dist/
@@ -44,6 +46,7 @@ htmlcov/
 *.dump
 *.backup
 *.bak
+backups/
 storage/college-documents/
 
 # Local credentials and generated runtime output

@@ -21,6 +21,7 @@ async def verify():
     async with AsyncSessionFactory() as session:
         result = await session.execute(__import__("sqlalchemy").text("SELECT current_user, current_setting('app.current_college_id', true) as cid"))
         row = result.fetchone()
+        assert row is not None, "Expected a row from current_user query"
         print(f"[2] Connected as: {row[0]}")
         assert row[0] == "college_app_user", f"Expected college_app_user, got {row[0]}"
         print("    [PASS] Engine connects as college_app_user")
@@ -39,6 +40,7 @@ async def verify():
             "       current_setting('app.current_user_id', true)"
         ))
         row = result.fetchone()
+        assert row is not None, "Expected a row from current_setting query"
         assert row[0] == str(test_college_id), f"college_id mismatch: {row[0]}"
         assert row[1] == "false", f"is_super_admin mismatch: {row[1]}"
         assert row[2] == str(test_user_id), f"user_id mismatch: {row[2]}"

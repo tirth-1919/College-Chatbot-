@@ -10,14 +10,15 @@ PostgreSQL RLS policies for the college tenant scope.
 
 from datetime import datetime, timezone
 import logging
+import re
 from typing import Any, Dict, List, Optional, Tuple
 import uuid
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import tenant_session
-from app.models.document import Document, DocumentPage
+from app.models.document import Document, DocumentPage, DocumentParagraph
 from app.services.pdf_processor import pdf_processor
 from app.services.pdf_validator import PDFValidationError, validate_pdf_file
 from app.services.storage_service import document_storage_service
@@ -27,6 +28,15 @@ logger = logging.getLogger("college_chatbot.document_service")
 
 class DocumentProcessingService:
     """End-to-end pipeline service for institutional PDF documents."""
+
+    @staticmethod
+    def _split_paragraphs(page_text: str) -> List[str]:
+        """Split extracted page text while retaining headings and table blocks."""
+        return [
+            paragraph.strip()
+            for paragraph in re.split(r"\n\s*\n", page_text)
+            if paragraph.strip()
+        ]
 
     async def register_and_upload(
         self,
@@ -160,6 +170,10 @@ class DocumentProcessingService:
             total_pages = extraction_res["total_pages"]
             pages_list = extraction_res["pages"]
             ocr_applied = extraction_res["ocr_applied"]
+            if not pages_list or not any(
+                len((page.extracted_text or "").strip()) >= 40 for page in pages_list
+            ):
+                raise ValueError("PDF extraction produced no usable page evidence.")
 
             # 3. Save page records into database
             async with tenant_session(college_id=college_id) as session:
@@ -170,8 +184,9 @@ class DocumentProcessingService:
 
                 now = datetime.now(timezone.utc)
                 for p in pages_list:
+                    page_id = uuid.uuid4()
                     page_row = DocumentPage(
-                        id=uuid.uuid4(),
+                        id=page_id,
                         document_id=document_id,
                         college_id=college_id,
                         page_number=p.page_number,
@@ -187,6 +202,18 @@ class DocumentProcessingService:
                         processed_at=now,
                     )
                     session.add(page_row)
+                    for paragraph_index, paragraph_text in enumerate(
+                        self._split_paragraphs(p.extracted_text)
+                    ):
+                        session.add(
+                            DocumentParagraph(
+                                id=uuid.uuid4(),
+                                page_id=page_id,
+                                document_id=document_id,
+                                paragraph_index=paragraph_index,
+                                paragraph_text=paragraph_text,
+                            )
+                        )
 
                 # Update document header
                 doc_record = await session.get(Document, document_id)
@@ -195,14 +222,32 @@ class DocumentProcessingService:
                     doc_record.total_pages = total_pages
                     doc_record.ocr_applied = ocr_applied
                     doc_record.extraction_method = "PYMUPDF+TESSERACT" if ocr_applied else "PYMUPDF"
-                    doc_record.processing_status = "PENDING_REVIEW"
-                    doc_record.failure_reason = None
                     doc_record.updated_at = now
 
                 await session.commit()
 
+            # Keep extraction and indexing in one background job. Knowledge chunks
+            # are staged for review; publication remains an explicit admin action.
+            from app.services.knowledge_service import knowledge_service
+
+            async with tenant_session(college_id=college_id) as session:
+                indexing_result = await knowledge_service.process_document_pages(
+                    college_id=college_id,
+                    document_id=document_id,
+                    session=session,
+                )
+            if not indexing_result["chunks_created"] and not indexing_result["chunks_skipped"]:
+                raise ValueError("PDF indexing produced no usable knowledge chunks.")
+
+            async with tenant_session(college_id=college_id) as session:
+                doc_record = await session.get(Document, document_id)
+                if doc_record:
+                    doc_record.processing_status = "PENDING_REVIEW"
+                    doc_record.failure_reason = None
+                    doc_record.updated_at = datetime.now(timezone.utc)
+
             logger.info(
-                "Document %s successfully processed. Total pages: %d (OCR applied: %s)",
+                "Document %s successfully processed. Total pages: %s (OCR applied: %s)",
                 document_id,
                 total_pages,
                 ocr_applied,
@@ -212,6 +257,12 @@ class DocumentProcessingService:
                 "document_id": str(document_id),
                 "total_pages": total_pages,
                 "ocr_applied": ocr_applied,
+                "paragraphs_created": sum(
+                    len(self._split_paragraphs(page.extracted_text)) for page in pages_list
+                ),
+                "chunks_created": indexing_result["chunks_created"],
+                "chunks_skipped": indexing_result["chunks_skipped"],
+                "facts_created": indexing_result.get("facts_created", 0),
             }
 
         except Exception as exc:

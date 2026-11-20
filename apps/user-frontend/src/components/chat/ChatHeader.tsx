@@ -28,7 +28,9 @@ export function ChatHeader({
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[#F5F5F5]">{collegeName}</span>
+            <span className="text-xs font-semibold text-[#F5F5F5]">
+              {collegeName || "No college selected"}
+            </span>
             <span className="text-[10px] text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full border border-[#10B981]/20 font-medium">
               Verified Tenant
             </span>

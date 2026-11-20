@@ -207,6 +207,12 @@ def parse_and_clean_html(
         or soup
     )
 
+    for heading_tag in main_container.find_all(re.compile(r"^h[1-6]$")):
+        heading_text = heading_tag.get_text(" ", strip=True)
+        if heading_text:
+            heading_tag.clear()
+            heading_tag.append(f"{'#' * int(heading_tag.name[1])} {heading_text}")
+
     raw_text = main_container.get_text(separator="\n")
 
     # Normalize whitespace, excessive newlines, and trailing spaces

@@ -50,8 +50,8 @@ async def create_membership(
             detail="User already holds a membership with this college.",
         )
 
-    # Automatically set user's role to COLLEGE_ADMIN if currently STUDENT
-    if user.role == "STUDENT":
+    # Only an ADMIN college membership promotes a student to COLLEGE_ADMIN.
+    if user.role == "STUDENT" and req.role_in_college == "ADMIN":
         user.role = "COLLEGE_ADMIN"
         await user_repo.update(user)
 

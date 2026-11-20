@@ -1,48 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/auth-service";
-import { collegeService } from "@/services/college-service";
-import { College } from "@/types/college";
-import { User, Mail, Lock, Building2, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
-
-const DEFAULT_COLLEGES: College[] = [
-  {
-    id: "11111111-1111-1111-1111-111111111111",
-    name: "Ahmedabad Institute of Technology",
-    slug: "ait-college",
-    official_domain: "aitindia.in",
-    logo_url: null,
-    contact_email: "admissions@aitindia.in",
-    contact_phone: "+91-79-27663244",
-    status: "APPROVED",
-    is_active: true,
-  },
-  {
-    id: "22222222-2222-2222-2222-222222222222",
-    name: "RC Technical Institute",
-    slug: "rcti-college",
-    official_domain: "rcti.cteguj.org",
-    logo_url: null,
-    contact_email: "info@rcti.cteguj.org",
-    contact_phone: null,
-    status: "APPROVED",
-    is_active: true,
-  },
-  {
-    id: "33333333-3333-3333-3333-333333333333",
-    name: "Gujarat Technological University",
-    slug: "gtu-ahmedabad",
-    official_domain: "gtu.ac.in",
-    logo_url: null,
-    contact_email: "info@gtu.ac.in",
-    contact_phone: null,
-    status: "APPROVED",
-    is_active: true,
-  },
-];
+import { User, Mail, Lock, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -50,21 +12,10 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [selectedCollegeId, setSelectedCollegeId] = useState("11111111-1111-1111-1111-111111111111");
-  const [colleges, setColleges] = useState<College[]>(DEFAULT_COLLEGES);
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    collegeService.getColleges(true).then((res) => {
-      if (res.success && res.data && res.data.length > 0) {
-        setColleges(res.data);
-        setSelectedCollegeId(res.data[0].id);
-      }
-    });
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,8 +27,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!password || password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (!password || password.length < 8) {
+      setError("Password must be at least 8 characters long.");
       return;
     }
 
@@ -95,7 +46,6 @@ export default function RegisterPage() {
       password,
       full_name: resolvedName,
       role: "STUDENT",
-      college_id: selectedCollegeId,
     });
 
     if (res.success) {
@@ -105,16 +55,8 @@ export default function RegisterPage() {
       setLoading(false);
 
       if (loginRes.success && loginRes.data) {
-        localStorage.setItem("auth_token", loginRes.data.access_token);
-        if (loginRes.data.college_id) {
-          localStorage.setItem("selected_college_id", loginRes.data.college_id);
-          const foundCollege = colleges.find((c) => c.id === loginRes.data?.college_id);
-          if (foundCollege) {
-            localStorage.setItem("selected_college_name", foundCollege.name);
-          }
-        }
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/chat");
         }, 800);
       } else {
         setTimeout(() => {
@@ -188,33 +130,15 @@ export default function RegisterPage() {
               <input
                 type="password"
                 required
-                minLength={6}
+                minLength={8}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   if (!confirmPassword) setConfirmPassword(e.target.value);
                 }}
-                placeholder="Minimum 6 characters"
+                placeholder="Minimum 8 characters"
                 className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[#1F1F23] border border-[#2A2A30] text-[#F5F5F5] placeholder-[#A1A1AA]/50 text-xs focus:outline-none focus:border-[#6366F1] transition"
               />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-[#A1A1AA] mb-1.5">Select College Institution</label>
-            <div className="relative">
-              <Building2 className="absolute left-3.5 top-3 h-4 w-4 text-[#A1A1AA]" />
-              <select
-                value={selectedCollegeId}
-                onChange={(e) => setSelectedCollegeId(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[#1F1F23] border border-[#2A2A30] text-[#F5F5F5] text-xs focus:outline-none focus:border-[#6366F1] transition cursor-pointer"
-              >
-                {colleges.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-[#111114]">
-                    {c.name}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 

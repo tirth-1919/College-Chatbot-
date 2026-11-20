@@ -42,8 +42,9 @@ The engine deconstructs multi-page PDFs, formats structured tabular grids into M
 │ 2. pdfplumber Tabular Grid Parsing -> Markdown         │
 │ 3. Scanned Page Detection (< 50 characters)            │
 │ 4. Tesseract OCR with Average Confidence Scoring       │
-│ 5. Page-by-Page Database Recording (document_pages)    │
-│ 6. Status Update -> PENDING_REVIEW                     │
+│ 5. Page and ordered paragraph recording                │
+│ 6. Shared knowledge chunking and 768-D embedding       │
+│ 7. PENDING_REVIEW only after usable indexing evidence  │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -99,17 +100,23 @@ The engine deconstructs multi-page PDFs, formats structured tabular grids into M
           ┌───────────────────┐
           │   OCR_PROCESSING  │
           └─────────┬─────────┘
-                    │ Text & Table Deconstruction
-                    ▼
-          ┌───────────────────┐        If Corrupted / Timeout
-          │   PENDING_REVIEW  ├──────────────────────────────► ┌─────────┐
-          └─────────┬─────────┘                                │  FAILED │
-                    │                                          └────┬────┘
-                    ▼                                               │ Retry / Reprocess
-          ┌───────────────────┐                                     │
-          │     COMPLETED     │ ◄───────────────────────────────────┘
-          └───────────────────┘
+                    │ Text, headings, tables, paragraphs,
+                    │ knowledge chunks and embeddings
+                    ├──────────────────────► PENDING_REVIEW
+                    │                         │
+                    │                         │ Admin reviews and publishes
+                    │                         ▼
+                    │                    Live shared RAG
+                    │
+                    └── No usable evidence / extraction or indexing failure
+                                              ▼
+                                            FAILED
 ```
+
+Extraction persists each page to `document_pages` and its ordered text blocks to
+`document_paragraphs`. The same knowledge pipeline used for website pages creates
+pending-review chunks and embeddings. Documents are not reviewable when extraction
+or indexing produces no usable evidence; publication remains an explicit admin action.
 
 ---
 

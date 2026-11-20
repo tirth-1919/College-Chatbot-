@@ -55,7 +55,7 @@ class ChatMessageResponse(BaseModel):
     answer_mode: Optional[str] = None
     actual_provider: Optional[str] = None
     actual_model: Optional[str] = None
-    fallback_reason: Optional[str] = None
+    fallback_reason: Optional[str] = Field(default=None, exclude=True)
     attempt_count: int = 0
     request_duration_ms: Optional[int] = None
 

@@ -54,7 +54,7 @@ class EmbeddingService:
         try:
             url = (
                 f"https://generativelanguage.googleapis.com/v1beta/models/"
-                f"{self.model_name}:embedContent?key={self.api_key}"
+                f"{self.model_name}:embedContent"
             )
             payload = {
                 "model": f"models/{self.model_name}",
@@ -62,7 +62,11 @@ class EmbeddingService:
                 "outputDimensionality": self.DIMENSION,
             }
             async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.post(url, json=payload)
+                res = await client.post(
+                    url,
+                    headers={"x-goog-api-key": self.api_key},
+                    json=payload,
+                )
                 if res.status_code != 200:
                     raise RuntimeError(f"Gemini embedding API returned HTTP {res.status_code}: {res.text[:400]}")
 
@@ -74,8 +78,9 @@ class EmbeddingService:
                     )
                 return values
         except Exception as exc:
-            logger.error("Gemini embedding generation failed for chunk: %s", exc, exc_info=True)
-            raise RuntimeError(f"Embedding generation failed: {exc}") from exc
+            detail = str(exc).replace(self.api_key, "[REDACTED]") if self.api_key else str(exc)
+            logger.error("Gemini embedding generation failed: %s", detail)
+            raise RuntimeError(f"Embedding generation failed: {detail}") from None
 
     async def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """Generates embeddings for a batch of text chunks."""

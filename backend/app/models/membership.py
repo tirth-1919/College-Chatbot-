@@ -1,6 +1,6 @@
 """College Membership SQLAlchemy ORM Model.
 
-Maps College Administrators to their assigned college tenant.
+Maps users to their assigned college tenants.
 """
 
 import uuid
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class CollegeMembership(Base, UUIDPrimaryKeyMixin):
-    """Enforces tenant-user mapping for college administration staff."""
+    """Enforces tenant-user mapping for college members."""
 
     __tablename__ = "college_memberships"
     __table_args__ = (

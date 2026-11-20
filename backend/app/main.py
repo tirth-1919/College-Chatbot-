@@ -93,6 +93,14 @@ async def root():
 async def global_exception_handler(request: Request, exc: Exception):
     """Catches unhandled exceptions and returns a consistent JSON envelope with correlation ID."""
     req_id = getattr(request.state, "correlation_id", "unknown")
+    origin = request.headers.get("origin")
+    cors_headers = {}
+    if origin in settings.BACKEND_CORS_ORIGINS:
+        cors_headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
     logger.error(
         "Unhandled Exception on %s [RequestID: %s]: %s",
         request.url.path,
@@ -108,4 +116,5 @@ async def global_exception_handler(request: Request, exc: Exception):
             "message": "An unexpected server error occurred. Please contact college support quoting this Request ID.",
             "request_id": req_id,
         },
+        headers=cors_headers,
     )

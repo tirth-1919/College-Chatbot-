@@ -1,0 +1,41 @@
+# Docker Compose configuration for isolated local testing
+# Enforces strict loopback-only binding on 127.0.0.1
+# Uses dedicated disposable test volumes - zero overlap with development or production
+services:
+  supabase-test-db:
+    image: pgvector/pgvector:pg17
+    container_name: college_chatbot_test_db
+    networks:
+      - test-isolated
+    ports:
+      - "127.0.0.1:54322:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: DISPOSABLE_LOCAL_DEV_PASSWORD
+    volumes:
+      - college_chatbot_test_pgdata:/var/lib/postgresql/data
+      - ./database/init_test:/docker-entrypoint-initdb.d:ro
+    restart: "no"
+
+  test-redis:
+    image: redis:7-alpine
+    container_name: college_chatbot_test_redis
+    networks:
+      - test-isolated
+    ports:
+      - "127.0.0.1:63799:6379"
+    volumes:
+      - college_chatbot_test_redisdata:/data
+    restart: "no"
+
+volumes:
+  college_chatbot_test_pgdata:
+    name: college_chatbot_test_pgdata
+  college_chatbot_test_redisdata:
+    name: college_chatbot_test_redisdata
+
+networks:
+  test-isolated:
+    name: college_chatbot_test_internal
+    internal: true

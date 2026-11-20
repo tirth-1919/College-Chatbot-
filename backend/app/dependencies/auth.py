@@ -53,6 +53,12 @@ async def get_current_user(
             detail="Invalid, malformed, or expired access token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if token_payload.get("token_type", "access") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Access token required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     user_id_str = token_payload.get("sub")
     if not user_id_str:
@@ -69,17 +75,53 @@ async def get_current_user(
             detail="Token subject is not a valid UUID.",
         )
 
-    # Bind the verified token subject before loading the user row. The users
-    # SELECT policy is intentionally self-scoped.
+    # Bind the verified token subject and role before loading the user row.
+    # Super-admin profile reads must see the account through RLS.
+    token_role = str(token_payload.get("role") or "")
+    # If the access token already contains an assigned college_id claim (standard for
+    # COLLEGE_ADMIN, STUDENT, etc.), preserve it immediately rather than resetting to None.
+    token_college_id_str = token_payload.get("college_id")
+    token_college_id = None
+    if token_college_id_str:
+        try:
+            token_college_id = uuid.UUID(str(token_college_id_str))
+        except (ValueError, TypeError):
+            token_college_id = None
+
     await set_rls_context(
         session,
-        college_id=None,
+        college_id=token_college_id,
         user_id=user_id,
-        is_super_admin=False,
+        is_super_admin=(token_role.upper() == "SUPER_ADMIN"),
     )
 
     user_repo = UserRepository(session)
     user = await user_repo.get_by_id(user_id)
+    if not user:
+        # RLS can hide a valid profile on an existing deployment. Resolve it
+        # through the narrow auth lookup, and bind it to every signed identity
+        # claim before allowing the request to continue.
+        token_email = token_payload.get("email")
+        auth_lookup = (
+            await user_repo.get_auth_account_by_email(token_email)
+            if isinstance(token_email, str) and token_email.strip()
+            else None
+        )
+        if (
+            auth_lookup
+            and auth_lookup.id == user_id
+            and auth_lookup.role == token_role
+            and auth_lookup.is_active
+        ):
+            user = User(
+                id=auth_lookup.id,
+                email=auth_lookup.email,
+                hashed_password=auth_lookup.hashed_password,
+                full_name=auth_lookup.full_name,
+                role=auth_lookup.role,
+                is_verified=auth_lookup.is_verified,
+                is_active=auth_lookup.is_active,
+            )
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -93,11 +135,11 @@ async def get_current_user(
         )
 
     # Set transaction-local RLS context for the current user.
-    # college_id is left empty (None) here — tenant dependencies will set it
-    # after verifying college membership for college-scoped routes.
+    # Preserves token_college_id if already present; tenant dependencies will further
+    # verify college membership for college-scoped routes.
     await set_rls_context(
         session,
-        college_id=None,
+        college_id=token_college_id,
         user_id=user.id,
         is_super_admin=(user.role == "SUPER_ADMIN"),
     )
@@ -115,6 +157,8 @@ async def get_optional_current_user(
     token_payload = decode_token(auth_credentials.credentials)
     if not token_payload:
         return None
+    if token_payload.get("token_type", "access") != "access":
+        return None
     user_id_str = token_payload.get("sub")
     if not user_id_str:
         return None
@@ -123,11 +167,22 @@ async def get_optional_current_user(
     except ValueError:
         return None
 
+    token_role = str(token_payload.get("role") or "")
+    # If the access token already contains an assigned college_id claim (standard for
+    # COLLEGE_ADMIN, STUDENT, etc.), preserve it immediately rather than resetting to None.
+    token_college_id_str = token_payload.get("college_id")
+    token_college_id = None
+    if token_college_id_str:
+        try:
+            token_college_id = uuid.UUID(str(token_college_id_str))
+        except (ValueError, TypeError):
+            token_college_id = None
+
     await set_rls_context(
         session,
-        college_id=None,
+        college_id=token_college_id,
         user_id=user_id,
-        is_super_admin=False,
+        is_super_admin=(token_role.upper() == "SUPER_ADMIN"),
     )
     user_repo = UserRepository(session)
     user = await user_repo.get_by_id(user_id)

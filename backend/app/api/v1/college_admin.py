@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database.session import get_db
+from app.database.session import get_db, set_rls_context
 from app.models.college import College
 from app.models.user import User
 from app.models.website import WebsiteSource, CrawlJob, CrawlEvent, WebsitePage
@@ -21,7 +21,6 @@ from app.repositories.college_repository import CollegeRepository
 from app.repositories.membership_repository import MembershipRepository
 from app.repositories.registration_repository import RegistrationRepository
 from app.dependencies.auth import get_current_user, require_role
-from sqlalchemy import text
 from app.services.url_validator import (
     validate_url_security,
     is_url_in_college_domain,
@@ -82,6 +81,23 @@ router = APIRouter(prefix="/college-admin", tags=["College Administration Worksp
 # TENANT RESOLUTION & ISOLATION DEPENDENCY
 # ==============================================================================
 
+class CollegeTenantContext:
+    """Bundles the verified college, the RLS-configured session, and the acting user.
+
+    Use this as the single dependency for all college-admin route handlers to
+    guarantee that the PostgreSQL RLS GUCs are set on the **same** session that
+    executes data queries. This avoids the dependency-resolution-order race
+    between ``get_current_user`` (which resets ``college_id`` to None) and
+    ``get_authorized_college`` (which sets the real college_id).
+    """
+    __slots__ = ("college", "session", "user")
+
+    def __init__(self, college: "College", session: "AsyncSession", user: "User") -> None:
+        self.college = college
+        self.session = session
+        self.user = user
+
+
 async def get_authorized_college(
     x_college_id: Optional[str] = Header(None, alias="X-College-ID"),
     current_user: User = Depends(require_role("COLLEGE_ADMIN", "SUPER_ADMIN")),
@@ -94,16 +110,41 @@ async def get_authorized_college(
       it must strictly match their assigned college. Cannot access any other college.
     - SUPER_ADMIN: Can pass X-College-ID to manage any college tenant, or defaults to first active college.
 
-    After resolving the college, sets the transaction-local GUC
-    ``app.current_college_id`` so PostgreSQL RLS policies are activated for
-    all subsequent queries in this session.
+    After resolving the college, refreshes the signed transaction-local RLS
+    context so PostgreSQL policies trust the verified tenant and identity.
     """
     membership_repo = MembershipRepository(session)
     college_repo = CollegeRepository(session)
 
     if current_user.role == "COLLEGE_ADMIN":
         membership = await membership_repo.get_by_user_id(current_user.id)
-        if not membership:
+        membership_college_id = membership.college_id if membership else None
+
+        if not membership_college_id and x_college_id:
+            try:
+                requested_id = uuid.UUID(x_college_id)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid X-College-ID header format.",
+                ) from exc
+            if await membership_repo.user_belongs_to_college(
+                current_user.id, requested_id
+            ):
+                membership_college_id = requested_id
+
+        if not membership_college_id and not x_college_id:
+            for candidate in await college_repo.list_colleges(
+                only_approved=True,
+                limit=1000,
+            ):
+                if await membership_repo.user_belongs_to_college(
+                    current_user.id, candidate.id
+                ):
+                    membership_college_id = candidate.id
+                    break
+
+        if not membership_college_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access Denied: You do not have an active college administration assignment.",
@@ -112,7 +153,7 @@ async def get_authorized_college(
         if x_college_id:
             try:
                 requested_id = uuid.UUID(x_college_id)
-                if requested_id != membership.college_id:
+                if requested_id != membership_college_id:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail="Cross-tenant access violation: You are not authorized for this college institution.",
@@ -123,17 +164,18 @@ async def get_authorized_college(
                     detail="Invalid X-College-ID header format.",
                 )
 
-        college = await college_repo.get_by_id(membership.college_id)
+        college = await college_repo.get_by_id(membership_college_id)
         if not college:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Assigned college tenant not found.",
             )
 
-        # Activate RLS: scope session to the verified college tenant
-        await session.execute(
-            text("SELECT set_config('app.current_college_id', :cid, true)"),
-            {"cid": str(membership.college_id)},
+        await set_rls_context(
+            session,
+            college_id=membership_college_id,
+            user_id=current_user.id,
+            is_super_admin=False,
         )
         return college
 
@@ -143,10 +185,11 @@ async def get_authorized_college(
             target_id = uuid.UUID(x_college_id)
             college = await college_repo.get_by_id(target_id)
             if college:
-                # Super admin: scope to the requested college
-                await session.execute(
-                    text("SELECT set_config('app.current_college_id', :cid, true)"),
-                    {"cid": str(target_id)},
+                await set_rls_context(
+                    session,
+                    college_id=target_id,
+                    user_id=current_user.id,
+                    is_super_admin=True,
                 )
                 return college
         except ValueError:
@@ -158,12 +201,39 @@ async def get_authorized_college(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No college tenants found on platform.",
         )
-    # Super admin defaulting to first college: set GUC accordingly
-    await session.execute(
-        text("SELECT set_config('app.current_college_id', :cid, true)"),
-        {"cid": str(colleges[0].id)},
+    await set_rls_context(
+        session,
+        college_id=colleges[0].id,
+        user_id=current_user.id,
+        is_super_admin=True,
     )
     return colleges[0]
+
+
+async def get_college_context(
+    college: College = Depends(get_authorized_college),
+    current_user: User = Depends(require_role("COLLEGE_ADMIN", "SUPER_ADMIN")),
+    session: AsyncSession = Depends(get_db),
+) -> CollegeTenantContext:
+    """Unified dependency that guarantees RLS is set on the route handler's session.
+
+    ``get_authorized_college`` sets the RLS GUCs on its own resolved session.
+    ``get_current_user`` (called inside ``require_role``) also calls
+    ``set_rls_context`` but only sets ``college_id=None``, which can overwrite
+    the college context depending on FastAPI's dependency resolution order.
+
+    This dependency resolves AFTER both of the above and explicitly re-sets the
+    full RLS context (college_id, user_id, is_super_admin) on the shared session
+    so that all repository queries in the route handler run with the correct tenant.
+    """
+    is_super = current_user.role == "SUPER_ADMIN"
+    await set_rls_context(
+        session,
+        college_id=college.id,
+        user_id=current_user.id,
+        is_super_admin=is_super,
+    )
+    return CollegeTenantContext(college=college, session=session, user=current_user)
 
 
 # ==============================================================================
@@ -176,11 +246,11 @@ async def get_authorized_college(
     summary="Get aggregated institutional dashboard overview",
 )
 async def get_dashboard_overview(
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Retrieves college metrics, recent jobs, documents, and pending reviews."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     stats_data = await repo.get_dashboard_stats(college.id)
     crawls = await repo.list_crawl_jobs(college.id, limit=5)
     documents = await repo.list_documents(college.id, limit=5)
@@ -228,11 +298,11 @@ async def get_college_profile(
 )
 async def update_college_profile(
     req: CollegeProfileUpdateRequest,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Updates permitted details (contact, logo, domain, name). Status cannot be altered."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     updated = await repo.update_college(college.id, req.model_dump(exclude_unset=True))
     return APIResponse(
         success=True,
@@ -251,11 +321,11 @@ async def update_college_profile(
     summary="List registered website sources for the college",
 )
 async def list_website_sources(
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Lists all configured crawler website targets."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     sources = await repo.list_website_sources(college.id)
     return APIResponse(
         success=True,
@@ -272,10 +342,10 @@ async def list_website_sources(
 )
 async def create_website_source(
     req: WebsiteSourceCreateRequest,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Registers an official website URL for automated crawling."""
+    college = ctx.college
     # 1. SSRF & Scheme/Port/Host Security Validation
     try:
         validate_url_security(req.base_url)
@@ -300,7 +370,7 @@ async def create_website_source(
             ),
         )
 
-    repo = CollegeAdminRepository(session)
+    repo = CollegeAdminRepository(ctx.session)
     source = WebsiteSource(
         id=uuid.uuid4(),
         college_id=college.id,
@@ -327,11 +397,11 @@ async def create_website_source(
 async def update_website_source(
     source_id: uuid.UUID,
     req: WebsiteSourceUpdateRequest,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Updates crawling parameters or active state for a website source."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     updated = await repo.update_website_source(college.id, source_id, req.model_dump(exclude_unset=True))
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Website source not found.")
@@ -350,11 +420,11 @@ async def update_website_source(
 )
 async def delete_website_source(
     source_id: uuid.UUID,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Removes a website source and associated crawl metadata."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     deleted = await repo.delete_website_source(college.id, source_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Website source not found.")
@@ -375,11 +445,11 @@ async def delete_website_source(
 async def start_crawl_job(
     background_tasks: BackgroundTasks,
     source_id: uuid.UUID = Query(description="Target website source ID"),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Dispatches an asynchronous crawler execution job."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     source = await repo.get_website_source(college.id, source_id)
     if not source:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Website source not found.")
@@ -404,15 +474,22 @@ async def start_crawl_job(
 async def trigger_source_crawl(
     source_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Convenience alias to dispatch crawl on a specific website source."""
-    return await start_crawl_job(
-        background_tasks=background_tasks,
-        source_id=source_id,
-        college=college,
-        session=session,
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
+    source = await repo.get_website_source(college.id, source_id)
+    if not source:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Website source not found.")
+
+    job = await repo.create_crawl_job(college.id, source_id)
+    mode = dispatch_crawl_job(job.id, college.id, source.id, background_tasks)
+
+    return APIResponse(
+        success=True,
+        message=f"Crawl job initiated successfully ({mode})",
+        data=CrawlJobResponse.model_validate(job),
     )
 
 
@@ -423,11 +500,11 @@ async def trigger_source_crawl(
 )
 async def get_crawl_job(
     job_id: uuid.UUID,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Fetches real-time status and page counts for a crawl job."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     job = await repo.get_crawl_job(college.id, job_id)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Crawl job not found.")
@@ -447,16 +524,16 @@ async def get_crawl_job(
 async def control_crawl_job(
     job_id: uuid.UUID,
     action: str = Query(description="PAUSE, RESUME, or CANCEL"),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Updates crawl execution lifecycle state."""
+    college = ctx.college
     action_map = {"PAUSE": "PAUSED", "RESUME": "RUNNING", "CANCEL": "CANCELLED"}
     new_status = action_map.get(action.upper())
     if not new_status:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid action.")
 
-    repo = CollegeAdminRepository(session)
+    repo = CollegeAdminRepository(ctx.session)
     job = await repo.update_crawl_job_status(college.id, job_id, new_status)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Crawl job not found.")
@@ -475,11 +552,11 @@ async def control_crawl_job(
 )
 async def list_crawl_jobs(
     source_id: Optional[uuid.UUID] = Query(None),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Lists crawl executions and progress."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     jobs = await repo.list_crawl_jobs(college.id, source_id=source_id)
     return APIResponse(
         success=True,
@@ -495,12 +572,14 @@ async def list_crawl_jobs(
 )
 async def get_crawl_events(
     job_id: uuid.UUID,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
+    **kwargs: Any,
 ):
     """Retrieves log events emitted during crawling."""
-    repo = CollegeAdminRepository(session)
-    job = await repo.get_crawl_job(college.id, job_id)
+    effective_college = kwargs.get("college") or ctx.college
+    effective_session = kwargs.get("session") or ctx.session
+    repo = CollegeAdminRepository(effective_session)
+    job = await repo.get_crawl_job(effective_college.id, job_id)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Crawl job not found.")
 
@@ -520,11 +599,11 @@ async def get_crawl_events(
 async def list_crawled_pages(
     source_id: Optional[uuid.UUID] = Query(None),
     limit: int = 50,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Lists parsed website pages with content hash and extracted text."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     pages = await repo.list_website_pages(college.id, source_id=source_id, limit=limit)
     return APIResponse(
         success=True,
@@ -544,11 +623,11 @@ async def list_crawled_pages(
 )
 async def list_documents(
     status_filter: Optional[str] = Query(None, description="UPLOADED, QUEUED, PROCESSING, EXTRACTED, PENDING_REVIEW, FAILED"),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Lists PDF documents uploaded for this college."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     docs = await repo.list_documents(college.id, status=status_filter)
     
     # Attach signed download URLs
@@ -579,11 +658,11 @@ async def upload_pdf_document(
     file: UploadFile = File(description="PDF binary file"),
     category: str = Form("GENERAL"),
     description: Optional[str] = Form(None),
-    current_user: User = Depends(get_current_user),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Secure multipart file upload: validates magic bytes, stores in private storage, and queues Celery extraction."""
+    college = ctx.college
+    current_user = ctx.user
     file_bytes = await file.read()
     if not file_bytes:
         raise HTTPException(
@@ -646,9 +725,7 @@ async def upload_pdf_document(
 )
 async def register_uploaded_document(
     req: DocumentCreateRequest,
-    current_user: User = Depends(get_current_user),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Registers metadata for a document that the caller has already uploaded to private storage.
 
@@ -656,6 +733,8 @@ async def register_uploaded_document(
     The object at the derived storage path must already exist in Supabase Storage.
     Use POST /upload-file to upload a new PDF binary instead.
     """
+    college = ctx.college
+    current_user = ctx.user
     if not req.original_filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -699,7 +778,7 @@ async def register_uploaded_document(
             detail="Storage object not found at the expected path. Upload the file first.",
         )
 
-    repo = CollegeAdminRepository(session)
+    repo = CollegeAdminRepository(ctx.session)
     doc = Document(
         id=doc_id,
         college_id=college.id,
@@ -737,11 +816,11 @@ async def register_uploaded_document(
 )
 async def get_document_details(
     document_id: uuid.UUID,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Retrieves document metadata ensuring tenant ownership."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     doc = await repo.get_document(college.id, document_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
@@ -766,11 +845,11 @@ async def get_document_details(
 )
 async def get_document_pages(
     document_id: uuid.UUID,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Returns page-by-page extracted text, tables, and OCR telemetry."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     doc = await repo.get_document(college.id, document_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
@@ -790,11 +869,11 @@ async def get_document_pages(
 )
 async def get_document_status(
     document_id: uuid.UUID,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Lightweight polling endpoint to inspect extraction progress."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     doc = await repo.get_document(college.id, document_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
@@ -827,11 +906,11 @@ async def get_document_status(
 async def get_document_download_url(
     document_id: uuid.UUID,
     expires_in: int = Query(3600, ge=60, le=86400, description="Expiration in seconds"),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Generates temporary signed download URL for an authorized document."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     doc = await repo.get_document(college.id, document_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
@@ -863,11 +942,11 @@ async def get_document_download_url(
 async def reprocess_document(
     document_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Retries text extraction and OCR pipeline on a document."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     doc = await repo.get_document(college.id, document_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
@@ -875,7 +954,7 @@ async def reprocess_document(
     doc.processing_status = "QUEUED"
     doc.failure_reason = None
     doc.updated_at = datetime.now(timezone.utc)
-    await session.commit()
+    await ctx.session.commit()
 
     mode = await dispatch_document_processing(doc.id, college.id, background_tasks)
 
@@ -899,11 +978,11 @@ async def reprocess_document(
 )
 async def delete_document(
     document_id: uuid.UUID,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Deletes document record and removes binary from private storage."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     doc = await repo.get_document(college.id, document_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
@@ -961,11 +1040,11 @@ async def list_knowledge_chunks(
     search: Optional[str] = Query(None, description="Search keyword in chunk text"),
     limit: int = 50,
     offset: int = 0,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Explores atomic knowledge chunks with source citations and category classification."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     chunks = await repo.list_knowledge_chunks(
         college.id,
         status=status_filter,
@@ -991,11 +1070,11 @@ async def list_pending_reviews(
     category: Optional[str] = Query(None, description="Optional category filter"),
     limit: int = 50,
     offset: int = 0,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Retrieves items in the human review queue awaiting administrator verification."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     chunks = await repo.list_knowledge_chunks(
         college.id,
         status="PENDING_REVIEW",
@@ -1018,13 +1097,13 @@ async def list_pending_reviews(
 async def submit_review_decision(
     chunk_id: uuid.UUID,
     req: KnowledgeReviewDecisionRequest,
-    current_user: User = Depends(get_current_user),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Applies administrator approval or rejection to an extracted knowledge chunk.
     Separate publication action is required before chunks become live in vector search.
     """
+    college = ctx.college
+    current_user = ctx.user
     decision = req.decision.upper().strip()
     if decision not in ("APPROVE", "APPROVED", "REJECT", "REJECTED"):
         raise HTTPException(
@@ -1033,7 +1112,7 @@ async def submit_review_decision(
         )
     normalized_decision = "APPROVED" if "APPROVE" in decision else "REJECTED"
 
-    repo = CollegeAdminRepository(session)
+    repo = CollegeAdminRepository(ctx.session)
     chunk = await repo.review_knowledge_chunk(
         college_id=college.id,
         chunk_id=chunk_id,
@@ -1044,7 +1123,7 @@ async def submit_review_decision(
     if not chunk:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge chunk not found.")
 
-    await session.commit()
+    await ctx.session.commit()
     return APIResponse(
         success=True,
         message=f"Knowledge chunk marked as {normalized_decision}",
@@ -1059,13 +1138,13 @@ async def submit_review_decision(
 )
 async def bulk_review_decisions(
     req: BulkKnowledgeReviewRequest,
-    current_user: User = Depends(get_current_user),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Applies human review decisions in batch."""
+    college = ctx.college
+    current_user = ctx.user
     decision = "APPROVED" if "APPROVE" in req.decision.upper() else "REJECTED"
-    repo = CollegeAdminRepository(session)
+    repo = CollegeAdminRepository(ctx.session)
     count = 0
     for chunk_id in req.chunk_ids:
         chunk = await repo.review_knowledge_chunk(
@@ -1077,7 +1156,7 @@ async def bulk_review_decisions(
         )
         if chunk:
             count += 1
-    await session.commit()
+    await ctx.session.commit()
     return APIResponse(
         success=True,
         message=f"Successfully marked {count} chunks as {decision}",
@@ -1093,16 +1172,16 @@ async def bulk_review_decisions(
 async def update_knowledge_chunk(
     chunk_id: uuid.UUID,
     req: KnowledgeChunkTextUpdate,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Corrects or clarifies extracted text before approving."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     chunk = await repo.update_knowledge_chunk_text(college.id, chunk_id, req.chunk_text)
     if not chunk:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge chunk not found.")
 
-    await session.commit()
+    await ctx.session.commit()
     return APIResponse(
         success=True,
         message="Knowledge chunk text updated",
@@ -1117,17 +1196,17 @@ async def update_knowledge_chunk(
 )
 async def publish_knowledge_chunk(
     chunk_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Promotes an approved chunk to live student RAG retrieval."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    current_user = ctx.user
+    repo = CollegeAdminRepository(ctx.session)
     chunk = await repo.publish_knowledge_chunk(college.id, chunk_id, reviewer_id=current_user.id)
     if not chunk:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge chunk not found.")
 
-    await session.commit()
+    await ctx.session.commit()
     return APIResponse(
         success=True,
         message="Knowledge chunk published to live student search",
@@ -1142,18 +1221,18 @@ async def publish_knowledge_chunk(
 )
 async def bulk_publish_chunks(
     req: BulkKnowledgePublishRequest,
-    current_user: User = Depends(get_current_user),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Publishes a list of approved knowledge chunks to live vector search."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    current_user = ctx.user
+    repo = CollegeAdminRepository(ctx.session)
     count = 0
     for chunk_id in req.chunk_ids:
         chunk = await repo.publish_knowledge_chunk(college.id, chunk_id, reviewer_id=current_user.id)
         if chunk:
             count += 1
-    await session.commit()
+    await ctx.session.commit()
     return APIResponse(
         success=True,
         message=f"Successfully published {count} knowledge chunks to live search",
@@ -1168,17 +1247,17 @@ async def bulk_publish_chunks(
 )
 async def unpublish_knowledge_chunk(
     chunk_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Reverts a published chunk to inactive approved state."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    current_user = ctx.user
+    repo = CollegeAdminRepository(ctx.session)
     chunk = await repo.unpublish_knowledge_chunk(college.id, chunk_id, reviewer_id=current_user.id)
     if not chunk:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge chunk not found.")
 
-    await session.commit()
+    await ctx.session.commit()
     return APIResponse(
         success=True,
         message="Knowledge chunk unpublished from live student search",
@@ -1194,10 +1273,10 @@ async def unpublish_knowledge_chunk(
 async def trigger_knowledge_processing(
     req: KnowledgeProcessTriggerRequest,
     background_tasks: BackgroundTasks,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Triggers chunking, 15-category classification, and embedding generation."""
+    college = ctx.college
     source_type = req.source_type.upper().strip()
     if source_type in ("WEBSITE", "OFFICIAL_WEBSITE"):
         mode = dispatch_website_knowledge_processing(
@@ -1239,11 +1318,11 @@ async def trigger_knowledge_processing(
 )
 async def list_structured_facts(
     category: Optional[str] = Query(None, description="ABOUT, COURSES, ADMISSIONS, DEPARTMENTS, FACILITIES, FAQS"),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Lists structured institutional facts categorized by topic."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     facts = await repo.list_extracted_facts(college.id, category=category)
     return APIResponse(
         success=True,
@@ -1260,11 +1339,11 @@ async def list_structured_facts(
 )
 async def create_structured_fact(
     req: ExtractedFactCreateRequest,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Adds a verified structured factual claim for the college."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     fact = ExtractedFact(
         id=uuid.uuid4(),
         college_id=college.id,
@@ -1291,11 +1370,11 @@ async def create_structured_fact(
 async def update_structured_fact(
     fact_id: uuid.UUID,
     req: ExtractedFactUpdateRequest,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Updates a structured factual entry."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     updated = await repo.update_extracted_fact(college.id, fact_id, req.model_dump(exclude_unset=True))
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Structured fact not found.")
@@ -1314,11 +1393,11 @@ async def update_structured_fact(
 )
 async def delete_structured_fact(
     fact_id: uuid.UUID,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Deletes a structured fact record."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     deleted = await repo.delete_extracted_fact(college.id, fact_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Structured fact not found.")
@@ -1337,11 +1416,11 @@ async def delete_structured_fact(
 )
 async def get_college_analytics(
     time_range: str = Query("30D", description="TODAY, 7D, 30D, 90D"),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Returns analytics scoped strictly to this college's chatbot interactions."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     data = await repo.get_college_analytics(college.id, time_range=time_range)
     return APIResponse(
         success=True,
@@ -1361,11 +1440,11 @@ async def get_college_analytics(
 )
 async def list_support_tickets(
     status_filter: Optional[str] = Query(None, description="OPEN, IN_PROGRESS, RESOLVED, CLOSED"),
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Lists student inquiries escalated when reliable AI answer was unavailable."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     tickets = await repo.list_support_tickets(college.id, status=status_filter)
     return APIResponse(
         success=True,
@@ -1382,11 +1461,11 @@ async def list_support_tickets(
 async def resolve_support_ticket(
     ticket_id: uuid.UUID,
     req: CollegeSupportTicketResolution,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Updates status and delivers resolution notes for student inquiry."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     ticket = await repo.resolve_support_ticket(college.id, ticket_id, req.status)
     if not ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found.")
@@ -1404,11 +1483,11 @@ async def resolve_support_ticket(
     summary="List student rating feedback on chatbot answers",
 )
 async def list_feedback(
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Returns student ratings and comments on chatbot messages."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     feedbacks = await repo.list_feedback(college.id)
     return APIResponse(
         success=True,
@@ -1437,11 +1516,11 @@ async def list_feedback(
     summary="List institutional system alerts & notices",
 )
 async def list_notifications(
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Returns alerts regarding crawler runs, document processing, and pending reviews."""
-    repo = CollegeAdminRepository(session)
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
     stats = await repo.get_dashboard_stats(college.id)
 
     notifications: List[CollegeNotificationItem] = []
@@ -1495,11 +1574,11 @@ async def list_notifications(
     summary="Get multi-step onboarding progression for current college tenant",
 )
 async def get_onboarding_progress(
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Retrieves current onboarding wizard progression and milestone states."""
-    reg_repo = RegistrationRepository(session)
+    college = ctx.college
+    reg_repo = RegistrationRepository(ctx.session)
     prog = await reg_repo.get_or_create_onboarding_progress(college.id)
 
     res_data = CollegeOnboardingProgressResponse.model_validate(prog)
@@ -1520,11 +1599,11 @@ async def get_onboarding_progress(
 )
 async def update_onboarding_progress(
     req: CollegeOnboardingProgressUpdate,
-    college: College = Depends(get_authorized_college),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Saves completion state for profile, website, or document onboarding steps."""
-    reg_repo = RegistrationRepository(session)
+    college = ctx.college
+    reg_repo = RegistrationRepository(ctx.session)
     prog = await reg_repo.update_onboarding_progress(
         college_id=college.id,
         current_step=req.current_step,
@@ -1552,12 +1631,12 @@ async def update_onboarding_progress(
     summary="Finalize onboarding wizard and mark institution ready for operation",
 )
 async def complete_onboarding_wizard(
-    college: College = Depends(get_authorized_college),
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    ctx: CollegeTenantContext = Depends(get_college_context),
 ):
     """Finalizes onboarding wizard: flags progress as completed and logs telemetry."""
-    reg_repo = RegistrationRepository(session)
+    college = ctx.college
+    current_user = ctx.user
+    reg_repo = RegistrationRepository(ctx.session)
     prog = await reg_repo.complete_onboarding(
         college_id=college.id,
         admin_email=current_user.email,

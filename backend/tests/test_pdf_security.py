@@ -1,6 +1,7 @@
 """PDF & File Upload Security Unit Tests."""
 
 import pytest
+import fitz
 from app.services.pdf_validator import (
     validate_pdf_file,
     sanitize_filename,
@@ -62,10 +63,13 @@ def test_filename_path_traversal_sanitization():
 
 def test_valid_pdf_buffer_acceptance():
     """Verifies that a well-formed PDF buffer passes all signature and integrity checks."""
-    valid_pdf_header = b"%PDF-1.5\n%\xe2\xe3\xcf\xd3\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF"
-    res = validate_pdf_file(valid_pdf_header, "admissions_2026.pdf", "application/pdf")
+    document = fitz.open()
+    document.new_page()
+    valid_pdf = document.tobytes()
+    document.close()
+    res = validate_pdf_file(valid_pdf, "admissions_2026.pdf", "application/pdf")
 
     assert res["sanitized_filename"] == "admissions_2026.pdf"
-    assert res["file_size_bytes"] == len(valid_pdf_header)
+    assert res["file_size_bytes"] == len(valid_pdf)
     assert len(res["checksum_sha256"]) == 64
 

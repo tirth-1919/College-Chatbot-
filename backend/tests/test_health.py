@@ -3,7 +3,9 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from httpx import AsyncClient, ASGITransport
-from app.main import app
+from starlette.requests import Request
+from app.core.config import settings
+from app.main import app, global_exception_handler
 
 
 @pytest.mark.asyncio
@@ -27,6 +29,31 @@ async def test_health_endpoint():
         assert "status" in data
         assert "database_connected" in data
         assert "version" in data
+
+
+@pytest.mark.asyncio
+async def test_unhandled_error_includes_cors_for_allowed_origin():
+    origin = settings.BACKEND_CORS_ORIGINS[0]
+    request = Request(
+        {
+            "type": "http",
+            "http_version": "1.1",
+            "method": "POST",
+            "scheme": "http",
+            "path": "/api/v1/auth/login",
+            "raw_path": b"/api/v1/auth/login",
+            "query_string": b"",
+            "headers": [(b"origin", origin.encode("latin-1"))],
+            "client": ("127.0.0.1", 12345),
+            "server": ("127.0.0.1", 8000),
+        }
+    )
+
+    response = await global_exception_handler(request, RuntimeError("database unavailable"))
+
+    assert response.status_code == 500
+    assert response.headers["access-control-allow-origin"] == origin
+    assert response.headers["access-control-allow-credentials"] == "true"
 
 
 @pytest.mark.asyncio

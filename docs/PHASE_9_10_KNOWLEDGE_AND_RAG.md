@@ -22,7 +22,7 @@ flowchart TD
         C[15-Category Classifier: Admissions, Fees, Courses, etc.]
         K[Heading-Aware Chunker: 800 chars, Overlap 100]
         H[Deduplication: SHA256 Content Hash]
-        E[Gemini 768-Dim Embedding: text-embedding-004]
+        E[Configured Gemini embedding model: 768 dimensions]
     end
 
     subgraph Review["3. Human-in-the-Loop Review State Machine"]
@@ -78,9 +78,8 @@ flowchart TD
    - Retains Markdown tables as atomic undivided blocks.
    - Attaches heading ancestry, category, hash, and token count.
 4. [embedding_service.py](file:///c:/Users/Vataliya%20Dharmik/OneDrive/Documents/College%20Chatbot/backend/app/services/embedding_service.py)
-   - Google Gemini `text-embedding-004` (768 dimensions).
-   - Deterministic offline mathematical unit vector fallback for local development and CI testing.
-   - Cosine similarity mathematical consistency invariant: $\sum v_i^2 = 1.0$.
+   - Uses `GEMINI_EMBEDDING_MODEL` with the configured 768-dimensional output.
+   - Indexing and retrieval fail explicitly when real embeddings are unavailable; synthetic vectors are not stored.
 5. [ai_provider_service.py](file:///c:/Users/Vataliya%20Dharmik/OneDrive/Documents/College%20Chatbot/backend/app/services/ai_provider_service.py)
    - Primary AI: Google Gemini (`gemini-1.5-flash`).
    - Secondary AI: Configurable fallback (OpenAI `gpt-4o-mini`, Groq, Anthropic).
@@ -88,7 +87,7 @@ flowchart TD
    - Grounded offline fallback synthesizer.
 6. [rag_service.py](file:///c:/Users/Vataliya%20Dharmik/OneDrive/Documents/College%20Chatbot/backend/app/services/rag_service.py)
    - Security prompt injection defense against adversarial jailbreaks ("ignore previous instructions", "act as DAN", "system prompt leakage").
-   - Strict tenant-boundary pgvector search (`college_id == :id` AND `status == 'PUBLISHED'` AND `is_active == TRUE`).
+   - Strict tenant-boundary retrieval (`college_id == :id` AND `status == 'PUBLISHED'` AND `is_active == TRUE`).
    - Source priority hierarchy resolution:
      1. `OFFICIAL_WEBSITE`
      2. `ADMIN_VERIFIED`
@@ -97,7 +96,8 @@ flowchart TD
      5. `NO_RELIABLE_INFORMATION`
    - Real-time Server-Sent Events (SSE) streaming token generator.
 7. [knowledge_service.py](file:///c:/Users/Vataliya%20Dharmik/OneDrive/Documents/College%20Chatbot/backend/app/services/knowledge_service.py)
-   - Pipeline ingestion from `WebsitePage` and `DocumentPage`.
+   - Shared pipeline ingestion from `WebsitePage` and `DocumentPage`, preserving source identifiers and citations.
+   - PDF pages are indexed from `extracted_text`; ordered paragraphs and pending facts are recorded separately.
    - Lifecycle state machine: `PROCESSING` -> `PENDING_REVIEW` -> `APPROVED` -> `PUBLISHED`.
    - Separate approval and publishing enforcement.
    - Full audit trail logging to `KnowledgeReview`.
@@ -105,6 +105,7 @@ flowchart TD
 ### C. Background Tasks (`backend/app/tasks/knowledge_tasks.py`)
 - `dispatch_website_knowledge_processing`: Dispatches asynchronous extraction with Celery / async fallback.
 - `dispatch_document_knowledge_processing`: Dispatches PDF/OCR extraction to knowledge pipeline.
+- Celery knowledge jobs reuse the persistent worker event loop used by document and crawler jobs.
 
 ---
 

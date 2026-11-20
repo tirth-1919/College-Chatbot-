@@ -4,7 +4,7 @@ College Chatbot Platform Management & Test Automation CLI.
 
 Available Test Commands:
   python manage.py test-all          - Run full application test suite
-  python manage.py test-frontend     - Test frontend routes, Next.js pages & UI
+  python manage.py test-frontend     - Run frontend unit tests, builds, routes & UI
   python manage.py test-backend      - Test backend services, models & unit tests
   python manage.py test-api          - Test API endpoints and HTTP status codes
   python manage.py test-database     - Test database engine, RLS policies & isolation
@@ -31,7 +31,7 @@ if str(ROOT_DIR) not in sys.path:
 
 VALID_COMMANDS = {
     "test-all": "Execute the complete end-to-end application test suite",
-    "test-frontend": "Test frontend routes, Next.js rendering, and Playwright UI",
+    "test-frontend": "Run frontend unit tests, Next.js builds, routes, and Playwright UI",
     "test-backend": "Test backend services, models, and pytest unit suite",
     "test-api": "Test all API endpoints and validate HTTP status codes",
     "test-database": "Test database connections, RLS policies, and multi-tenant isolation",

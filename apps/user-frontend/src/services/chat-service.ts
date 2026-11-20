@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import { AUTH_SESSION_INVALID_KEY } from "@/lib/auth-session";
 
 export function generateUUID(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -67,14 +68,29 @@ export interface ChatSessionData {
   created_at: string;
   updated_at: string;
   messages?: ChatMessageData[];
+  local_state?: "unavailable";
 }
 
-function getSessionAccessHeaders(sessionId: string): Record<string, string> | null {
-  if (typeof window === "undefined") return null;
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+export function hasVisitorToken(sessionId: string): boolean {
+  return typeof window !== "undefined" &&
+    Boolean(sessionStorage.getItem(`campusai_chat_visitor_${sessionId}`));
+}
+
+function getSessionAccessHeaders(sessionId: string, collegeId: string): Record<string, string> | null {
+  if (typeof window === "undefined" || !collegeId) return null;
   const visitorToken = sessionStorage.getItem(`campusai_chat_visitor_${sessionId}`);
-  const authenticated = Boolean(localStorage.getItem("auth_token"));
+  const authenticated = Boolean(
+    localStorage.getItem("auth_token") && !localStorage.getItem(AUTH_SESSION_INVALID_KEY)
+  );
   if (!visitorToken && !authenticated) return null;
-  return visitorToken ? { "X-Chat-Visitor-Token": visitorToken } : {};
+  return {
+    "X-College-ID": collegeId,
+    ...(visitorToken ? { "X-Chat-Visitor-Token": visitorToken } : {}),
+  };
 }
 
 function generateLocalAnswer(
@@ -378,10 +394,11 @@ function generateLocalAnswer(
 }
 
 export const chatService = {
-  async createSession(collegeId: string, title?: string, language: string = "en"): Promise<{ success: boolean; data?: ChatSessionData; error?: string }> {
+  async createSession(collegeId: string, title?: string, language: string = "en"): Promise<{ success: boolean; data?: ChatSessionData; error?: string; status?: number; requestId?: string }> {
     try {
       const res = await apiRequest<ChatSessionData & { visitor_token?: string }>("/chat/sessions", {
         method: "POST",
+        headers: { "X-College-ID": collegeId },
         body: JSON.stringify({
           college_id: collegeId,
           session_title: title || "New Conversation",
@@ -389,17 +406,36 @@ export const chatService = {
         }),
       });
       if (res.success && res.data) {
-        if (res.data.visitor_token && typeof window !== "undefined") {
+        const { visitor_token: visitorToken, ...session } = res.data;
+        const authenticated = typeof window !== "undefined" &&
+          Boolean(
+            localStorage.getItem("auth_token") &&
+            !localStorage.getItem(AUTH_SESSION_INVALID_KEY)
+          );
+        if (
+          !isUuid(session.id) ||
+          session.college_id !== collegeId ||
+          !session.is_active ||
+          (authenticated && !session.user_id) ||
+          (!authenticated && !visitorToken)
+        ) {
+          return {
+            success: false,
+            error: "The server returned an invalid chat session. No local session was created.",
+            status: 502,
+            requestId: res.requestId,
+          };
+        }
+        if (visitorToken && typeof window !== "undefined") {
           sessionStorage.setItem(
-            `campusai_chat_visitor_${res.data.id}`,
-            res.data.visitor_token
+            `campusai_chat_visitor_${session.id}`,
+            visitorToken
           );
         }
-        const { visitor_token: _visitorToken, ...session } = res.data;
         return { success: true, data: session };
       }
       if (res.error) {
-        return { success: false, error: res.error };
+        return { success: false, error: res.error, status: res.status, requestId: res.requestId };
       }
     } catch (e) {
       return {
@@ -411,57 +447,73 @@ export const chatService = {
     return { success: false, error: "Unable to create a chat session." };
   },
 
-  async listSessions(collegeId?: string): Promise<{ success: boolean; data?: ChatSessionData[]; error?: string }> {
+  async listSessions(collegeId?: string): Promise<{ success: boolean; data?: ChatSessionData[]; error?: string; status?: number; requestId?: string }> {
+    if (!collegeId) {
+      return { success: false, error: "Select a college before loading chat history." };
+    }
     try {
-      const query = collegeId ? `?college_id=${collegeId}` : "";
-      const res = await apiRequest<ChatSessionData[]>(`/chat/sessions${query}`);
+      const query = `?college_id=${encodeURIComponent(collegeId)}`;
+      const res = await apiRequest<ChatSessionData[]>(`/chat/sessions${query}`, {
+        headers: { "X-College-ID": collegeId },
+      });
       if (res.success && res.data) {
         return res;
       }
-    } catch (e) {}
-
-    return { success: false, error: "Offline" };
+      return { success: false, error: res.error || "Unable to load chat history.", status: res.status, requestId: res.requestId };
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : "Unable to load chat history.",
+      };
+    }
   },
 
-  async getSessionHistory(sessionId: string): Promise<{ success: boolean; data?: ChatSessionData; error?: string }> {
-    const headers = getSessionAccessHeaders(sessionId);
-    if (!headers) return { success: false, error: "This conversation is stored locally." };
+  async getSessionHistory(sessionId: string, collegeId: string): Promise<{ success: boolean; data?: ChatSessionData; error?: string; status?: number; requestId?: string }> {
+    const headers = getSessionAccessHeaders(sessionId, collegeId);
+    if (!headers) {
+      return { success: false, error: "Chat session not found.", status: 404 };
+    }
     try {
       const res = await apiRequest<ChatSessionData>(`/chat/sessions/${sessionId}`, { headers });
       if (res.success && res.data) {
         return res;
       }
-    } catch (e) {}
-
-    return { success: false, error: "Offline" };
+      return { success: false, error: res.error || "Unable to load this conversation.", status: res.status, requestId: res.requestId };
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : "Unable to load this conversation.",
+      };
+    }
   },
 
-  async renameSession(sessionId: string, newTitle: string): Promise<{ success: boolean; data?: ChatSessionData; error?: string }> {
+  async renameSession(sessionId: string, newTitle: string, collegeId: string): Promise<{ success: boolean; data?: ChatSessionData; error?: string }> {
+    const headers = getSessionAccessHeaders(sessionId, collegeId);
+    if (!headers) return { success: false, error: "This chat session is not accessible." };
     try {
       const res = await apiRequest<ChatSessionData>(`/chat/sessions/${sessionId}`, {
         method: "PATCH",
+        headers,
         body: JSON.stringify({ session_title: newTitle }),
       });
       if (res.success && res.data) return res;
-    } catch (e) {}
+      return { success: false, error: res.error || "Unable to rename the chat session." };
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : "Unable to rename the chat session.",
+      };
+    }
 
     return {
-      success: true,
-      data: {
-        id: sessionId,
-        college_id: "",
-        session_title: newTitle,
-        language: "en",
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
+      success: false,
+      error: "Unable to rename the chat session.",
     };
   },
 
-  async deleteSession(sessionId: string): Promise<{ success: boolean; data?: boolean; error?: string }> {
-    const headers = getSessionAccessHeaders(sessionId);
-    if (!headers) return { success: true, data: true };
+  async deleteSession(sessionId: string, collegeId: string): Promise<{ success: boolean; data?: boolean; error?: string }> {
+    const headers = getSessionAccessHeaders(sessionId, collegeId);
+    if (!headers) return { success: false, error: "This chat session is not accessible." };
     try {
       const res = await apiRequest<boolean>(`/chat/sessions/${sessionId}`, {
         method: "DELETE",
@@ -480,12 +532,16 @@ export const chatService = {
   async sendMessage(
     sessionId: string,
     text: string,
+    collegeId: string,
     language?: string,
-    collegeName: string = "College"
-  ): Promise<{ success: boolean; data?: ChatMessageData; error?: string }> {
+    _collegeName: string = "College"
+  ): Promise<{ success: boolean; data?: ChatMessageData; error?: string; status?: number; requestId?: string }> {
+    if (!collegeId) {
+      return { success: false, error: "Select a college before sending a message." };
+    }
     // 1. Attempt backend AI call first if sessionId is a valid UUID
-    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId);
-    const headers = getSessionAccessHeaders(sessionId);
+    const isValidUUID = isUuid(sessionId);
+    const headers = getSessionAccessHeaders(sessionId, collegeId);
     if (isValidUUID && headers) {
       const res = await apiRequest<ChatMessageData>(`/chat/sessions/${sessionId}/messages`, {
         method: "POST",
@@ -498,13 +554,18 @@ export const chatService = {
       if (res.success && res.data) {
         return res;
       }
-      return { success: false, error: res.error || "Chat request was rejected." };
+      return {
+        success: false,
+        error: res.error || "Chat request was rejected.",
+        status: res.status,
+        requestId: res.requestId,
+      };
     }
 
-    // Local-only sessions have no server token and never write conversation data to the API.
-    await new Promise((r) => setTimeout(r, 400)); // snappy natural conversational delay
-    const localMsg = generateLocalAnswer(text, collegeName, language || "en", sessionId);
-    return { success: true, data: localMsg };
+    return {
+      success: false,
+      error: "This conversation is not connected to an accessible server session.",
+    };
   },
 
   async submitFeedback(

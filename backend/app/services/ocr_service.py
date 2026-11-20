@@ -72,7 +72,7 @@ class TesseractOCREngine:
 
         if not self.is_available:
             return {
-                "text": "[Scanned document page: OCR engine pending server host configuration]",
+                "text": "",
                 "confidence": 0.0,
                 "word_count": 0,
                 "error": "Tesseract OCR executable not found on host system.",
@@ -117,15 +117,14 @@ class TesseractOCREngine:
         """Converts PyMuPDF Pixmap to PIL Image and executes OCR."""
         try:
             import importlib
-            pil_module = importlib.import_module("PIL.Image")
-            Image = getattr(pil_module, "Image", pil_module)
+            image_module = importlib.import_module("PIL.Image")
 
             if hasattr(pixmap, "tobytes"):
                 # PyMuPDF pixmap conversion
-                img = Image.open(io.BytesIO(pixmap.tobytes("png")))
+                img = image_module.open(io.BytesIO(pixmap.tobytes("png")))
             elif hasattr(pixmap, "samples"):
                 mode = "RGBA" if pixmap.alpha else "RGB"
-                img = Image.frombytes(mode, [pixmap.width, pixmap.height], pixmap.samples)
+                img = image_module.frombytes(mode, [pixmap.width, pixmap.height], pixmap.samples)
             else:
                 return {
                     "text": "",

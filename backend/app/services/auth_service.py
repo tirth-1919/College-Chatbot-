@@ -96,12 +96,26 @@ class AuthService:
         college_id: Optional[uuid.UUID] = None
         if user.role == "COLLEGE_ADMIN":
             membership = await self.membership_repo.get_by_user_id(user.id)
-            if not membership or not membership.college_id:
+            college_id = membership.college_id if membership else None
+            if not college_id:
+                # The security-definer membership check can resolve the assignment
+                # when the ORM query is filtered by the deployed RLS policy.
+                colleges = await self.college_repo.list_colleges(
+                    only_approved=True,
+                    limit=1000,
+                )
+                for candidate in colleges:
+                    if await self.membership_repo.user_belongs_to_college(
+                        user.id, candidate.id
+                    ):
+                        college_id = candidate.id
+                        break
+
+            if not college_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="No institutional membership associated with this college administrator account.",
                 )
-            college_id = membership.college_id
             college = await self.college_repo.get_by_id(college_id)
             if not college:
                 raise HTTPException(
@@ -170,7 +184,13 @@ class AuthService:
         if not user_id_str:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject.")
 
-        user_id = uuid.UUID(user_id_str)
+        try:
+            user_id = uuid.UUID(user_id_str)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token subject.",
+            ) from exc
         await set_rls_context(
             self.session,
             college_id=None,
@@ -181,7 +201,13 @@ class AuthService:
         if not user or not user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is deactivated.")
 
-        college_id = uuid.UUID(payload["college_id"]) if payload.get("college_id") else None
+        try:
+            college_id = uuid.UUID(payload["college_id"]) if payload.get("college_id") else None
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token tenant claim.",
+            ) from exc
 
         new_access_token = create_access_token(
             subject=str(user.id),

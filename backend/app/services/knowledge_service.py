@@ -6,6 +6,7 @@ vector-indexed chunks, enforcing strict human-in-the-loop governance.
 """
 
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -24,6 +25,33 @@ logger = logging.getLogger(__name__)
 
 class KnowledgeService:
     """Enterprise knowledge processing, review lifecycle, and vector indexing manager."""
+
+    @staticmethod
+    def _mark_plain_website_headings(content: str) -> str:
+        """Recover simple standalone headings from legacy cleaned page text."""
+        lines: List[str] = []
+        raw_lines = content.splitlines()
+        for index, line in enumerate(raw_lines):
+            stripped = line.strip()
+            next_text = next(
+                (candidate.strip() for candidate in raw_lines[index + 1 :] if candidate.strip()),
+                "",
+            )
+            if (
+                stripped
+                and not stripped.startswith(("#", "|", "-", "*"))
+                and 15 <= len(stripped) <= 100
+                and 2 <= len(stripped.split()) <= 12
+                and not re.search(r"[.!?;:]$", stripped)
+                and (
+                    len(next_text) > 100
+                    or re.search(r"[.!?;:]$", next_text)
+                )
+            ):
+                lines.append(f"## {stripped}")
+            else:
+                lines.append(line)
+        return "\n".join(lines)
 
     # ==========================================================================
     # 1. Ingestion & Processing Pipeline
@@ -60,10 +88,13 @@ class KnowledgeService:
                 continue
 
             processed_chunks = chunker_service.chunk_content(
-                content=raw_text,
+                content=self._mark_plain_website_headings(raw_text),
                 source_url=page.url,
                 default_heading=page.title or "Official College Website",
-                extra_metadata={"crawl_job_id": str(page.crawl_job_id) if page.crawl_job_id else None},
+                extra_metadata={
+                    "crawl_job_id": str(page.crawl_job_id) if page.crawl_job_id else None,
+                    "source_title": page.title or "Official College Website",
+                },
             )
 
             for p_chunk in processed_chunks:
@@ -71,6 +102,8 @@ class KnowledgeService:
                 existing_stmt = select(KnowledgeChunk.id).where(
                     and_(
                         KnowledgeChunk.college_id == college_id,
+                        KnowledgeChunk.source_type == "OFFICIAL_WEBSITE",
+                        KnowledgeChunk.source_id == page.id,
                         KnowledgeChunk.content_hash == p_chunk.content_hash,
                     )
                 )
@@ -137,17 +170,63 @@ class KnowledgeService:
 
         chunks_created = 0
         chunks_skipped = 0
+        existing_facts_res = await session.execute(
+            select(ExtractedFact.fact_key, ExtractedFact.fact_value).where(
+                and_(
+                    ExtractedFact.college_id == college_id,
+                    ExtractedFact.source_type == "PDF",
+                    ExtractedFact.source_id == doc.id,
+                )
+            )
+        )
+        existing_facts = set(existing_facts_res.all())
+        facts_created = 0
 
         for page in pages:
-            text_content = page.page_text or ""
+            text_content = page.extracted_text or ""
             if not text_content.strip():
                 continue
+
+            paragraphs = [
+                paragraph.strip()
+                for paragraph in re.split(r"\n\s*\n", text_content)
+                if paragraph.strip()
+            ]
+            for paragraph_index, paragraph_text in enumerate(paragraphs):
+                if len(paragraph_text) < 40:
+                    continue
+                fact_key = f"Page {page.page_number} paragraph {paragraph_index + 1}"
+                fact_value = paragraph_text
+                if (fact_key, fact_value) not in existing_facts:
+                    category, _, _ = classifier_service.classify_text(
+                        text=paragraph_text,
+                        source_url=None,
+                    )
+                    session.add(
+                        ExtractedFact(
+                            id=uuid.uuid4(),
+                            college_id=college_id,
+                            source_type="PDF",
+                            source_id=doc.id,
+                            category=category,
+                            fact_key=fact_key,
+                            fact_value=fact_value,
+                            verification_status="PENDING",
+                        )
+                    )
+                    existing_facts.add((fact_key, fact_value))
+                    facts_created += 1
 
             processed_chunks = chunker_service.chunk_content(
                 content=text_content,
                 page_number=page.page_number,
                 default_heading=f"{doc.original_filename} - Page {page.page_number}",
-                extra_metadata={"document_id": str(document_id), "ocr_applied": page.has_ocr_content},
+                extra_metadata={
+                    "document_id": str(document_id),
+                    "original_filename": doc.original_filename,
+                    "document_title": doc.title or doc.original_filename,
+                    "ocr_applied": page.ocr_applied,
+                },
             )
 
             for p_chunk in processed_chunks:
@@ -155,6 +234,8 @@ class KnowledgeService:
                 existing_stmt = select(KnowledgeChunk.id).where(
                     and_(
                         KnowledgeChunk.college_id == college_id,
+                        KnowledgeChunk.source_type == "PDF",
+                        KnowledgeChunk.source_id == doc.id,
                         KnowledgeChunk.content_hash == p_chunk.content_hash,
                     )
                 )
@@ -187,11 +268,15 @@ class KnowledgeService:
                 session.add(new_chunk)
                 chunks_created += 1
 
+        if not chunks_created and not chunks_skipped:
+            raise ValueError(f"Document {document_id} contains no usable knowledge chunks.")
+
         await session.commit()
         return {
             "pages_processed": len(pages),
             "chunks_created": chunks_created,
             "chunks_skipped": chunks_skipped,
+            "facts_created": facts_created,
         }
 
     # ==========================================================================

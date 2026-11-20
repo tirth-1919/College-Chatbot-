@@ -15,7 +15,8 @@ class UserResponse(BaseModel):
     role: str
     is_verified: bool
     is_active: bool
-    created_at: datetime
+    # Legacy account rows may predate the database timestamp default.
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

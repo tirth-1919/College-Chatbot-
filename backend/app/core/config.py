@@ -3,6 +3,7 @@
 Loads and validates environment variables using Pydantic Settings.
 """
 
+import os
 from typing import List, Optional
 from pathlib import Path
 from ipaddress import ip_address
@@ -77,12 +78,13 @@ class Settings(BaseSettings):
         except ValueError:
             pass
 
-        is_development = self.ENVIRONMENT.strip().lower() in {"development", "dev", "local"}
-        if is_loopback and not is_development:
-            raise ValueError("Localhost ADMIN_FRONTEND_URL is allowed only in development.")
-        if parsed.scheme == "http" and not (is_loopback and is_development):
+        environment = self.ENVIRONMENT.strip().lower()
+        is_local_environment = environment in {"development", "dev", "local", "test"}
+        if is_loopback and not is_local_environment:
+            raise ValueError("Localhost ADMIN_FRONTEND_URL is allowed only in development or test.")
+        if parsed.scheme == "http" and not (is_loopback and is_local_environment):
             raise ValueError("HTTP ADMIN_FRONTEND_URL is allowed only for a development loopback host.")
-        if self.ENVIRONMENT.strip().lower() in {"production", "prod"} and parsed.scheme != "https":
+        if environment in {"production", "prod"} and parsed.scheme != "https":
             raise ValueError("Production ADMIN_FRONTEND_URL must use HTTPS.")
 
         self.ADMIN_FRONTEND_URL = raw_url.rstrip("/")
@@ -147,8 +149,8 @@ class Settings(BaseSettings):
 
     # AI Configuration
     GEMINI_API_KEY: str = "placeholder-gemini-key"
-    GEMINI_DEFAULT_MODEL: str = "gemini-3.5-flash"
-    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
+    GEMINI_DEFAULT_MODEL: str = "gemini-1.5-flash"
+    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
     EMBEDDING_DIMENSION: int = 768
 
     SECONDARY_AI_ENABLED: bool = False
@@ -157,7 +159,11 @@ class Settings(BaseSettings):
     SECONDARY_AI_MODEL: str = "gpt-4o-mini"
 
     # Provider model priority lists (comma-separated)
-    GEMINI_MODEL_PRIORITY: str = "gemini-1.5-flash,gemini-1.5-pro,gemini-2.0-flash-exp"
+    GEMINI_MODEL_PRIORITY: str = (
+        "gemini-1.5-flash,"
+        "gemini-2.0-flash,"
+        "gemini-1.5-pro"
+    )
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL_PRIORITY: str = "gpt-4o-mini,gpt-4o,gpt-3.5-turbo"
     XKIRO_API_KEY: Optional[str] = None
@@ -204,8 +210,61 @@ class Settings(BaseSettings):
         """Returns synchronous version of the app-role URL (for diagnostics only)."""
         return self.DATABASE_APP_ROLE_URL.replace("postgresql+asyncpg://", "postgresql://")
 
+    @model_validator(mode="after")
+    def validate_isolated_test_database_targets(self):
+        if self.ENVIRONMENT.strip().lower() != "test":
+            return self
+
+        def parse_test_url(value: Optional[str]):
+            try:
+                parsed = urlsplit(value or "")
+                port = parsed.port
+            except ValueError as exc:
+                raise ValueError(
+                    "Test database URLs must target the isolated application database."
+                ) from exc
+
+            if (
+                parsed.scheme not in {"postgresql", "postgresql+asyncpg"}
+                or parsed.hostname != "127.0.0.1"
+                or port != 54322
+                or parsed.path.lstrip("/") != "postgres"
+                or parsed.username != "college_app_user"
+                or not parsed.password
+                or parsed.query
+                or parsed.fragment
+                or "," in parsed.netloc
+            ):
+                raise ValueError(
+                    "Test database URLs must target 127.0.0.1:54322/postgres "
+                    "using college_app_user."
+                )
+            return parsed
+
+        database_url = parse_test_url(self.DATABASE_URL)
+        app_role_url = parse_test_url(self.DATABASE_APP_ROLE_URL)
+        if database_url.password != app_role_url.password:
+            raise ValueError(
+                "Test database URLs must use the same isolated application credentials."
+            )
+
+        if self.DATABASE_URL_SYNC:
+            sync_url = parse_test_url(self.DATABASE_URL_SYNC)
+            if sync_url.password != app_role_url.password:
+                raise ValueError(
+                    "The synchronous test database URL must use the isolated application credentials."
+                )
+
+        return self
+
+    # Test mode is selected from the process environment before dotenv loading;
+    # inherited database variables are then rejected by the validator above.
     model_config = SettingsConfigDict(
-        env_file=_REPOSITORY_ROOT / ".env",
+        env_file=(
+            _REPOSITORY_ROOT / ".env.test"
+            if os.environ.get("ENVIRONMENT", "").strip().lower() == "test"
+            else _REPOSITORY_ROOT / ".env"
+        ),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",

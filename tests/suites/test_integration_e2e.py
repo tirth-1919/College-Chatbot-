@@ -9,6 +9,7 @@ Tests complete business transactions across layers:
 import time
 import uuid
 from typing import List, Dict, Any
+from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient, ASGITransport
 from tests.config import (
     STUDENT_EMAIL,
@@ -58,20 +59,48 @@ async def run_integration_suite() -> List[Dict[str, Any]]:
             sess_id = session_init_res.json()["data"]["id"]
 
             # Step 5: Ask College FAQ Question
-            query_res = await client.post(
-                f"/api/v1/chat/sessions/{sess_id}/messages",
-                json={
-                    "message_text": "What are the engineering courses offered?",
-                    "language": "en",
-                },
-                headers=headers,
-            )
+            with patch(
+                "app.api.v1.chat.rag_service.answer_question",
+                new=AsyncMock(return_value={
+                    "answer_text": "Test-only assistant response.",
+                    "is_verified": False,
+                    "answer_source_type": "NO_RELIABLE_INFORMATION",
+                    "source_citations": [],
+                    "token_count": 4,
+                    "model_used": None,
+                    "answer_mode": "TEST",
+                    "actual_provider": None,
+                    "actual_model": None,
+                    "fallback_reason": "External generation is stubbed in integration tests.",
+                    "attempt_count": 0,
+                    "request_duration_ms": 0,
+                }),
+            ):
+                query_res = await client.post(
+                    f"/api/v1/chat/sessions/{sess_id}/messages",
+                    json={
+                        "message_text": "What are the engineering courses offered?",
+                        "language": "en",
+                    },
+                    headers=headers,
+                )
             assert query_res.status_code in [200, 201], f"Chat query failed: {query_res.status_code}"
             q_data = query_res.json().get("data", {})
             assert "message_text" in q_data or "answer" in q_data or "text" in q_data or "reply" in q_data or query_res.status_code == 200
 
+            history_res = await client.get(
+                f"/api/v1/chat/sessions/{sess_id}",
+                headers=headers,
+            )
+            assert history_res.status_code == 200, f"Chat history reload failed: {history_res.status_code}"
+            saved_roles = {
+                message.get("sender_role")
+                for message in history_res.json().get("data", {}).get("messages", [])
+            }
+            assert {"user", "assistant"}.issubset(saved_roles), "User and assistant messages were not both persisted"
+
             w1_passed = True
-            w1_detail = "Step 1-5 Success: Login -> Profile -> College Directory -> Chat Session -> FAQ Query"
+            w1_detail = "Login -> Profile -> College Directory -> Chat Session -> Persisted User/Assistant Messages and History Reload (AI stubbed)"
         except Exception as exc:
             w1_detail = f"Failed at step: {str(exc)}"
 

@@ -249,7 +249,7 @@ class WebsiteCrawlerService:
                             if js_parsed.content_length > parsed_content.content_length:
                                 parsed_content = js_parsed
                                 logger.info(
-                                    "JS rendering fallback used for %s — %d chars extracted (was %d)",
+                                    "JS rendering fallback used for %s — %s chars extracted (was %s)",
                                     final_url, parsed_content.content_length, 0
                                 )
                     except Exception as js_err:
@@ -341,14 +341,14 @@ class WebsiteCrawlerService:
                     page_ids=unique_page_ids,
                 )
                 logger.info(
-                    "Dispatched website knowledge processing for %d changed pages (college=%s, mode=%s)",
+                    "Dispatched website knowledge processing for %s changed pages (college=%s, mode=%s)",
                     len(unique_page_ids),
                     college_id,
                     mode,
                 )
             except Exception as exc:
                 logger.exception(
-                    "Failed to dispatch website knowledge processing for %d changed pages in college %s: %s",
+                    "Failed to dispatch website knowledge processing for %s changed pages in college %s: %s",
                     len(unique_page_ids),
                     college_id,
                     exc,

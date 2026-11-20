@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import { User, AuthState } from "@/types/auth";
 import { apiRequest } from "@/lib/api-client";
+import {
+  AUTH_SESSION_INVALID_KEY,
+  clearAuthSession,
+  markAuthSessionInvalid,
+} from "@/lib/auth-session";
 
 export function useAuth() {
   const [state, setState] = useState<AuthState>({
@@ -13,10 +18,32 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
+    const handleInvalidSession = () => {
       setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
-      return;
+    };
+    const handleUpdatedSession = () => {
+      const currentToken = localStorage.getItem("auth_token");
+      if (!currentToken || localStorage.getItem(AUTH_SESSION_INVALID_KEY)) {
+        handleInvalidSession();
+        return;
+      }
+      let user: User | null = null;
+      try {
+        const cached = localStorage.getItem("user_profile");
+        user = cached ? JSON.parse(cached) : null;
+      } catch (e) {}
+      setState({ user, token: currentToken, isAuthenticated: true, isLoading: false });
+    };
+    window.addEventListener("auth-session-invalid", handleInvalidSession);
+    window.addEventListener("auth-session-updated", handleUpdatedSession);
+
+    const token = localStorage.getItem("auth_token");
+    if (!token || localStorage.getItem(AUTH_SESSION_INVALID_KEY)) {
+      setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      return () => {
+        window.removeEventListener("auth-session-invalid", handleInvalidSession);
+        window.removeEventListener("auth-session-updated", handleUpdatedSession);
+      };
     }
 
     // 1. Instant hydration from cached profile if present
@@ -26,30 +53,12 @@ export function useAuth() {
         const user = JSON.parse(cachedUser);
         setState({ user, token, isAuthenticated: true, isLoading: false });
       } catch (e) {}
-    } else if (token.startsWith("demo_student_token_")) {
-      setState({
-        user: {
-          id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
-          email: "student@gmail.com",
-          full_name: "Dharmik Vataliya",
-          role: "STUDENT",
-          is_verified: true,
-          is_active: true,
-        },
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-      return;
     }
 
-    if (token.startsWith("demo_student_token_")) {
-      return;
-    }
-
-    // 2. Refresh user profile from /auth/me in background
+    // Refresh the profile; apiRequest renews an expired access token once.
     apiRequest<User>("/auth/me")
       .then((res) => {
+        if (localStorage.getItem("auth_token") !== token) return;
         if (res.success && res.data) {
           localStorage.setItem("user_profile", JSON.stringify(res.data));
           setState({
@@ -58,29 +67,30 @@ export function useAuth() {
             isAuthenticated: true,
             isLoading: false,
           });
+        } else if (res.status === 401 || res.status === 403) {
+          markAuthSessionInvalid();
+          handleInvalidSession();
         } else {
-          // If network error occurred, keep cached user
           const cached = localStorage.getItem("user_profile");
           if (!cached) {
-            localStorage.removeItem("auth_token");
             setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
           }
         }
       })
       .catch(() => {
+        if (localStorage.getItem("auth_token") !== token) return;
         const cached = localStorage.getItem("user_profile");
-        if (!cached) {
-          localStorage.removeItem("auth_token");
-          setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
-        }
+        if (!cached) setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
       });
+
+    return () => {
+      window.removeEventListener("auth-session-invalid", handleInvalidSession);
+      window.removeEventListener("auth-session-updated", handleUpdatedSession);
+    };
   }, []);
 
   const logout = () => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_profile");
-    localStorage.removeItem("selected_college_id");
-    localStorage.removeItem("selected_college_name");
+    clearAuthSession();
     setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
     window.location.href = "/login";
   };

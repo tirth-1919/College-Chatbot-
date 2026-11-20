@@ -7,6 +7,7 @@ pdfplumber for structured tabular grid parsing, and Tesseract for scanned page O
 import io
 import logging
 import re
+import statistics
 from typing import Any, Dict, List, Optional
 
 from app.services.ocr_service import ocr_engine
@@ -76,6 +77,50 @@ def format_table_cells_to_markdown(table_rows: List[List[Any]]) -> str:
 class PDFProcessor:
     """Orchestrates page-by-page PDF deconstruction, table extraction, and OCR."""
 
+    @staticmethod
+    def _extract_page_text(page: Any) -> str:
+        """Extract text in block order and mark visually distinct short headings."""
+        try:
+            blocks = page.get_text("dict").get("blocks", [])
+        except (AttributeError, TypeError, ValueError):
+            blocks = []
+
+        text_blocks = [block for block in blocks if block.get("type", 0) == 0]
+        font_sizes = [
+            float(span.get("size", 0))
+            for block in text_blocks
+            for line in block.get("lines", [])
+            for span in line.get("spans", [])
+            if span.get("text", "").strip()
+        ]
+        body_size = statistics.median(font_sizes) if font_sizes else 0
+
+        extracted_blocks: List[str] = []
+        for block in text_blocks:
+            lines: List[str] = []
+            for line in block.get("lines", []):
+                spans = line.get("spans", [])
+                line_text = "".join(span.get("text", "") for span in spans).strip()
+                if not line_text:
+                    continue
+                max_font_size = max(
+                    (float(span.get("size", 0)) for span in spans),
+                    default=0,
+                )
+                if (
+                    body_size
+                    and max_font_size >= body_size * 1.2
+                    and len(line_text) <= 120
+                ):
+                    line_text = f"## {line_text}"
+                lines.append(line_text)
+            if lines:
+                extracted_blocks.append("\n".join(lines))
+
+        if extracted_blocks:
+            return "\n\n".join(extracted_blocks).strip()
+        return page.get_text("text").strip()
+
     def process_pdf(
         self,
         file_bytes: bytes,
@@ -100,24 +145,13 @@ class PDFProcessor:
             pass
 
         if fitz is None:
-            # Fallback if PyMuPDF fitz is not installed in local environment
-            return {
-                "title": original_filename.rsplit(".", 1)[0].replace("_", " ").title(),
-                "total_pages": 1,
-                "pages": [
-                    ExtractedPageData(
-                        page_number=1,
-                        extracted_text=f"Processed content for {original_filename}",
-                        is_scanned=False,
-                        ocr_applied=False,
-                    )
-                ],
-                "ocr_applied": False,
-                "metadata": {},
-            }
+            raise RuntimeError("PyMuPDF is required to extract PDF content.")
 
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         total_pages = len(doc)
+        if total_pages == 0:
+            doc.close()
+            raise ValueError("The PDF contains no pages.")
 
         # 1. Extract Document Metadata
         metadata = doc.metadata or {}
@@ -153,7 +187,7 @@ class PDFProcessor:
             page = doc[page_idx]
 
             # Standard text extraction
-            raw_text = page.get_text("text").strip()
+            raw_text = self._extract_page_text(page)
 
             # Check if tables were extracted for this page
             tables = page_tables_map.get(page_idx, [])
@@ -179,14 +213,17 @@ class PDFProcessor:
                     pix = page.get_pixmap(dpi=200)
                     ocr_res = ocr_engine.process_pixmap(pix)
                     ocr_text = ocr_res.get("text", "").strip()
+                    ocr_error = ocr_res.get("error")
 
-                    if ocr_text:
+                    if ocr_text and not ocr_error:
                         full_text = ocr_text
                         ocr_applied = True
                         any_ocr_applied = True
                         ocr_confidence = ocr_res.get("confidence")
+                    elif ocr_error:
+                        logger.warning("OCR attempt on page %s failed: %s", page_num, ocr_error)
                 except Exception as ocr_err:
-                    logger.warning("OCR attempt on page %d failed: %s", page_num, str(ocr_err))
+                    logger.warning("OCR attempt on page %s failed: %s", page_num, str(ocr_err))
 
             # Store Page Data
             page_obj = ExtractedPageData(

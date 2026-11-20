@@ -40,13 +40,28 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
 
-from app.api.v1.chat import send_chat_message
+from app.api.v1.chat import (
+    create_chat_session,
+    get_optional_chat_user,
+    get_session_history,
+    list_chat_sessions,
+    send_chat_message,
+)
 from app.database import session as db_session_module
 from app.models.ai import AIProviderEvent
-from app.schemas.chat import SendMessageRequest
+from app.schemas.chat import ChatMessageResponse, CreateSessionRequest, SendMessageRequest
 
 TEST_VISITOR_TOKEN = "test-anonymous-session-capability"
+
+
+def test_chat_response_does_not_expose_provider_switch_reasons():
+    response = ChatMessageResponse.model_construct(
+        fallback_reason="GEMINI model error followed by OPENAI failover"
+    )
+
+    assert "fallback_reason" not in response.model_dump()
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +166,11 @@ def _chat_env(*, chat_session, rag_result, college_header=None,
     rag_mock.answer_question = AsyncMock(return_value=rag_result)
 
     request = MagicMock()
-    request.headers.get.return_value = college_header  # str | None
+    request.headers.get.return_value = (
+        college_header
+        if college_header is not None
+        else str(chat_session.college_id) if chat_session is not None else None
+    )
     request.state.college_id = (
         chat_session.college_id if chat_session is not None else None
     )
@@ -200,6 +219,151 @@ def _rls_before(env, n=0):
         if calls[j][0] == "set_rls_context":
             return calls[j][1]
     return None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("header_college_id", "state_college_id"),
+    [
+        (None, None),
+        (None, "00000000-0000-0000-0000-000000000002"),
+        ("not-a-uuid", None),
+        ("00000000-0000-0000-0000-000000000001", None),
+    ],
+)
+async def test_chat_session_creation_rejects_missing_invalid_or_mismatched_tenant(
+    header_college_id, state_college_id
+):
+    """Creation must use the same validated tenant context as later session reads."""
+    request = MagicMock()
+    request.headers.get.return_value = header_college_id
+    request.state.college_id = state_college_id
+
+    req = CreateSessionRequest(
+        college_id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
+        session_title="Tenant consistency test",
+        language="en",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await create_chat_session(
+            req,
+            request,
+            current_user=None,
+            session=AsyncMock(),
+        )
+
+    assert exc_info.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_chat_optional_auth_does_not_downgrade_invalid_bearer_to_anonymous():
+    with patch(
+        "app.api.v1.chat.get_current_user",
+        new=AsyncMock(return_value=None),
+    ):
+        request = MagicMock()
+        request.headers.get.return_value = None
+        assert await get_optional_chat_user(request, None, AsyncMock()) is None
+
+        request.headers.get.return_value = "Bearer invalid"
+        with pytest.raises(HTTPException) as exc_info:
+            await get_optional_chat_user(
+                request,
+                HTTPAuthorizationCredentials(scheme="Bearer", credentials="invalid"),
+                AsyncMock(),
+            )
+
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_chat_optional_auth_rejects_non_bearer_authorization_header():
+    request = MagicMock()
+    request.headers.get.return_value = "Basic invalid"
+    with pytest.raises(HTTPException) as exc_info:
+        await get_optional_chat_user(request, None, AsyncMock())
+
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail_commit", [False, True])
+async def test_chat_session_creation_returns_only_after_commit(fail_commit):
+    college_id = uuid.uuid4()
+    request = MagicMock()
+    request.headers.get.return_value = str(college_id)
+    req = CreateSessionRequest(college_id=college_id, session_title="Commit test")
+    session = AsyncMock()
+    persisted_ids = []
+    if fail_commit:
+        session.commit.side_effect = RuntimeError("commit failed")
+
+    async def persist(chat_session):
+        now = datetime.now(timezone.utc)
+        chat_session.created_at = now
+        chat_session.updated_at = now
+        persisted_ids.append(chat_session.id)
+        return chat_session
+
+    with patch(
+        "app.api.v1.chat.TenantService.get_active_college",
+        new=AsyncMock(return_value=SimpleNamespace(id=college_id)),
+    ), patch(
+        "app.api.v1.chat._set_chat_context",
+        new=AsyncMock(),
+    ), patch(
+        "app.api.v1.chat.ChatRepository.create_session",
+        new=AsyncMock(side_effect=persist),
+    ):
+        if fail_commit:
+            with pytest.raises(RuntimeError, match="commit failed"):
+                await create_chat_session(req, request, None, session)
+        else:
+            response = await create_chat_session(req, request, None, session)
+            assert response.data.id == persisted_ids[0]
+            assert response.data.college_id == college_id
+            assert response.data.visitor_token
+
+    session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_chat_history_rejects_a_session_from_another_tenant():
+    ait_id = uuid.uuid4()
+    rcti_session = make_chat_session(college_id=uuid.uuid4(), user_id=None)
+
+    with _chat_env(
+        chat_session=rcti_session,
+        rag_result=_rag_result(),
+        college_header=str(ait_id),
+    ) as env:
+        with pytest.raises(HTTPException) as exc_info:
+            await get_session_history(
+                uuid.uuid4(),
+                env.request,
+                None,
+                env.session,
+                visitor_token=TEST_VISITOR_TOKEN,
+            )
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_chat_session_list_requires_matching_header_and_query_tenant():
+    request = MagicMock()
+    request.headers.get.return_value = str(uuid.uuid4())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await list_chat_sessions(
+            request,
+            college_id=uuid.uuid4(),
+            current_user=make_user(uuid.uuid4()),
+            session=AsyncMock(),
+        )
+
+    assert exc_info.value.status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -332,7 +496,7 @@ async def test_cross_user_session_rejected():
             await send_chat_message(uuid.uuid4(), req, env.request,
                                      make_user(other_id, "STUDENT"), env.session)
 
-    assert exc.value.status_code == 403
+    assert exc.value.status_code == 404
     # Ownership is checked before any insert, so nothing is persisted.
     assert _create_messages(env) == []
 
@@ -342,28 +506,30 @@ async def test_cross_user_session_rejected():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_send_message_reestablishes_session_tenant_context():
-    """The message insert context is reset to the fetched session's tenant."""
-    ait_id = uuid.uuid4()
-    rcti_id = uuid.uuid4()
-    chat_session = make_chat_session(college_id=rcti_id, user_id=None)
+@pytest.mark.parametrize(("header_tenant", "session_tenant"), [
+    ("00000000-0000-0000-0000-000000000001", "00000000-0000-0000-0000-000000000002"),
+    ("00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000001"),
+])
+async def test_send_message_rejects_a_session_from_another_tenant(
+    header_tenant, session_tenant
+):
+    """A session cannot be accessed through a different tenant header."""
+    requested_id = uuid.UUID(header_tenant)
+    chat_session = make_chat_session(college_id=uuid.UUID(session_tenant), user_id=None)
 
     with _chat_env(chat_session=chat_session, rag_result=_rag_result(),
-                    college_header=str(ait_id)) as env:
+                    college_header=header_tenant) as env:
         req = SendMessageRequest(message_text="hi")
-        await send_chat_message(
-            uuid.uuid4(), req, env.request, None, env.session,
-            visitor_token=TEST_VISITOR_TOKEN,
-        )
+        with pytest.raises(HTTPException) as exc_info:
+            await send_chat_message(
+                uuid.uuid4(), req, env.request, None, env.session,
+                visitor_token=TEST_VISITOR_TOKEN,
+            )
 
     all_rls = _rls_kwargs(env)
-    # The request tenant is used to scope the session lookup.
-    assert any(kw["college_id"] == ait_id for kw in all_rls)
-    # The insert context is re-established from the fetched session.
-    for n in range(len(_create_messages(env))):
-        ctx = _rls_before(env, n)
-        assert ctx is not None
-        assert ctx["college_id"] == rcti_id
+    assert any(kw["college_id"] == requested_id for kw in all_rls)
+    assert exc_info.value.status_code == 404
+    assert _create_messages(env) == []
 
 
 # ---------------------------------------------------------------------------
@@ -378,6 +544,7 @@ async def test_no_insert_without_authoritative_tenant_context():
 
     with _chat_env(chat_session=chat_session, rag_result=_rag_result()) as env:
         env.request.state.college_id = None
+        env.request.headers.get.return_value = None
         req = SendMessageRequest(message_text="hi")
         with pytest.raises(HTTPException) as exc:
             await send_chat_message(

@@ -69,6 +69,21 @@ def _mock_httpx_response(status_code=200, json_body=None, headers=None):
     return resp
 
 
+def test_provider_error_details_redact_configured_api_keys(monkeypatch):
+    from app.core.config import settings
+    from app.services.ai_provider_service import AIProviderService
+
+    secret = "test-only-gemini-secret-value"
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", secret)
+
+    detail = AIProviderService._redact_provider_secrets(
+        f"request failed for key={secret}"
+    )
+
+    assert secret not in detail
+    assert "[REDACTED]" in detail
+
+
 # ---------------------------------------------------------------------------
 # Answer mode tests (1–6)
 # ---------------------------------------------------------------------------
@@ -79,7 +94,11 @@ async def test_college_info_found_returns_verified_answer_with_citations():
     from app.services.rag_service import RAGService
 
     college_id = uuid.uuid4()
-    chunk = _make_chunk(college_id=college_id, source_type="OFFICIAL_WEBSITE")
+    chunk = _make_chunk(
+        college_id=college_id,
+        source_type="OFFICIAL_WEBSITE",
+        chunk_text="The official B.Tech Computer Engineering tuition fee is ₹78,000.",
+    )
     college = _make_college(college_id=college_id)
     mock_session = AsyncMock()
     mock_session.execute = AsyncMock(return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[chunk])))))
@@ -160,8 +179,8 @@ async def test_college_info_missing_returns_general_ai_answer():
 
 
 @pytest.mark.asyncio
-async def test_partial_college_info_returns_mixed_answer():
-    """Test 3: All chunk scores below 0.60 → MIXED mode."""
+async def test_unrelated_low_similarity_chunks_use_general_ai_fallback():
+    """Low similarity and no question-term evidence must not enter college context."""
     from app.services.rag_service import RAGService
 
     college_id = uuid.uuid4()
@@ -170,7 +189,7 @@ async def test_partial_college_info_returns_mixed_answer():
     mock_session = AsyncMock()
     rag = RAGService()
 
-    # All scores below 0.60
+    # These scores exceed the retrieval floor but the text does not answer the query.
     scored_chunks = [(chunk, 0.45), (chunk, 0.52)]
 
     with patch.object(rag, "retrieve_relevant_chunks", return_value=scored_chunks), \
@@ -196,7 +215,117 @@ async def test_partial_college_info_returns_mixed_answer():
             college=college,
         )
 
-    assert result["answer_mode"] == "MIXED"
+    assert result["answer_mode"] == "GENERAL_AI"
+    assert result["source_citations"] == []
+    assert result["is_verified"] is False
+    assert "AI Guidance — Not verified by college" in result["answer_text"]
+    generate_call = mock_ai.generate_response.await_args
+    assert generate_call is not None
+    assert generate_call.kwargs["context_chunks"] == []
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "What is the lunar rover maintenance schedule for the observatory?",
+        "Who won the 1874 intergalactic chess championship on Mars?",
+        "What is the boiling point of pure water at standard atmospheric pressure?",
+        "What is the orbital period of Mars around the Sun?",
+        "How do I prepare a traditional sourdough starter at home?",
+        "What is the exact population of Thimphu, Bhutan?",
+    ],
+)
+def test_step47_unrelated_queries_reject_actual_college_evidence(query):
+    """The six Step 4.7 false-positive queries must not pass the evidence gate."""
+    from app.services.rag_service import RAGService
+
+    rag = RAGService()
+    evidence = [
+        _make_chunk(
+            source_type="OFFICIAL_WEBSITE",
+            heading="Academic Calendar",
+            chunk_text=(
+                "Stay updated with important academic activities, examination "
+                "schedules, holidays, and institutional events."
+            ),
+        ),
+        _make_chunk(
+            source_type="OFFICIAL_WEBSITE",
+            heading="Degree Engineering Admissions 2026",
+            chunk_text=(
+                "Applications open for Management and Vacant Quota seats across "
+                "Computer Engineering. Apply between 05-08-2026 and 10-08-2026."
+            ),
+        ),
+        _make_chunk(
+            source_type="PDF",
+            heading="Admission Verification",
+            chunk_text=(
+                "Applicants must bring the original school transcript and one "
+                "signed identity declaration. The transcript must reach the "
+                "admission office by 17 July 2026 at 4:30 PM."
+            ),
+        ),
+    ]
+
+    assert rag._select_relevant_evidence(
+        query, [(chunk, 0.45) for chunk in evidence]
+    ) == []
+
+
+@pytest.mark.parametrize(
+    ("query", "evidence_text"),
+    [
+        (
+            "How many seats are available in Computer Engineering?",
+            "Program Seats Start Date: Computer Engineering 120 15 Aug 2026.",
+        ),
+        (
+            "By what date and time must the transcript reach the admission office?",
+            "The transcript must reach the admission office by 17 July 2026 at 4:30 PM.",
+        ),
+        (
+            "What caveat applies to the synthetic seat counts and start date?",
+            "Footnote: seat counts and dates are synthetic test values; verify official details.",
+        ),
+    ],
+)
+def test_relevance_gate_preserves_table_detail_and_footnote_evidence(query, evidence_text):
+    from app.services.rag_service import RAGService
+
+    chunk = _make_chunk(source_type="PDF", chunk_text=evidence_text)
+    selected = RAGService._select_relevant_evidence(query, [(chunk, 0.42)])
+
+    assert selected == [(chunk, 0.42)]
+
+
+def test_relevance_gate_combines_multiple_chunks_for_multi_part_question():
+    from app.services.rag_service import RAGService
+
+    website_chunk = _make_chunk(
+        source_type="OFFICIAL_WEBSITE",
+        heading="Degree Engineering Admissions 2026",
+        chunk_text="Applications open. Apply between 05-08-2026 and 10-08-2026.",
+    )
+    pdf_chunk = _make_chunk(
+        source_type="PDF",
+        heading="Extracted Tables",
+        chunk_text="Program | Seats | Computer Engineering | 120",
+    )
+    query = (
+        "What are the application dates for degree engineering, and what "
+        "seat counts are listed for Computer Engineering?"
+    )
+    selected = RAGService._select_relevant_evidence(
+        query,
+        [(website_chunk, 0.43), (pdf_chunk, 0.41)],
+    )
+
+    assert {chunk.source_type for chunk, _ in selected} == {
+        "OFFICIAL_WEBSITE",
+        "PDF",
+    }
+    assert RAGService._select_relevant_evidence(query, [(pdf_chunk, 0.41)]) == []
 
 
 @pytest.mark.asyncio
@@ -324,6 +453,58 @@ async def test_missing_college_specific_fact_no_fabrication():
     # AI should not fabricate specific fee amounts (₹78,000 is a known fabrication risk)
     assert "₹78,000" not in result["answer_text"]
     assert result["is_verified"] is False
+
+
+@pytest.mark.asyncio
+async def test_missing_fee_is_not_grounded_by_unrelated_seat_table():
+    from app.services.rag_service import RAGService
+
+    college_id = uuid.uuid4()
+    college = _make_college(college_id=college_id)
+    session = AsyncMock()
+    rag = RAGService()
+    seat_table = _make_chunk(
+        college_id=college_id,
+        source_type="PDF",
+        heading="Extracted Tables",
+        chunk_text=(
+            "| Program | Seats | Start Date |\n"
+            "| Computer Engineering | 120 | 15 Aug 2026 |"
+        ),
+    )
+
+    with (
+        patch.object(
+            rag,
+            "retrieve_relevant_chunks",
+            new=AsyncMock(return_value=[(seat_table, 0.81)]),
+        ),
+        patch.object(rag, "get_recent_conversation_context", new=AsyncMock(return_value=[])),
+        patch("app.services.rag_service.settings") as mock_settings,
+        patch("app.services.rag_service.ai_provider_service") as mock_ai,
+    ):
+        mock_settings.AI_GENERAL_ANSWERING_ENABLED = True
+        mock_ai.generate_response = AsyncMock(
+            return_value={
+                "text": "AI Guidance — Not verified by college\n\nI cannot verify the fee.",
+                "provider": "GEMINI",
+                "model": "test-model",
+                "prompt_tokens": 1,
+                "completion_tokens": 1,
+            }
+        )
+
+        result = await rag.answer_question(
+            college_id=college_id,
+            query="What is the exact tuition fee for the 2026 engineering program?",
+            session=session,
+            college=college,
+        )
+
+    assert result["answer_mode"] == "GENERAL_AI"
+    assert result["source_citations"] == []
+    assert result["is_verified"] is False
+    assert mock_ai.generate_response.await_args.kwargs["context_chunks"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -1088,6 +1269,65 @@ async def test_invalid_credentials_permanent_failure_not_retried():
 
 
 @pytest.mark.asyncio
+async def test_invalid_model_404_is_permanent_for_that_model():
+    """Ensure invalid or retired Gemini model IDs are treated as permanent per-model failures."""
+    from app.services.ai_provider_service import AIProviderService
+
+    svc = AIProviderService()
+    svc.is_placeholder_key = False
+    svc.gemini_key = "fake-key-1234567890abcdef"
+
+    invalid_model_404 = _mock_httpx_response(404, {}, {})
+    invalid_model_404.text = (
+        '{"error":{"code":404,"message":"This model models/gemini-2.5-flash is no longer available to new users. '
+        'Please update your code to use models/gemini-3.8-flash."}}'
+    )
+
+    post_call_count = {"n": 0}
+
+    async def _post(*args, **kwargs):
+        post_call_count["n"] += 1
+        return invalid_model_404
+
+    with patch("app.services.ai_provider_service.settings") as mock_settings, \
+         patch("app.services.ai_provider_service.provider_health_tracker") as mock_tracker, \
+         patch("app.services.ai_provider_service.asyncio.sleep", new_callable=AsyncMock), \
+         patch("httpx.AsyncClient") as mock_client_cls:
+
+        mock_settings.AI_MAX_RETRIES = 3
+        mock_settings.AI_TIMEOUT_SECONDS = 30
+        mock_settings.AI_CIRCUIT_BREAKER_THRESHOLD = 5
+        mock_settings.gemini_model_list = ["gemini-2.5-flash"]
+        mock_settings.openai_model_list = []
+        mock_settings.xkiro_model_list = []
+        mock_settings.OPENAI_API_KEY = None
+        mock_settings.SECONDARY_AI_API_KEY = None
+        mock_settings.XKIRO_API_KEY = None
+
+        mock_tracker.is_available = AsyncMock(return_value=True)
+        mock_tracker.record_success = AsyncMock()
+        mock_tracker.record_failure = AsyncMock()
+        mock_tracker.record_retry = AsyncMock()
+        mock_tracker.record_fallback_event = AsyncMock()
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=_post)
+        mock_client_cls.return_value = mock_client
+
+        result = await svc.generate_response(
+            prompt="Test",
+            system_instruction="Be helpful",
+            context_chunks=[],
+        )
+
+    assert post_call_count["n"] == 1
+    assert result["provider"] == "UNAVAILABLE"
+    assert result["fallback_reason"]
+
+
+@pytest.mark.asyncio
 async def test_circuit_breaker_trips_and_recovers():
     """Test 20: Drive failures >= threshold → is_available returns False; then recovers after cooldown."""
     from app.services.provider_health import ProviderHealthTracker
@@ -1524,6 +1764,7 @@ async def test_missing_tenant_context_rejected():
     # Return empty scalars → no chunks for this college
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = []
+    mock_result.all.return_value = []
     mock_session.execute = AsyncMock(return_value=mock_result)
 
     rag = RAGService()
@@ -1578,5 +1819,8 @@ async def test_provider_failure_does_not_create_false_successful_chat_record():
 
     # Result must clearly indicate failure, not fabricated success
     assert result["answer_source_type"] == "NO_RELIABLE_INFORMATION"
+    assert result["answer_mode"] == "GENERAL_AI"
     assert result["is_verified"] is False
+    assert result["source_citations"] == []
     assert "unavailable" in result["answer_text"].lower() or "unable" in result["answer_text"].lower()
+    assert "all_providers_failed" not in result["answer_text"]

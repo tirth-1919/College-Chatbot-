@@ -26,6 +26,7 @@ from tests.config import (
     FAILED_REPORT_FILE,
     BASELINE_FILE
 )
+from app.middleware.rate_limit import rate_limiter
 from tests.dashboard import TestDashboard
 from tests.reporter import (
     generate_html_report,
@@ -101,6 +102,115 @@ def run_backend_pytest_suite() -> Dict[str, Any]:
                 "detail": f"Pytest invocation error: {e}"
             }]
         }
+
+
+def _frontend_test_environment() -> Dict[str, str]:
+    """Provide npm with OS essentials and a loopback-only API endpoint."""
+    allowed_os_variables = (
+        "PATH",
+        "PATHEXT",
+        "SYSTEMROOT",
+        "WINDIR",
+        "COMSPEC",
+        "TEMP",
+        "TMP",
+        "USERPROFILE",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "HOME",
+        "HOMEDRIVE",
+        "HOMEPATH",
+    )
+    env = {
+        key: os.environ[key]
+        for key in allowed_os_variables
+        if key in os.environ
+    }
+    env["NEXT_PUBLIC_API_URL"] = "http://127.0.0.1:8000/api/v1"
+    return env
+
+
+def run_frontend_package_suite() -> Dict[str, Any]:
+    """Run each frontend's package tests and production build."""
+    results = []
+    npm = "npm.cmd" if os.name == "nt" else "npm"
+    env = _frontend_test_environment()
+
+    for name in ("user-frontend", "admin-frontend"):
+        project_dir = ROOT_DIR / "apps" / name
+        package_file = project_dir / "package.json"
+        try:
+            with package_file.open(encoding="utf-8") as package_stream:
+                package = json.load(package_stream)
+        except (OSError, json.JSONDecodeError):
+            results.append({
+                "category": "Frontend Package",
+                "name": f"{name}: package configuration",
+                "target": str(package_file.relative_to(ROOT_DIR)),
+                "status": "FAIL",
+                "duration_ms": 0.0,
+                "detail": "Could not read a valid package.json.",
+            })
+            continue
+
+        scripts = package.get("scripts") or {}
+        checks = (
+            ("test", "test", "unit tests"),
+            ("build", "run", "production build"),
+        )
+        for script_name, npm_command, label in checks:
+            title = f"{name}: {label}"
+            if script_name not in scripts:
+                results.append({
+                    "category": "Frontend Package",
+                    "name": title,
+                    "target": str(project_dir.relative_to(ROOT_DIR)),
+                    "status": "SKIPPED",
+                    "duration_ms": 0.0,
+                    "detail": f"No '{script_name}' script is configured in package.json.",
+                })
+                continue
+
+            command = [npm, npm_command]
+            if npm_command == "run":
+                command.append(script_name)
+            t0 = time.time()
+            try:
+                proc = subprocess.run(
+                    command,
+                    cwd=str(project_dir),
+                    capture_output=True,
+                    text=True,
+                    timeout=600,
+                    env=env,
+                )
+                status = "PASS" if proc.returncode == 0 else "FAIL"
+                detail = (
+                    f"npm {' '.join(command[1:])} completed."
+                    if proc.returncode == 0
+                    else f"npm {' '.join(command[1:])} exited with code {proc.returncode}; "
+                         "rerun that command in the target directory for its output."
+                )
+            except subprocess.TimeoutExpired:
+                status = "FAIL"
+                detail = f"npm {' '.join(command[1:])} exceeded the 600-second timeout."
+            except OSError as exc:
+                status = "FAIL"
+                detail = f"Could not start npm: {type(exc).__name__}."
+
+            results.append({
+                "category": "Frontend Package",
+                "name": title,
+                "target": str(project_dir.relative_to(ROOT_DIR)),
+                "status": status,
+                "duration_ms": (time.time() - t0) * 1000,
+                "detail": detail,
+            })
+
+    return {
+        "suite_name": "Frontend Package Tests & Builds",
+        "results": results,
+    }
 
 
 def run_coverage_analysis() -> Dict[str, Any]:
@@ -191,6 +301,7 @@ async def execute_suites(command: str) -> int:
             ("Security Controls & Defensive Hardening", run_security_suite),
             ("Performance Benchmark & System Telemetry", run_performance_suite),
             ("Integration & End-to-End Workflows", run_integration_suite),
+            ("Frontend Package Tests & Builds", lambda: run_frontend_package_suite()),
             ("Frontend Routes & Playwright UI", run_frontend_tests),
             ("Backend Unit Test Suite", lambda: run_backend_pytest_suite()),
             ("Code Coverage & Quality Analysis", lambda: run_coverage_analysis()),
@@ -208,7 +319,10 @@ async def execute_suites(command: str) -> int:
     elif command == "test-integration":
         plan = [("Integration & End-to-End Workflows", run_integration_suite)]
     elif command == "test-frontend":
-        plan = [("Frontend Routes & Playwright UI", run_frontend_tests)]
+        plan = [
+            ("Frontend Package Tests & Builds", lambda: run_frontend_package_suite()),
+            ("Frontend Routes & Playwright UI", run_frontend_tests),
+        ]
     elif command == "test-backend":
         plan = [("Backend Unit Test Suite", lambda: run_backend_pytest_suite())]
     elif command == "test-coverage":
@@ -230,14 +344,25 @@ async def execute_suites(command: str) -> int:
         plan = [
             ("Authentication & RBAC Authorization", run_auth_rbac_suite),
             ("REST API & Endpoint Routing", run_api_suite),
+            ("Frontend Package Tests & Builds", lambda: run_frontend_package_suite()),
             ("Frontend Routes & Playwright UI", run_frontend_tests)
         ]
     else:
         dashboard.console.print(f"[bold red]Unknown test command:[/bold red] {command}")
         return 1
 
+    if command in {"test-all", "test-auth", "test-api", "test-integration", "test-regression", "test-failed"}:
+        from tests.fixture_setup import TestFixtureError, provision_test_accounts
+
+        try:
+            await provision_test_accounts()
+        except TestFixtureError as exc:
+            dashboard.console.print(f"[bold red]✖ Test identity setup failed:[/bold red] {exc}")
+            return 1
+
     # Execute designated suites
     for title, suite_fn in plan:
+        rate_limiter.reset()
         dashboard.console.print(f"[cyan]▶ Executing Suite:[/cyan] [bold]{title}[/bold]...")
         if asyncio.iscoroutinefunction(suite_fn):
             raw_out = await suite_fn()

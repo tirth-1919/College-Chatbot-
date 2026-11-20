@@ -34,6 +34,29 @@ _RETRIABLE_STATUSES = {429, 500, 502, 503, 504}
 _PERMANENT_FAIL_STATUSES = {400, 401, 403}
 
 
+def _looks_like_invalid_model_error(response_text: str) -> bool:
+    """Return True when Google identifies a model as invalid or unavailable."""
+    if not response_text:
+        return False
+
+    text = response_text.lower()
+    markers = (
+        "model not found",
+        "no longer available to new users",
+        "not available to new users",
+        "model is no longer available",
+        "does not exist",
+        "not a valid model",
+        "unsupported model",
+        "unknown model",
+        "invalid model",
+        "model not supported",
+        "could not find model",
+        "model unavailable for this account",
+    )
+    return any(marker in text for marker in markers)
+
+
 def _jitter_backoff(attempt: int, base: float = 1.0, cap: float = 30.0) -> float:
     """Exponential backoff with full jitter: uniform(0, min(cap, base * 2^attempt))."""
     return random.uniform(0, min(cap, base * (2 ** attempt)))
@@ -56,6 +79,18 @@ class AIProviderService:
         self.secondary_model = settings.SECONDARY_AI_MODEL
         # Legacy single-model attribute (still used by embedding_service etc.)
         self.gemini_model = settings.GEMINI_DEFAULT_MODEL
+
+    @staticmethod
+    def _redact_provider_secrets(detail: str) -> str:
+        for secret in (
+            settings.GEMINI_API_KEY,
+            settings.OPENAI_API_KEY,
+            settings.SECONDARY_AI_API_KEY,
+            settings.XKIRO_API_KEY,
+        ):
+            if isinstance(secret, str) and secret:
+                detail = detail.replace(secret, "[REDACTED]")
+        return detail
 
     # ------------------------------------------------------------------
     # Public interface
@@ -146,20 +181,22 @@ class AIProviderService:
                         return result
 
                     except _PermanentFailure as exc:
-                        reason = f"{provider_name}::{model} permanent: {exc}"
+                        detail = self._redact_provider_secrets(str(exc))
+                        reason = f"{provider_name}::{model} permanent: {detail}"
                         logger.warning("Permanent failure, skipping model: %s", reason)
                         fallback_reasons.append(reason)
                         await provider_health_tracker.record_failure(
-                            provider_name, model, str(exc), permanent=True
+                            provider_name, model, detail, permanent=True
                         )
                         break  # skip remaining retries for this model
 
                     except _RetriableFailure as exc:
-                        reason = f"{provider_name}::{model} attempt {attempt}: {exc}"
+                        detail = self._redact_provider_secrets(str(exc))
+                        reason = f"{provider_name}::{model} attempt {attempt}: {detail}"
                         logger.warning("Retriable failure: %s", reason)
                         fallback_reasons.append(reason)
                         await provider_health_tracker.record_failure(
-                            provider_name, model, str(exc), permanent=False
+                            provider_name, model, detail, permanent=False
                         )
                         retry_after = getattr(exc, "retry_after", None)
                         if retry_after:
@@ -169,11 +206,12 @@ class AIProviderService:
                             break  # exhausted retries for this model
 
                     except Exception as exc:
-                        reason = f"{provider_name}::{model} unexpected: {exc}"
-                        logger.error("Unexpected error: %s", reason, exc_info=True)
+                        detail = self._redact_provider_secrets(str(exc))
+                        reason = f"{provider_name}::{model} unexpected: {detail}"
+                        logger.error("Unexpected error: %s", reason)
                         fallback_reasons.append(reason)
                         await provider_health_tracker.record_failure(
-                            provider_name, model, str(exc), permanent=False
+                            provider_name, model, detail, permanent=False
                         )
                         break
 
@@ -220,7 +258,7 @@ class AIProviderService:
         """Calls Gemini REST API for the given model."""
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model}:generateContent?key={self.gemini_key}"
+            f"{model}:generateContent"
         )
 
         evidence_blocks = []
@@ -243,7 +281,11 @@ class AIProviderService:
 
         try:
             async with httpx.AsyncClient(timeout=float(settings.AI_TIMEOUT_SECONDS)) as client:
-                res = await client.post(url, json=payload)
+                res = await client.post(
+                    url,
+                    headers={"x-goog-api-key": self.gemini_key},
+                    json=payload,
+                )
         except (httpx.TimeoutException, httpx.ConnectError) as exc:
             raise _RetriableFailure(f"GEMINI::{model} transport error: {exc}") from exc
 
@@ -383,16 +425,17 @@ class AIProviderService:
     @staticmethod
     def _raise_for_status(res: httpx.Response, provider: str, model: str) -> None:
         """Raises _PermanentFailure or _RetriableFailure based on HTTP status."""
+        response_text = res.text[:200]
         if res.status_code == 200:
             return
         if res.status_code in _PERMANENT_FAIL_STATUSES:
-            raise _PermanentFailure(
-                f"{provider}::{model} HTTP {res.status_code}: {res.text[:200]}"
-            )
+            raise _PermanentFailure(f"{provider}::{model} HTTP {res.status_code}: {response_text}")
+
+        if res.status_code == 404 and _looks_like_invalid_model_error(response_text):
+            raise _PermanentFailure(f"{provider}::{model} invalid model HTTP 404: {response_text}")
+
         if res.status_code in _RETRIABLE_STATUSES:
-            err = _RetriableFailure(
-                f"{provider}::{model} HTTP {res.status_code}: {res.text[:200]}"
-            )
+            err = _RetriableFailure(f"{provider}::{model} HTTP {res.status_code}: {response_text}")
             # Respect Retry-After header
             retry_after = res.headers.get("Retry-After")
             if retry_after:
@@ -401,10 +444,9 @@ class AIProviderService:
                 except ValueError:
                     pass
             raise err
-        # Any other non-200 is treated as retriable
-        raise _RetriableFailure(
-            f"{provider}::{model} HTTP {res.status_code}: {res.text[:200]}"
-        )
+        # Any other non-200 is treated as retriable unless the API explicitly identifies
+        # the model as invalid or unavailable.
+        raise _RetriableFailure(f"{provider}::{model} HTTP {res.status_code}: {response_text}")
 
     # ------------------------------------------------------------------
     # Offline / dev-mode fallback (no real API key configured)

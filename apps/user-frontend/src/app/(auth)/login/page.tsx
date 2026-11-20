@@ -16,7 +16,9 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    searchParams.get("session_expired") === "1" ? "Your session expired. Please sign in again." : null
+  );
   const [forgotSent, setForgotSent] = useState(false);
   const [autoLoggingIn, setAutoLoggingIn] = useState(false);
 
@@ -24,56 +26,24 @@ function LoginContent() {
     setError(null);
     setLoading(true);
 
-    let res = await authService.login({ email: loginEmail, password: loginPass });
-
-    // Resilient fallback for test student accounts if backend is offline
-    if (!res.success && (res.error?.includes("reach") || res.error?.includes("fetch") || res.error?.includes("Network"))) {
-      if (loginEmail.toLowerCase().includes("student") || loginEmail.toLowerCase().includes("gmail.com")) {
-        res = {
-          success: true,
-          data: {
-            access_token: "demo_student_token_" + Date.now(),
-            token_type: "bearer",
-            expires_in_minutes: 1440,
-            user_id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
-            email: loginEmail,
-            full_name: "Dharmik Vataliya",
-            role: "STUDENT",
-            college_id: "11111111-1111-1111-1111-111111111111",
-            is_verified: true,
-          },
-        };
-      }
-    }
+    const res = await authService.login({ email: loginEmail, password: loginPass });
 
     setLoading(false);
 
     if (res.success && res.data) {
-      localStorage.setItem("auth_token", res.data.access_token);
-      
-      const userProfile = {
-        id: res.data.user_id,
-        email: res.data.email,
-        full_name: res.data.full_name,
-        role: res.data.role,
-        college_id: res.data.college_id || "11111111-1111-1111-1111-111111111111",
-        is_verified: res.data.is_verified,
-      };
-      localStorage.setItem("user_profile", JSON.stringify(userProfile));
-
-      if (res.data.college_id) {
-        localStorage.setItem("selected_college_id", res.data.college_id);
-      } else if (!localStorage.getItem("selected_college_id")) {
-        localStorage.setItem("selected_college_id", "11111111-1111-1111-1111-111111111111");
-        localStorage.setItem("selected_college_name", "Ahmedabad Institute of Technology");
-      }
-
       if (rememberMe) {
         localStorage.setItem("remembered_email", loginEmail);
       }
       
-      const dest = searchParams.get("redirect") || "/chat";
-      window.location.href = dest;
+      const requestedDestination = searchParams.get("redirect") || "/chat";
+      let destination = "/chat";
+      try {
+        const parsedDestination = new URL(requestedDestination, window.location.origin);
+        if (parsedDestination.origin === window.location.origin) {
+          destination = `${parsedDestination.pathname}${parsedDestination.search}${parsedDestination.hash}`;
+        }
+      } catch {}
+      window.location.assign(destination);
     } else {
       setError(res.error || "Failed to sign in. Please verify your credentials.");
       setAutoLoggingIn(false);

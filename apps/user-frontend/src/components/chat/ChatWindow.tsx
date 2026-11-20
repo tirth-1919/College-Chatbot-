@@ -8,6 +8,8 @@ import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { SuggestedQuestions } from "./SuggestedQuestions";
 import { SupportedLanguage } from "@/hooks/use-translation";
+import Link from "next/link";
+import { Building2 } from "lucide-react";
 
 interface ChatWindowProps {
   collegeName: string;
@@ -56,11 +58,22 @@ export function ChatWindow({
           <div className="py-8">
             <div className="text-center max-w-md mx-auto mb-6">
               <h2 className="text-xl font-bold text-[#F5F5F5] mb-2">
-                Ask {collegeName} Anything
+                {collegeName ? `Ask ${collegeName} Anything` : "Choose a college to start"}
               </h2>
               <p className="text-xs text-[#A1A1AA] leading-relaxed">
-                Our AI answers are grounded strictly in the official website, verified admission notifications, and fee brochures.
+                {collegeName
+                  ? "Our AI answers are grounded strictly in the official website, verified admission notifications, and fee brochures."
+                  : "Select an institution once. You can switch colleges anytime from the chat header or this page."}
               </p>
+              {!collegeName && (
+                <Link
+                  href="/colleges"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#6366F1] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#4F46E5]"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Select College Institution
+                </Link>
+              )}
             </div>
             <SuggestedQuestions
               onSelect={onSendMessage}

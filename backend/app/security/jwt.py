@@ -27,6 +27,7 @@ def create_access_token(
         "sub": str(subject),
         "role": role,
         "college_id": str(college_id) if college_id else None,
+        "token_type": "access",
         "exp": expire,
         "iat": datetime.now(timezone.utc),
         "jti": str(uuid.uuid4()),

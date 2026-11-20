@@ -47,7 +47,8 @@ class TenantService:
         Rules:
         - SUPER_ADMIN: Can access any college tenant platform-wide.
         - COLLEGE_ADMIN: Can only access their assigned college.
-        - STUDENT: Can query public information from active colleges.
+        - STUDENT: Assigned students are restricted to their memberships;
+          unassigned students can query public information from active colleges.
         """
         college = await self.get_active_college(target_college_id)
 
@@ -65,6 +66,15 @@ class TenantService:
                 )
             return college
 
-        # Regular students can access active colleges for public chat/reading
+        memberships = await self.membership_repo.list_by_user_id(user.id)
+        if memberships and not any(
+            membership.college_id == target_college_id
+            for membership in memberships
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cross-tenant access denied: You are not a member of this college.",
+            )
+
         return college
 

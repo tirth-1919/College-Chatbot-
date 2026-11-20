@@ -9,7 +9,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
 from datetime import datetime, timezone
 
-from app.services.pdf_validator import PDF_MAGIC_BYTES
+import fitz
+
+
+def _valid_pdf_bytes():
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "A valid isolated PDF fixture for document upload tests.")
+    content = document.tobytes()
+    document.close()
+    return content
 
 
 # Test 1: upload_pdf_document — storage upload called, DB record created, status = QUEUED on success
@@ -21,7 +30,7 @@ async def test_upload_pdf_document_success():
 
     college_id = uuid.uuid4()
     user_id = uuid.uuid4()
-    valid_pdf = PDF_MAGIC_BYTES + b"\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF"
+    valid_pdf = _valid_pdf_bytes()
 
     with (
         patch.object(document_service, "register_and_upload", new_callable=AsyncMock) as mock_register,
@@ -64,7 +73,7 @@ async def test_upload_pdf_document_storage_failure_no_db_record():
 
     college_id = uuid.uuid4()
     user_id = uuid.uuid4()
-    valid_pdf = PDF_MAGIC_BYTES + b"\n%%EOF"
+    valid_pdf = _valid_pdf_bytes()
 
     with (
         patch.object(document_storage_service, "upload_file", side_effect=RuntimeError("Storage unavailable")),
@@ -93,7 +102,7 @@ async def test_upload_pdf_document_db_commit_failure_cleans_up_storage():
     college_id = uuid.uuid4()
     user_id = uuid.uuid4()
     doc_id = uuid.uuid4()
-    valid_pdf = PDF_MAGIC_BYTES + b"\n%%EOF"
+    valid_pdf = _valid_pdf_bytes()
 
     delete_called = []
 

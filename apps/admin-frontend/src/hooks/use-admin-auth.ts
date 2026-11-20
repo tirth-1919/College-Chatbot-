@@ -19,6 +19,33 @@ export function useAdminAuth() {
       return;
     }
 
+    let cancelled = false;
+
+    // Multiple admin tabs share localStorage. A stale tab must not invalidate a
+    // newer login when its own session check completes later.
+    const syncSessionFromStorage = () => {
+      const latestToken = localStorage.getItem("admin_auth_token");
+      if (!latestToken) {
+        setState({ admin: null, token: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+
+      try {
+        const latestUser = JSON.parse(localStorage.getItem("admin_user") || "null");
+        if (latestUser && (latestUser.role === "COLLEGE_ADMIN" || latestUser.role === "SUPER_ADMIN")) {
+          setState({ admin: latestUser, token: latestToken, isAuthenticated: true, isLoading: false });
+        }
+      } catch {
+        // A concurrent login may be between writing its token and user record.
+      }
+    };
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "admin_auth_token" || event.key === "admin_user") {
+        syncSessionFromStorage();
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+
     // Preload cached user profile for instant authentication without flicker
     let cachedUser: AdminUser | null = null;
     const cachedStr = localStorage.getItem("admin_user");
@@ -43,6 +70,7 @@ export function useAdminAuth() {
     // 3. Verify / refresh active session from backend
     adminApiRequest<AdminUser>("/auth/me")
       .then((res) => {
+        if (cancelled || localStorage.getItem("admin_auth_token") !== token) return;
         if (res.success && res.data && (res.data.role === "COLLEGE_ADMIN" || res.data.role === "SUPER_ADMIN")) {
           localStorage.setItem("admin_user", JSON.stringify(res.data));
           setState({
@@ -73,6 +101,7 @@ export function useAdminAuth() {
         }
       })
       .catch(() => {
+        if (cancelled || localStorage.getItem("admin_auth_token") !== token) return;
         if (cachedUser) {
           setState({
             admin: cachedUser,
@@ -84,6 +113,11 @@ export function useAdminAuth() {
           setState({ admin: null, token: null, isAuthenticated: false, isLoading: false });
         }
       });
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const logout = () => {

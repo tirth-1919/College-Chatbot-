@@ -7,6 +7,7 @@ import { SourceCitation } from "./SourceCitation";
 import { FeedbackModal } from "./FeedbackModal";
 import { useVoice } from "@/hooks/use-voice";
 import { SupportedLanguage } from "@/hooks/use-translation";
+import Link from "next/link";
 import {
   Copy,
   Check,
@@ -16,6 +17,7 @@ import {
   ThumbsUp,
   User,
   Sparkles,
+  ArrowLeftRight,
 } from "lucide-react";
 
 interface ChatMessageProps {
@@ -26,6 +28,13 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
   const isUser = message.sender_role === "user";
+  const switchCollegeMatch = !isUser
+    ? message.message_text.match(/__CAMPUSAI_SWITCH_COLLEGE__:([^\n]+)/)
+    : null;
+  const switchCollegeName = switchCollegeMatch?.[1]?.trim() || null;
+  const displayText = switchCollegeName
+    ? message.message_text.replace(/__CAMPUSAI_SWITCH_COLLEGE__:[^\n]+/, "").trim()
+    : message.message_text;
   const [copied, setCopied] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const { isSpeaking, speak, stopSpeaking } = useVoice();
@@ -85,7 +94,17 @@ export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
         )}
 
         {/* Message Content */}
-        <div className="whitespace-pre-wrap">{message.message_text}</div>
+        <div className="whitespace-pre-wrap">{displayText}</div>
+
+        {switchCollegeName && (
+          <Link
+            href="/colleges"
+            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#6366F1]/50 bg-[#6366F1]/10 px-3 py-2 text-xs font-semibold text-[#A5B4FC] hover:bg-[#6366F1]/20"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+            Switch to {switchCollegeName}
+          </Link>
+        )}
 
         {/* Source Citations */}
         {!isUser && message.source_citations && (
