@@ -228,10 +228,6 @@ export default function ChatPage() {
     loadingCollegeIdsRef.current.add(cId);
 
     try {
-      if (messagesRef.current.length > 0) {
-        return;
-      }
-
       let cachedSessions: ChatSessionData[] = [];
       try {
         const raw = localStorage.getItem(`${STORAGE_PREFIX}${cId}`);
@@ -274,7 +270,10 @@ export default function ChatPage() {
           historyLoadSessionRef.current = active.id;
           setActiveSessionId(active.id);
           persistActiveSession(cId, active.id);
-          setMessages(active.messages || []);
+          // If no messages on screen currently, load active session's messages
+          if (messagesRef.current.length === 0) {
+            setMessages(active.messages || []);
+          }
           persistSessions(cId, verified);
           return;
         }
@@ -289,7 +288,15 @@ export default function ChatPage() {
           setSessions(res.data);
           setActiveSessionId(active.id);
           persistActiveSession(cId, active.id);
-          setMessages([]);
+
+          // If no messages on screen currently, load active session's message history from backend
+          if (messagesRef.current.length === 0) {
+            historyLoadSessionRef.current = active.id;
+            const history = await chatService.getSessionHistory(active.id, cId);
+            if (collegeIdRef.current === cId && history.success && history.data?.messages) {
+              setMessages(history.data.messages);
+            }
+          }
           persistSessions(cId, res.data);
         }
       }
@@ -298,10 +305,20 @@ export default function ChatPage() {
     }
   }, []);
 
+  // Handle active college changes — always keep chat history on screen
+  const prevCollegeIdRef = useRef<string>("");
+
   useEffect(() => {
-    if (collegeContextReady && collegeId) {
-      loadSessions(collegeId);
+    if (!collegeContextReady || !collegeId) return;
+
+    if (prevCollegeIdRef.current && prevCollegeIdRef.current !== collegeId) {
+      loadingCollegeIdsRef.current.delete(collegeId);
+      historyLoadSessionRef.current = null;
+      // Do NOT wipe messages here — always keep visible chat history on screen
     }
+
+    prevCollegeIdRef.current = collegeId;
+    loadSessions(collegeId);
   }, [collegeContextReady, collegeId, loadSessions]);
 
   // Load Message History when activeSessionId changes
@@ -357,7 +374,14 @@ export default function ChatPage() {
     }
 
     const newSession: ChatSessionData = { ...created.data, messages: [] };
-    const updatedSessions = [newSession, ...sessions.filter((s) => s.college_id === targetCollege.id)];
+    let cachedTargetSessions: ChatSessionData[] = [];
+    try {
+      const raw = localStorage.getItem(`${STORAGE_PREFIX}${targetCollege.id}`);
+      if (raw) cachedTargetSessions = JSON.parse(raw);
+    } catch (e) {}
+    if (!Array.isArray(cachedTargetSessions)) cachedTargetSessions = [];
+
+    const updatedSessions = [newSession, ...cachedTargetSessions.filter((s) => s.id !== newSession.id)];
     setSessions(updatedSessions);
     setActiveSessionId(newSession.id);
     persistActiveSession(targetCollege.id, newSession.id);
@@ -570,7 +594,13 @@ export default function ChatPage() {
               session_title: s.session_title === "New Conversation"
                 ? (trimmed.slice(0, 36) + (trimmed.length > 36 ? "..." : ""))
                 : s.session_title,
-              messages: allMessages,
+              messages: allMessages.filter(
+                (m) =>
+                  m.session_id === currentSessionId ||
+                  !m.session_id ||
+                  m.session_id === "session" ||
+                  m.session_id === "pending"
+              ),
               updated_at: new Date().toISOString(),
             };
           }
@@ -634,7 +664,8 @@ export default function ChatPage() {
       }
     }
 
-    // 3. Update active college state & storage
+    // 3. Update active college state & storage — do NOT wipe messages so history stays visible
+    loadingCollegeIdsRef.current.delete(targetCollege.id);
     setCollegeId(targetCollege.id);
     setCollegeName(targetCollege.name);
     localStorage.setItem("selected_college_id", targetCollege.id);
@@ -696,23 +727,45 @@ export default function ChatPage() {
   const handleModalSwitchCollege = async (targetCollege: College) => {
     const prevCollegeId = collegeId;
     const activeId = activeSessionRef.current;
+    let newSessionId: string | null = null;
 
+    // Transition session on backend if active session exists
     if (activeId && prevCollegeId) {
       const res = await chatService.switchCollege(activeId, prevCollegeId, targetCollege.id);
-      if (!res.success) {
-        throw new Error(res.error || "Unable to switch session to selected college.");
+      if (res.success && res.data) {
+        newSessionId = res.data.id;
+        if (res.data.visitor_token && typeof window !== "undefined") {
+          sessionStorage.setItem(`campusai_chat_visitor_${newSessionId}`, res.data.visitor_token);
+        }
       }
     }
 
+    if (!newSessionId) {
+      const created = await chatService.createSession(targetCollege.id, "Conversation with " + targetCollege.name, lang);
+      if (created.success && created.data) {
+        newSessionId = created.data.id;
+      }
+    }
+
+    if (newSessionId) {
+      setActiveSessionId(newSessionId);
+      persistActiveSession(targetCollege.id, newSessionId);
+    }
+
+    // Clear the deduplication guard so loadSessions fires for the new college
+    loadingCollegeIdsRef.current.delete(targetCollege.id);
+
+    // Update active college in state and localStorage
     setCollegeId(targetCollege.id);
     setCollegeName(targetCollege.name);
     localStorage.setItem("selected_college_id", targetCollege.id);
     localStorage.setItem("selected_college_name", targetCollege.name);
     window.dispatchEvent(new Event("selected-college-change"));
 
+    // Append switch message while preserving all previous messages ("always show chat history")
     const switchMsg: ChatMessageData = {
       id: generateUUID(),
-      session_id: activeId || "session",
+      session_id: newSessionId || "session",
       sender_role: "assistant",
       message_text: `Conversation switched to **${targetCollege.name}**. Ask anything about your college, like fees, admission, facilities and more.`,
       is_verified: true,

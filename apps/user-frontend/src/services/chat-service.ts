@@ -83,6 +83,7 @@ export interface ChatSessionData {
   updated_at: string;
   messages?: ChatMessageData[];
   local_state?: "unavailable";
+  visitor_token?: string;
 }
 
 function isUuid(value: string): boolean {
