@@ -297,19 +297,40 @@ class CrawlEventResponse(BaseModel):
         This validator runs before field-level coercion: it extracts the correct
         value from ``obj.metadata_`` (the mapped Python attribute) and returns a
         plain dict so the alias lookup never touches SQLAlchemy internals.
+
+        Guard also covers the case where data is already a dict but its
+        ``metadata`` key holds a SQLAlchemy MetaData() object (e.g. injected by
+        a buggy test fixture or future serializer).
         """
-        if not isinstance(data, dict) and hasattr(data, "metadata_"):
-            meta_val = getattr(data, "metadata_", {})
-            if not isinstance(meta_val, dict):
-                meta_val = {}
+        import sqlalchemy  # local import avoids circular deps at module load
+
+        def _safe_meta(val: Any) -> dict:
+            """Return val if it is a plain dict, else an empty dict."""
+            if isinstance(val, dict):
+                return val
+            # Explicitly guard against sqlalchemy MetaData objects
+            if isinstance(val, sqlalchemy.MetaData):
+                return {}
+            return {}
+
+        if isinstance(data, dict):
+            # Already a dict: sanitise the metadata key in place if poisoned.
+            if not isinstance(data.get("metadata"), dict):
+                data = {**data, "metadata": _safe_meta(data.get("metadata"))}
+            return data
+
+        if hasattr(data, "metadata_"):
+            # ORM instance path: read the Python-side attribute name (metadata_)
+            # to avoid resolving the class-level MetaData descriptor.
             return {
                 "id": getattr(data, "id", None),
                 "crawl_job_id": getattr(data, "crawl_job_id", None),
                 "log_level": getattr(data, "log_level", "INFO"),
                 "message": getattr(data, "message", ""),
-                "metadata": meta_val,
+                "metadata": _safe_meta(getattr(data, "metadata_", {})),
                 "created_at": getattr(data, "created_at", None),
             }
+
         return data
 
     class Config:

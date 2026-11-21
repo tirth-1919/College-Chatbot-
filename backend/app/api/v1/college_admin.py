@@ -797,7 +797,7 @@ async def get_crawl_events(
     return APIResponse(
         success=True,
         message=f"Retrieved {len(events)} log events",
-        data=[CrawlEventResponse.model_validate(e) for e in events],
+        data=[CrawlEventResponse.model_validate(e, from_attributes=True) for e in events],
     )
 
 
