@@ -2,17 +2,24 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { GraduationCap, MessageSquare, Building2, User, LogOut, ShieldCheck, Clock } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Navbar() {
+  const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // When on the chatbot page (/chat), hide the top navigation bar completely (ChatGPT layout)
+  if (pathname === "/chat" || pathname?.startsWith("/chat")) {
+    return null;
+  }
 
   return (
     <nav className="border-b border-[#2A2A30] bg-[#111114]/80 backdrop-blur-md sticky top-0 z-50">

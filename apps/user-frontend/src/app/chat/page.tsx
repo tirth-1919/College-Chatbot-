@@ -877,7 +877,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-[#0B0B0D]">
+    <div className="flex h-screen overflow-hidden bg-[#0B0B0D]">
       {/* Conversation History Sidebar */}
       <ChatSidebar
         sessions={sessions}
