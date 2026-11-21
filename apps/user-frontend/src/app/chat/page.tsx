@@ -118,6 +118,7 @@ export default function ChatPage() {
 
   const historyLoadSessionRef = useRef<string | null>(null);
   const loadingCollegeIdsRef = useRef(new Set<string>());
+  const initialLoadedRef = useRef(false);
 
   // Fetch registered colleges directory on mount
   useEffect(() => {
@@ -270,9 +271,12 @@ export default function ChatPage() {
           historyLoadSessionRef.current = active.id;
           setActiveSessionId(active.id);
           persistActiveSession(cId, active.id);
-          // If no messages on screen currently, load active session's messages
-          if (messagesRef.current.length === 0) {
-            setMessages(active.messages || []);
+          // Only auto-load messages into screen on initial page mount
+          if (!initialLoadedRef.current) {
+            initialLoadedRef.current = true;
+            if (messagesRef.current.length === 0) {
+              setMessages(active.messages || []);
+            }
           }
           persistSessions(cId, verified);
           return;
@@ -289,12 +293,15 @@ export default function ChatPage() {
           setActiveSessionId(active.id);
           persistActiveSession(cId, active.id);
 
-          // If no messages on screen currently, load active session's message history from backend
-          if (messagesRef.current.length === 0) {
-            historyLoadSessionRef.current = active.id;
-            const history = await chatService.getSessionHistory(active.id, cId);
-            if (collegeIdRef.current === cId && history.success && history.data?.messages) {
-              setMessages(history.data.messages);
+          // Only auto-load messages into screen on initial page mount
+          if (!initialLoadedRef.current) {
+            initialLoadedRef.current = true;
+            if (messagesRef.current.length === 0) {
+              historyLoadSessionRef.current = active.id;
+              const history = await chatService.getSessionHistory(active.id, cId);
+              if (collegeIdRef.current === cId && history.success && history.data?.messages) {
+                setMessages(history.data.messages);
+              }
             }
           }
           persistSessions(cId, res.data);
@@ -779,6 +786,8 @@ export default function ChatPage() {
 
   // Session Actions (New, Rename, Delete, Clear)
   const handleNewSession = async () => {
+    setChatError(null);
+
     // If no college is connected, new conversation goes to welcome screen
     if (!collegeId) {
       setActiveSessionId(null);
@@ -787,20 +796,24 @@ export default function ChatPage() {
     }
 
     const currentCollegeId = collegeId;
-    setChatError(null);
-    const res = await chatService.createSession(currentCollegeId, "New Conversation", lang);
-    if (collegeIdRef.current !== currentCollegeId) return;
-    if (!res.success || !res.data) {
-      setChatError(withRequestId(res.error || "Unable to create a chat session.", res.requestId));
-      return;
+    try {
+      const res = await chatService.createSession(currentCollegeId, "New Conversation", lang);
+      if (collegeIdRef.current !== currentCollegeId) return;
+      if (!res.success || !res.data) {
+        setChatError(withRequestId(res.error || "Unable to create a chat session.", res.requestId));
+        return;
+      }
+      const newSession: ChatSessionData = { ...res.data, messages: [] };
+      const updated = [newSession, ...sessions.filter((session) => session.id !== newSession.id && session.college_id === currentCollegeId)];
+      setSessions(updated);
+      historyLoadSessionRef.current = newSession.id;
+      setActiveSessionId(newSession.id);
+      setMessages([]);
+      persistActiveSession(currentCollegeId, newSession.id);
+      persistSessions(currentCollegeId, updated);
+    } catch (err: any) {
+      setChatError(err?.message || "Failed to create new conversation.");
     }
-    const newSession: ChatSessionData = { ...res.data, messages: [] };
-    const updated = [newSession, ...sessions.filter((session) => session.college_id === currentCollegeId)];
-    setSessions(updated);
-    setActiveSessionId(newSession.id);
-    setMessages([]);
-    persistActiveSession(currentCollegeId, newSession.id);
-    persistSessions(currentCollegeId, updated);
   };
 
   const handleRenameSession = async (id: string, newTitle: string) => {
@@ -873,9 +886,10 @@ export default function ChatPage() {
           const selectedSession = sessions.find((session) => session.id === id);
           if (!selectedSession || selectedSession.college_id !== collegeId) return;
           if (activeSessionRef.current === id) return;
+          historyLoadSessionRef.current = null;
           setActiveSessionId(id);
           persistActiveSession(collegeId, id);
-          setMessages([]);
+          setMessages(selectedSession.messages || []);
         }}
         onNewSession={handleNewSession}
         onRenameSession={handleRenameSession}

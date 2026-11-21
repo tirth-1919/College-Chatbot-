@@ -74,15 +74,17 @@ export function ChatSidebar({
       {/* Sidebar Header */}
       <div className="p-4 border-b border-[#2A2A30] flex items-center justify-between">
         <button
+          type="button"
           onClick={onNewSession}
-          className="flex-1 py-2 px-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-medium flex items-center justify-center gap-2 transition"
+          className="flex-1 py-2 px-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] active:scale-[0.98] text-white text-xs font-medium flex items-center justify-center gap-2 transition cursor-pointer shadow-sm select-none"
         >
           <Plus className="h-4 w-4" />
           New Conversation
         </button>
         <button
+          type="button"
           onClick={onToggle}
-          className="ml-2 p-2 rounded-lg text-[#A1A1AA] hover:text-[#F5F5F5] transition"
+          className="ml-2 p-2 rounded-lg text-[#A1A1AA] hover:text-[#F5F5F5] transition cursor-pointer"
           title="Collapse sidebar"
         >
           <ChevronLeft className="h-4 w-4" />
