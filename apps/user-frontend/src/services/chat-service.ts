@@ -21,6 +21,11 @@ export interface SourceCitationData {
   page_number?: number;
   section?: string;
   similarity_score?: number;
+  image_url?: string;
+  image_category?: string;
+  image_description?: string;
+  event_name?: string;
+  event_date?: string;
 }
 
 export type FeedbackCategory = "ACCURACY" | "INCORRECT_INFO" | "MISSING_INFO" | "TECHNICAL_ISSUE" | "GENERAL";
@@ -37,6 +42,14 @@ export interface SupportTicketInput {
 export interface UserPreferencesData {
   preferred_language: string;
   preferences?: Record<string, any>;
+}
+
+export interface SwitchActionData {
+  targetCollegeId: string;
+  targetCollegeName: string;
+  currentCollegeName: string;
+  pendingQuestion: string;
+  status?: "pending" | "switched" | "stayed";
 }
 
 export interface ChatMessageData {
@@ -56,6 +69,7 @@ export interface ChatMessageData {
   fallback_reason?: string;
   attempt_count?: number;
   request_duration_ms?: number;
+  switch_action?: SwitchActionData;
 }
 
 export interface ChatSessionData {
@@ -509,6 +523,29 @@ export const chatService = {
       success: false,
       error: "Unable to rename the chat session.",
     };
+  },
+
+  async switchCollege(
+    sessionId: string,
+    currentCollegeId: string,
+    newCollegeId: string
+  ): Promise<{ success: boolean; data?: ChatSessionData; error?: string; status?: number; requestId?: string }> {
+    const headers = getSessionAccessHeaders(sessionId, currentCollegeId);
+    if (!headers) return { success: false, error: "This chat session is not accessible.", status: 401 };
+    try {
+      const res = await apiRequest<ChatSessionData>(`/chat/sessions/${sessionId}/switch-college`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ new_college_id: newCollegeId }),
+      });
+      if (res.success && res.data) return res;
+      return { success: false, error: res.error || "Unable to switch college institution.", status: res.status, requestId: res.requestId };
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : "Unable to switch college institution.",
+      };
+    }
   },
 
   async deleteSession(sessionId: string, collegeId: string): Promise<{ success: boolean; data?: boolean; error?: string }> {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { Shield, Bell, ExternalLink, Activity } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function AdminNavbar() {
   const pathname = usePathname();
@@ -56,6 +57,9 @@ export function AdminNavbar() {
           <span>Student Portal</span>
           <ExternalLink className="h-3 w-3" />
         </a>
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Super admin badge */}
         <div className="flex items-center gap-2 pl-2 border-l border-[#2A2A30]">

@@ -1,8 +1,10 @@
 """Colleges & Tenant Management API Router."""
 
 import uuid
+from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.models.college import College
@@ -211,6 +213,41 @@ async def create_college(
     )
 
 
+@router.get(
+    "/assets/{college_id}/{filename}",
+    summary="Serve verified college branding and accreditation assets",
+)
+async def get_college_asset(
+    college_id: uuid.UUID,
+    filename: str,
+):
+    """Safely serves uploaded logos, cover images, favicons, and accreditation documents."""
+    # Prevent directory traversal attacks
+    safe_filename = Path(filename).name
+    if safe_filename != filename or ".." in filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid asset filename.")
+
+    asset_path = Path("storage/college-assets") / str(college_id) / safe_filename
+    if not asset_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found.")
+
+    # Determine media type
+    ext = asset_path.suffix.lower()
+    media_types = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon",
+        ".pdf": "application/pdf",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+
+    return FileResponse(path=str(asset_path), media_type=media_type)
+
+
 @router.patch(
     "/{college_id}",
     response_model=APIResponse[CollegeResponse],
@@ -228,27 +265,32 @@ async def update_college(
     if not college:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="College not found.")
 
+    update_dict = req.model_dump(exclude_unset=True)
+
     # Status approval changes require SUPER_ADMIN
-    if req.status is not None and req.status != college.status:
+    if "status" in update_dict and update_dict["status"] != college.status:
         if current_user.role != "SUPER_ADMIN":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only Super Administrators can modify college status.",
             )
-        college.status = req.status
+        college.status = update_dict.pop("status")
 
-    if req.name is not None:
-        college.name = req.name
-    if req.official_domain is not None:
-        college.official_domain = req.official_domain
-    if req.logo_url is not None:
-        college.logo_url = req.logo_url
-    if req.contact_email is not None:
-        college.contact_email = req.contact_email
-    if req.contact_phone is not None:
-        college.contact_phone = req.contact_phone
-    if req.is_active is not None and current_user.role == "SUPER_ADMIN":
-        college.is_active = req.is_active
+    if "is_active" in update_dict:
+        if current_user.role != "SUPER_ADMIN":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Super Administrators can modify active status.",
+            )
+        college.is_active = update_dict.pop("is_active")
+
+    # Disallow tampering with immutable identifiers
+    update_dict.pop("id", None)
+    update_dict.pop("slug", None)
+
+    for field, val in update_dict.items():
+        if hasattr(college, field):
+            setattr(college, field, val)
 
     updated = await college_repo.update(college)
     return APIResponse(

@@ -14,6 +14,7 @@ import {
   Shield,
   Globe,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface StatusRecord {
   id: string;
@@ -119,7 +120,10 @@ function RegistrationStatusContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0B0D] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+    <div className="relative min-h-screen bg-[#0B0B0D] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-xl">
         {/* Header */}
         <div className="text-center mb-8">

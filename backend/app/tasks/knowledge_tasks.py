@@ -101,8 +101,20 @@ def dispatch_website_knowledge_processing(
         if background_tasks:
             background_tasks.add_task(_run_async_website_knowledge, college_id, page_ids)
             return "LOCAL_ASYNC"
-        asyncio.create_task(_run_async_website_knowledge(college_id, page_ids))
-        return "LOCAL_ASYNC"
+        # No BackgroundTasks context (e.g. called from crawler_service after crawl).
+        # Schedule on the existing running event loop if one exists; otherwise log and skip.
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(_run_async_website_knowledge(college_id, page_ids))
+                return "LOCAL_ASYNC"
+        except RuntimeError:
+            pass
+        logger.warning(
+            "No running event loop and no BackgroundTasks — website knowledge processing skipped for college %s",
+            college_id,
+        )
+        return "SKIPPED"
 
 
 def dispatch_document_knowledge_processing(
@@ -119,6 +131,18 @@ def dispatch_document_knowledge_processing(
         if background_tasks:
             background_tasks.add_task(_run_async_document_knowledge, college_id, document_id)
             return "LOCAL_ASYNC"
-        asyncio.create_task(_run_async_document_knowledge(college_id, document_id))
-        return "LOCAL_ASYNC"
+        # No BackgroundTasks context — schedule on running loop if available.
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(_run_async_document_knowledge(college_id, document_id))
+                return "LOCAL_ASYNC"
+        except RuntimeError:
+            pass
+        logger.warning(
+            "No running event loop and no BackgroundTasks — document knowledge processing skipped for college %s doc %s",
+            college_id,
+            document_id,
+        )
+        return "SKIPPED"
 

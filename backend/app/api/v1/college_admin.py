@@ -4,7 +4,9 @@ Enforces strict tenant boundary access, ensuring that college administrators
 can only inspect, crawl, upload, review, and configure their assigned institution.
 """
 
+import os
 import uuid
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
@@ -45,6 +47,9 @@ from app.schemas.registration import (
 from app.schemas.college_admin import (
     CollegeProfileResponse,
     CollegeProfileUpdateRequest,
+    CollegeDraftSaveRequest,
+    CollegeProfileHistoryItemResponse,
+    ProfileAssetUploadResponse,
     CollegeDashboardStats,
     CollegeAdminDashboardResponse,
     WebsiteSourceCreateRequest,
@@ -300,14 +305,222 @@ async def update_college_profile(
     req: CollegeProfileUpdateRequest,
     ctx: CollegeTenantContext = Depends(get_college_context),
 ):
-    """Updates permitted details (contact, logo, domain, name). Status cannot be altered."""
+    """Updates permitted details across all institutional metadata sections. Status and slug cannot be altered."""
     college = ctx.college
     repo = CollegeAdminRepository(ctx.session)
-    updated = await repo.update_college(college.id, req.model_dump(exclude_unset=True))
+    update_data = req.model_dump(exclude_unset=True)
+
+    # Compute audit diff for tracking history
+    payload_diff: Dict[str, Any] = {}
+    for key, new_val in update_data.items():
+        if hasattr(college, key):
+            old_val = getattr(college, key)
+            if old_val != new_val:
+                payload_diff[key] = {"old": old_val, "new": new_val}
+
+    updated = await repo.update_college(college.id, update_data)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="College not found")
+
+    # Record change in immutable audit log if any fields were modified
+    if payload_diff:
+        await repo.log_profile_change(
+            college_id=college.id,
+            actor_id=ctx.user.id if ctx.user else None,
+            payload_diff=payload_diff,
+        )
+
     return APIResponse(
         success=True,
-        message="College profile updated successfully",
+        message="College institutional profile updated successfully",
         data=CollegeProfileResponse.model_validate(updated),
+    )
+
+
+@router.post(
+    "/profile/draft",
+    response_model=APIResponse[Dict[str, Any]],
+    summary="Save in-progress institutional profile draft",
+)
+async def save_profile_draft(
+    req: CollegeDraftSaveRequest,
+    ctx: CollegeTenantContext = Depends(get_college_context),
+):
+    """Saves an uncommitted work-in-progress draft of profile updates."""
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
+    updated = await repo.save_draft(college.id, req.draft_data)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="College not found")
+
+    return APIResponse(
+        success=True,
+        message="Profile draft saved successfully",
+        data=updated.draft_profile or {},
+    )
+
+
+@router.get(
+    "/profile/draft",
+    response_model=APIResponse[Optional[Dict[str, Any]]],
+    summary="Retrieve current uncommitted profile draft",
+)
+async def get_profile_draft(
+    ctx: CollegeTenantContext = Depends(get_college_context),
+):
+    """Fetches the saved profile draft for the authorized college."""
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
+    draft = await repo.get_draft(college.id)
+
+    return APIResponse(
+        success=True,
+        message="Profile draft retrieved",
+        data=draft,
+    )
+
+
+@router.delete(
+    "/profile/draft",
+    response_model=APIResponse[bool],
+    summary="Discard saved profile draft",
+)
+async def discard_profile_draft(
+    ctx: CollegeTenantContext = Depends(get_college_context),
+):
+    """Discards the saved profile draft without altering the published profile."""
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
+    await repo.delete_draft(college.id)
+
+    return APIResponse(
+        success=True,
+        message="Profile draft discarded successfully",
+        data=True,
+    )
+
+
+@router.get(
+    "/profile/history",
+    response_model=APIResponse[List[CollegeProfileHistoryItemResponse]],
+    summary="Get recent profile modification change history",
+)
+async def get_profile_history(
+    limit: int = Query(20, ge=1, le=100),
+    ctx: CollegeTenantContext = Depends(get_college_context),
+):
+    """Returns recent audit logs documenting who made profile changes and what fields were altered."""
+    college = ctx.college
+    repo = CollegeAdminRepository(ctx.session)
+    logs = await repo.get_profile_history(college.id, limit=limit)
+
+    items: List[CollegeProfileHistoryItemResponse] = []
+    for log in logs:
+        actor_name = log.actor.full_name if log.actor else "System Administrator"
+        actor_email = log.actor.email if log.actor else None
+        items.append(
+            CollegeProfileHistoryItemResponse(
+                id=log.id,
+                action_type=log.action_type,
+                actor_id=log.actor_user_id,
+                actor_name=actor_name,
+                actor_email=actor_email,
+                payload_diff=log.payload_diff,
+                created_at=log.created_at,
+            )
+        )
+
+    return APIResponse(
+        success=True,
+        message=f"Retrieved {len(items)} profile change history entries",
+        data=items,
+    )
+
+
+@router.post(
+    "/profile/upload-image",
+    response_model=APIResponse[ProfileAssetUploadResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Secure image/document upload for college branding & accreditation",
+)
+async def upload_profile_asset(
+    file: UploadFile = File(...),
+    asset_type: str = Form("logo", description="logo, cover, favicon, or approval_document"),
+    ctx: CollegeTenantContext = Depends(get_college_context),
+):
+    """Validates magic bytes, file size, content-type and saves branding/accreditation assets."""
+    college = ctx.college
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty (0 bytes).",
+        )
+
+    # Size limits: 5MB for images, 10MB for approval documents
+    is_doc = asset_type == "approval_document"
+    max_bytes = 10 * 1024 * 1024 if is_doc else 5 * 1024 * 1024
+    if len(file_bytes) > max_bytes:
+        max_mb = 10 if is_doc else 5
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File size exceeds the {max_mb} MB limit.",
+        )
+
+    # Detect extension and validate magic bytes
+    ext = None
+    header = file_bytes[:1024]
+    mime = (file.content_type or "").lower()
+
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        ext = "png"
+    elif header.startswith(b"\xff\xd8\xff"):
+        ext = "jpg"
+    elif header.startswith(b"RIFF") and b"WEBP" in header[:16]:
+        ext = "webp"
+    elif header.startswith(b"GIF87a") or header.startswith(b"GIF89a"):
+        ext = "gif"
+    elif header.startswith(b"\x00\x00\x01\x00") or header.startswith(b"\x00\x00\x02\x00"):
+        ext = "ico"
+    elif b"<svg" in header.lower() and b"</svg>" in file_bytes[-1024:].lower():
+        # Prevent stored XSS in SVG uploads
+        if b"<script" in file_bytes.lower() or b"javascript:" in file_bytes.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Security policy violation: SVG contains disallowed script tags.",
+            )
+        ext = "svg"
+    elif is_doc and header.startswith(b"%PDF-"):
+        ext = "pdf"
+
+    if not ext:
+        allowed_desc = "PNG, JPG, WebP, SVG, ICO, or PDF" if is_doc else "PNG, JPG, WebP, SVG, or ICO"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file signature. File header does not match permitted formats ({allowed_desc}).",
+        )
+
+    # Create storage directory for college assets
+    assets_dir = Path("storage/college-assets") / str(college.id)
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    asset_filename = f"{asset_type}_{uuid.uuid4().hex[:12]}.{ext}"
+    target_file = assets_dir / asset_filename
+    with open(target_file, "wb") as f:
+        f.write(file_bytes)
+
+    # Construct accessible URL path
+    asset_url = f"/api/v1/colleges/assets/{college.id}/{asset_filename}"
+
+    return APIResponse(
+        success=True,
+        message=f"{asset_type.capitalize()} uploaded and verified successfully.",
+        data=ProfileAssetUploadResponse(
+            asset_url=asset_url,
+            asset_type=asset_type,
+            file_name=file.filename or asset_filename,
+            file_size_bytes=len(file_bytes),
+        ),
     )
 
 
@@ -573,13 +786,10 @@ async def list_crawl_jobs(
 async def get_crawl_events(
     job_id: uuid.UUID,
     ctx: CollegeTenantContext = Depends(get_college_context),
-    **kwargs: Any,
 ):
     """Retrieves log events emitted during crawling."""
-    effective_college = kwargs.get("college") or ctx.college
-    effective_session = kwargs.get("session") or ctx.session
-    repo = CollegeAdminRepository(effective_session)
-    job = await repo.get_crawl_job(effective_college.id, job_id)
+    repo = CollegeAdminRepository(ctx.session)
+    job = await repo.get_crawl_job(ctx.college.id, job_id)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Crawl job not found.")
 
@@ -1018,10 +1228,6 @@ async def stream_local_document(
         )
     except FileNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document binary not found.")
-    if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
-
-    return APIResponse(success=True, message="Document removed", data={"id": str(document_id)})
 
 
 # ==============================================================================
@@ -1266,6 +1472,40 @@ async def unpublish_knowledge_chunk(
 
 
 @router.post(
+    "/knowledge/publish-all",
+    response_model=APIResponse[Dict[str, int]],
+    summary="Approve + publish ALL pending/approved knowledge chunks to live student search",
+)
+async def approve_and_publish_all_chunks(
+    ctx: CollegeTenantContext = Depends(get_college_context),
+    source_type: Optional[str] = Query(None, description="Filter by source type: DOCUMENT, WEBSITE, etc."),
+):
+    """One-shot: bulk-approves every PENDING_REVIEW chunk then publishes all APPROVED chunks.
+
+    Use this after uploading a document or crawling a site to make all extracted
+    knowledge immediately available in student RAG, bypassing the per-chunk review queue.
+    Optional `source_type` query param (e.g. DOCUMENT, WEBSITE) to filter by source.
+    """
+    college = ctx.college
+    current_user = ctx.user
+    repo = CollegeAdminRepository(ctx.session)
+    counts = await repo.approve_and_publish_all_pending(
+        college_id=college.id,
+        reviewer_id=current_user.id,
+        source_type=source_type,
+    )
+    await ctx.session.commit()
+    return APIResponse(
+        success=True,
+        message=(
+            f"Bulk operation complete: approved {counts['approved_count']} chunks, "
+            f"published {counts['published_count']} chunks to live student search"
+        ),
+        data=counts,
+    )
+
+
+@router.post(
     "/knowledge/process",
     response_model=APIResponse[Dict[str, Any]],
     summary="Trigger knowledge extraction pipeline on crawled pages or documents",
@@ -1466,7 +1706,7 @@ async def resolve_support_ticket(
     """Updates status and delivers resolution notes for student inquiry."""
     college = ctx.college
     repo = CollegeAdminRepository(ctx.session)
-    ticket = await repo.resolve_support_ticket(college.id, ticket_id, req.status)
+    ticket = await repo.resolve_support_ticket(college.id, ticket_id, req.status, req.response_notes)
     if not ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found.")
 

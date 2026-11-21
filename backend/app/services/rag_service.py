@@ -511,7 +511,7 @@ class RAGService:
             GEMINI/OFFLINE_GROUNDED → AI_GUIDANCE
             UNAVAILABLE → NO_RELIABLE_INFORMATION
         """
-        if provider == "UNAVAILABLE":
+        if provider in ("UNAVAILABLE", "NO_RELIABLE_INFORMATION", "CAMPUSAI_ASSISTANT"):
             return "NO_RELIABLE_INFORMATION"
 
         if _NEW_ENUM_VALUES_AVAILABLE:
@@ -584,14 +584,25 @@ class RAGService:
             }
 
         # 2. Vector Retrieval (scoped to college tenant)
-        candidate_chunks = await self.retrieve_relevant_chunks(
-            college_id=college_id,
-            query=query,
-            session=session,
-            top_k=20,
-            min_similarity=0.35,
-        )
-        scored_chunks = self._select_relevant_evidence(query, candidate_chunks)[:8]
+        # _retrieve_candidate_chunks returns raw similarity-filtered rows; we then
+        # apply the lexical evidence filter exactly once to avoid double-filtering
+        # (retrieve_relevant_chunks calls _select_relevant_evidence internally, so
+        # we call the lower-level method here and filter once ourselves).
+        try:
+            raw_candidates = await self._retrieve_candidate_chunks(
+                college_id=college_id,
+                query=query,
+                session=session,
+                min_similarity=0.35,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Vector retrieval failed for college %s: %s. Falling back to general AI.",
+                college_id,
+                exc,
+            )
+            raw_candidates = []
+        scored_chunks = self._select_relevant_evidence(query, raw_candidates)[:8]
 
         # 3. Similarity only retrieves candidates; lexical evidence coverage decides
         # whether any college chunks may be cited or sent to the answer generator.
@@ -642,7 +653,7 @@ class RAGService:
         # 8. Determine source type and verification status
         if answer_mode == "GENERAL_AI" and settings.AI_GENERAL_ANSWERING_ENABLED:
             # General AI answers are never college-verified
-            if actual_provider in ("UNAVAILABLE", "NO_RELIABLE_INFORMATION"):
+            if actual_provider in ("UNAVAILABLE", "NO_RELIABLE_INFORMATION", "CAMPUSAI_ASSISTANT"):
                 final_source_type = "NO_RELIABLE_INFORMATION"
             else:
                 final_source_type = self._source_type_for_general_ai(actual_provider)
@@ -654,10 +665,10 @@ class RAGService:
 
         # 9. Handle complete unavailability (all providers failed)
         answer_text = ai_result.get("text", "")
-        if actual_provider in ("UNAVAILABLE", "NO_RELIABLE_INFORMATION"):
+        if actual_provider in ("UNAVAILABLE", "NO_RELIABLE_INFORMATION", "CAMPUSAI_ASSISTANT"):
             final_source_type = "NO_RELIABLE_INFORMATION"
             is_verified = False
-            # Keep the controlled unavailability message from ai_provider_service
+            # Keep the controlled answer message from ai_provider_service
 
         # 10. For GENERAL_AI with disabled flag, return localized fallback
         elif answer_mode == "GENERAL_AI" and not settings.AI_GENERAL_ANSWERING_ENABLED:
@@ -667,6 +678,7 @@ class RAGService:
         elif answer_mode == "GENERAL_AI" and actual_provider not in (
             "UNAVAILABLE",
             "NO_RELIABLE_INFORMATION",
+            "CAMPUSAI_ASSISTANT",
         ):
             guidance_label = "AI Guidance — Not verified by college"
             if not answer_text.strip().startswith(guidance_label):

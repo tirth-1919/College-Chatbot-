@@ -149,7 +149,7 @@ class Settings(BaseSettings):
 
     # AI Configuration
     GEMINI_API_KEY: str = "placeholder-gemini-key"
-    GEMINI_DEFAULT_MODEL: str = "gemini-1.5-flash"
+    GEMINI_DEFAULT_MODEL: str = "gemini-3.8-flash"
     GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
     EMBEDDING_DIMENSION: int = 768
 
@@ -160,9 +160,11 @@ class Settings(BaseSettings):
 
     # Provider model priority lists (comma-separated)
     GEMINI_MODEL_PRIORITY: str = (
-        "gemini-1.5-flash,"
-        "gemini-2.0-flash,"
-        "gemini-1.5-pro"
+        "gemini-3.8-flash,"
+        "gemini-3.5-flash,"
+        "gemini-3.5-flash-lite,"
+        "gemini-flash-latest,"
+        "gemini-3.1-flash-lite"
     )
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL_PRIORITY: str = "gpt-4o-mini,gpt-4o,gpt-3.5-turbo"

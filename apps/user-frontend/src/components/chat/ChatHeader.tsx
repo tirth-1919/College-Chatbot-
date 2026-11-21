@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { Building2, Globe, Trash2, ArrowLeftRight, LifeBuoy } from "lucide-react";
+import { Globe, Trash2, ArrowLeftRight, LifeBuoy } from "lucide-react";
 import { SupportedLanguage } from "@/hooks/use-translation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface ChatHeaderProps {
   collegeName: string;
@@ -10,6 +10,7 @@ interface ChatHeaderProps {
   onLanguageChange: (lang: SupportedLanguage) => void;
   onClearSession: () => void;
   onOpenSupport?: () => void;
+  onOpenSwitchCollege?: () => void;
 }
 
 export function ChatHeader({
@@ -18,35 +19,35 @@ export function ChatHeader({
   onLanguageChange,
   onClearSession,
   onOpenSupport,
+  onOpenSwitchCollege,
 }: ChatHeaderProps) {
+  // If no college is connected yet (initial welcome state), do not display the college subheader row
+  if (!collegeName) {
+    return null;
+  }
+
   return (
-    <div className="px-5 py-3.5 border-b border-[#2A2A30] bg-[#111114] flex flex-wrap items-center justify-between gap-3 shrink-0">
-      {/* College Info */}
+    <div className="px-5 py-3 border-b border-[#2A2A30] bg-[#111114] flex flex-wrap items-center justify-between gap-3 shrink-0">
+      {/* Connected College Name & Clean Switch College Button */}
       <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-lg bg-[#6366F1]/10 flex items-center justify-center text-[#6366F1] shrink-0">
-          <Building2 className="h-4 w-4" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[#F5F5F5]">
-              {collegeName || "No college selected"}
-            </span>
-            <span className="text-[10px] text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full border border-[#10B981]/20 font-medium">
-              Verified Tenant
-            </span>
-          </div>
-          <Link
-            href="/colleges"
-            className="text-[11px] text-[#A1A1AA] hover:text-[#6366F1] transition flex items-center gap-1"
+        <span className="text-sm font-semibold text-[#F5F5F5] tracking-tight">
+          {collegeName}
+        </span>
+        {onOpenSwitchCollege && (
+          <button
+            onClick={onOpenSwitchCollege}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-[#1F1F23] border border-[#2A2A30] transition"
+            title="Switch College"
           >
-            <ArrowLeftRight className="h-3 w-3" />
-            Switch College Institution
-          </Link>
-        </div>
+            <ArrowLeftRight className="h-3.5 w-3.5 text-[#6366F1]" />
+            <span>Switch College</span>
+          </button>
+        )}
       </div>
 
-      {/* Language Selector & Controls */}
-      <div className="flex items-center gap-3">
+      {/* Language Selector & Utility Controls */}
+      <div className="flex items-center gap-2.5">
+        <ThemeToggle />
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#2A2A30] bg-[#1F1F23]">
           <Globe className="h-3.5 w-3.5 text-[#6366F1]" />
           <select
@@ -82,4 +83,3 @@ export function ChatHeader({
     </div>
   );
 }
-

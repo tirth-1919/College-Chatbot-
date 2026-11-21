@@ -2,38 +2,83 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { chatService, ChatSessionData, ChatMessageData, generateUUID, hasVisitorToken } from "@/services/chat-service";
+import {
+  chatService,
+  ChatSessionData,
+  ChatMessageData,
+  generateUUID,
+  hasVisitorToken,
+} from "@/services/chat-service";
+import { collegeService } from "@/services/college-service";
+import { College } from "@/types/college";
 import { AUTH_SESSION_INVALID_KEY } from "@/lib/auth-session";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { SupportModal } from "@/components/chat/SupportModal";
+import { SwitchCollegeModal } from "@/components/chat/SwitchCollegeModal";
 import { useTranslation, SupportedLanguage } from "@/hooks/use-translation";
 
 const STORAGE_PREFIX = "campusai_chat_sessions_";
 const ACTIVE_SESSION_PREFIX = "campusai_chat_active_session_";
 
-function detectRequestedCollege(prompt: string, currentCollegeName: string): string | null {
-  const normalizedPrompt = prompt.toLowerCase();
-  const normalizedCurrent = currentCollegeName.toLowerCase();
+function cleanToken(str: string): string {
+  return str.toLowerCase().replace(/['".,\/#!$%\^&\*;:{}=\-_`~()]/g, " ").replace(/\s+/g, " ").trim();
+}
 
-  const colleges: Array<{ name: string; aliases: string[] }> = [
-    {
-      name: "Ahmedabad Institute of Technology",
-      aliases: ["ait", "ahmedabad institute of technology"],
-    },
-    {
-      name: "RC Technical Institute",
-      aliases: ["rcti", "rc technical institute", "r.c. technical institute"],
-    },
-  ];
+function detectCollegeInText(prompt: string, colleges: College[]): College | null {
+  const norm = cleanToken(prompt);
+  const words = norm.split(" ").filter(Boolean);
 
   for (const college of colleges) {
-    if (normalizedCurrent.includes(college.name.toLowerCase())) continue;
-    if (college.aliases.some((alias) => normalizedPrompt.includes(alias))) {
-      return college.name;
+    const colNorm = cleanToken(college.name);
+    // 1. Direct substring match of full college name
+    if (norm.includes(colNorm)) {
+      return college;
+    }
+
+    // 2. Acronym matching: initials of college name (e.g. "ait", "rcti")
+    const initials = colNorm.split(" ").map((w) => w[0]).join("");
+    if (words.includes(initials)) {
+      return college;
+    }
+
+    // 3. Slug matching (e.g. "ait", "rcti")
+    if (college.slug && words.includes(college.slug.toLowerCase())) {
+      return college;
+    }
+
+    // 4. Common known aliases
+    if (colNorm.includes("ahmedabad institute") && (words.includes("ait") || norm.includes("ahmedabad institute"))) {
+      return college;
+    }
+    if (
+      (colNorm.includes("rc technical") || colNorm.includes("r c technical")) &&
+      (words.includes("rcti") || norm.includes("rc technical") || norm.includes("r c technical"))
+    ) {
+      return college;
     }
   }
   return null;
+}
+
+function isPureCollegeSelection(prompt: string, college: College): boolean {
+  const norm = cleanToken(prompt);
+  const colNorm = cleanToken(college.name);
+  const initials = colNorm.split(" ").map((w) => w[0]).join("");
+  const ignoredTokens = new Set([
+    "hi", "hello", "hey", "connect", "select", "switch", "to", "info", "information",
+    "about", "please", "college", "institute", "campus", "start", "with"
+  ]);
+
+  const tokens = norm.split(" ").filter((w) => {
+    if (colNorm.includes(w)) return false;
+    if (w === initials) return false;
+    if (college.slug && w === college.slug.toLowerCase()) return false;
+    if (ignoredTokens.has(w)) return false;
+    return true;
+  });
+
+  return tokens.length === 0;
 }
 
 function hasAuthenticatedUser(): boolean {
@@ -46,6 +91,7 @@ export default function ChatPage() {
   const router = useRouter();
   const { lang, changeLanguage } = useTranslation();
 
+  const [colleges, setColleges] = useState<College[]>([]);
   const [collegeId, setCollegeId] = useState<string>("");
   const [collegeName, setCollegeName] = useState<string>("");
   const [collegeContextReady, setCollegeContextReady] = useState(false);
@@ -56,6 +102,7 @@ export default function ChatPage() {
   const [chatError, setChatError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isSwitchCollegeOpen, setIsSwitchCollegeOpen] = useState(false);
 
   const activeSessionRef = useRef<string | null>(null);
   activeSessionRef.current = activeSessionId;
@@ -64,9 +111,24 @@ export default function ChatPage() {
   messagesRef.current = messages;
 
   const collegeIdRef = useRef("");
+  collegeIdRef.current = collegeId;
+
+  const collegesRef = useRef<College[]>([]);
+  collegesRef.current = colleges;
+
   const historyLoadSessionRef = useRef<string | null>(null);
   const loadingCollegeIdsRef = useRef(new Set<string>());
 
+  // Fetch registered colleges directory on mount
+  useEffect(() => {
+    collegeService.getColleges(true).then((res) => {
+      if (res.success && res.data) {
+        setColleges(res.data);
+      }
+    });
+  }, []);
+
+  // Redirect expired sessions
   useEffect(() => {
     const redirectToLogin = () => {
       const destination = `${window.location.pathname}${window.location.search}`;
@@ -81,8 +143,9 @@ export default function ChatPage() {
     return () => window.removeEventListener("auth-session-invalid", redirectToLogin);
   }, [router]);
 
-  // Helper to save sessions and messages to localStorage
+  // Session persistence helpers
   const persistSessions = (cId: string, updatedSessions: ChatSessionData[]) => {
+    if (!cId) return;
     try {
       const key = `${STORAGE_PREFIX}${cId}`;
       const previous = JSON.parse(localStorage.getItem(key) || "[]") as ChatSessionData[];
@@ -95,6 +158,7 @@ export default function ChatPage() {
   };
 
   const persistActiveSession = (cId: string, sessionId: string | null) => {
+    if (!cId) return;
     try {
       const key = `${ACTIVE_SESSION_PREFIX}${cId}`;
       if (sessionId) localStorage.setItem(key, sessionId);
@@ -103,6 +167,7 @@ export default function ChatPage() {
   };
 
   const markSessionUnavailable = (cId: string, sessionId: string) => {
+    if (!cId) return;
     try {
       const key = `${STORAGE_PREFIX}${cId}`;
       const cached = JSON.parse(localStorage.getItem(key) || "[]") as ChatSessionData[];
@@ -117,36 +182,6 @@ export default function ChatPage() {
 
   const withRequestId = (message: string, requestId?: string) =>
     requestId ? `${message} (Request ID: ${requestId})` : message;
-
-  // 1. Resolve the active college and discard state from the previous tenant.
-  useEffect(() => {
-    const applySelectedCollege = () => {
-      const nextId = localStorage.getItem("selected_college_id") || "";
-      const nextName = localStorage.getItem("selected_college_name") || "";
-
-      if (collegeIdRef.current !== nextId) {
-        collegeIdRef.current = nextId;
-        activeSessionRef.current = null;
-        historyLoadSessionRef.current = null;
-        messagesRef.current = [];
-        setChatError(null);
-        setSessions([]);
-        setActiveSessionId(null);
-        setMessages([]);
-      }
-      setCollegeId(nextId);
-      setCollegeName(nextName);
-      setCollegeContextReady(true);
-    };
-
-    applySelectedCollege();
-    window.addEventListener("selected-college-change", applySelectedCollege);
-    window.addEventListener("storage", applySelectedCollege);
-    return () => {
-      window.removeEventListener("selected-college-change", applySelectedCollege);
-      window.removeEventListener("storage", applySelectedCollege);
-    };
-  }, []);
 
   // Sync saved user preferences (multilingual support)
   useEffect(() => {
@@ -165,101 +200,103 @@ export default function ChatPage() {
     chatService.updateUserPreferences(newLang);
   };
 
-  // 2. Fetch Sessions for Active College
+  // Check saved college on mount (without forcing default or showing warning banner)
+  useEffect(() => {
+    const applySelectedCollege = () => {
+      const savedId = localStorage.getItem("selected_college_id") || "";
+      const savedName = localStorage.getItem("selected_college_name") || "";
+      if (savedId && savedName) {
+        setCollegeId(savedId);
+        setCollegeName(savedName);
+      }
+      setCollegeContextReady(true);
+    };
+
+    applySelectedCollege();
+    window.addEventListener("selected-college-change", applySelectedCollege);
+    window.addEventListener("storage", applySelectedCollege);
+    return () => {
+      window.removeEventListener("selected-college-change", applySelectedCollege);
+      window.removeEventListener("storage", applySelectedCollege);
+    };
+  }, []);
+
+  // Fetch Sessions for Active College
   const loadSessions = useCallback(async (cId: string) => {
-    if (!cId || collegeIdRef.current !== cId) return;
+    if (!cId) return;
     if (loadingCollegeIdsRef.current.has(cId)) return;
     loadingCollegeIdsRef.current.add(cId);
+
     try {
-    // If we already have active messages or sessions in memory, don't clobber them
-    if (messagesRef.current.length > 0) {
-      return;
-    }
-
-    // Check localStorage cache first
-    let cachedSessions: ChatSessionData[] = [];
-    try {
-      const raw = localStorage.getItem(`${STORAGE_PREFIX}${cId}`);
-      if (raw) {
-        cachedSessions = JSON.parse(raw);
-      }
-    } catch (e) {}
-
-    cachedSessions = Array.isArray(cachedSessions)
-      ? cachedSessions.filter((session) => session.college_id === cId && session.local_state !== "unavailable")
-      : [];
-    const authenticated = hasAuthenticatedUser();
-    if (!authenticated && cachedSessions.length > 0) {
-      const preferredId = localStorage.getItem(`${ACTIVE_SESSION_PREFIX}${cId}`);
-      const candidates = [...cachedSessions].sort((a, b) =>
-        a.id === preferredId ? -1 : b.id === preferredId ? 1 : 0
-      );
-      const verified: ChatSessionData[] = [];
-      for (const candidate of candidates) {
-        if (!hasVisitorToken(candidate.id)) {
-          markSessionUnavailable(cId, candidate.id);
-          continue;
-        }
-        const history = await chatService.getSessionHistory(candidate.id, cId);
-        if (collegeIdRef.current !== cId) return;
-        if (history.success && history.data?.id === candidate.id && history.data.college_id === cId) {
-          verified.push({ ...candidate, ...history.data, messages: history.data.messages || [] });
-          continue;
-        }
-        if (history.status === 403 || history.status === 404) {
-          markSessionUnavailable(cId, candidate.id);
-          continue;
-        }
-        setChatError(withRequestId(history.error || "Unable to verify the saved conversation.", history.requestId));
+      if (messagesRef.current.length > 0) {
         return;
       }
-      if (verified.length > 0) {
-        const active = verified.find((session) => session.id === preferredId) || verified[0];
-        setSessions(verified);
-        historyLoadSessionRef.current = active.id;
-        setActiveSessionId(active.id);
-        persistActiveSession(cId, active.id);
-        setMessages(active.messages || []);
-        persistSessions(cId, verified);
-        return;
-      }
-    }
 
-    if (authenticated) {
-      const res = await chatService.listSessions(cId);
-      if (collegeIdRef.current !== cId) return;
-      if (!res.success || !res.data) {
-        setChatError(withRequestId(res.error || "Unable to load chat sessions.", res.requestId));
-        return;
-      }
-      if (res.data.length > 0) {
+      let cachedSessions: ChatSessionData[] = [];
+      try {
+        const raw = localStorage.getItem(`${STORAGE_PREFIX}${cId}`);
+        if (raw) {
+          cachedSessions = JSON.parse(raw);
+        }
+      } catch (e) {}
+
+      cachedSessions = Array.isArray(cachedSessions)
+        ? cachedSessions.filter((session) => session.college_id === cId && session.local_state !== "unavailable")
+        : [];
+
+      const authenticated = hasAuthenticatedUser();
+      if (!authenticated && cachedSessions.length > 0) {
         const preferredId = localStorage.getItem(`${ACTIVE_SESSION_PREFIX}${cId}`);
-        const active = res.data.find((session) => session.id === preferredId) || res.data[0];
-        setSessions(res.data);
-        setActiveSessionId(active.id);
-        persistActiveSession(cId, active.id);
-        setMessages([]);
-        persistSessions(cId, res.data);
-        return;
+        const candidates = [...cachedSessions].sort((a, b) =>
+          a.id === preferredId ? -1 : b.id === preferredId ? 1 : 0
+        );
+        const verified: ChatSessionData[] = [];
+        for (const candidate of candidates) {
+          if (!hasVisitorToken(candidate.id)) {
+            markSessionUnavailable(cId, candidate.id);
+            continue;
+          }
+          const history = await chatService.getSessionHistory(candidate.id, cId);
+          if (collegeIdRef.current !== cId) return;
+          if (history.success && history.data?.id === candidate.id && history.data.college_id === cId) {
+            verified.push({ ...candidate, ...history.data, messages: history.data.messages || [] });
+            continue;
+          }
+          if (history.status === 403 || history.status === 404) {
+            markSessionUnavailable(cId, candidate.id);
+            continue;
+          }
+          return;
+        }
+        if (verified.length > 0) {
+          const active = verified.find((session) => session.id === preferredId) || verified[0];
+          setSessions(verified);
+          historyLoadSessionRef.current = active.id;
+          setActiveSessionId(active.id);
+          persistActiveSession(cId, active.id);
+          setMessages(active.messages || []);
+          persistSessions(cId, verified);
+          return;
+        }
       }
-    }
 
-    const created = await chatService.createSession(cId, "New Conversation", lang);
-    if (collegeIdRef.current !== cId) return;
-    if (!created.success || !created.data) {
-      setChatError(withRequestId(created.error || "Unable to create a chat session.", created.requestId));
-      return;
-    }
-    const initial = { ...created.data, messages: [] };
-    setSessions([initial]);
-    setActiveSessionId(initial.id);
-    persistActiveSession(cId, initial.id);
-    setMessages([]);
-    persistSessions(cId, [initial]);
+      if (authenticated) {
+        const res = await chatService.listSessions(cId);
+        if (collegeIdRef.current !== cId) return;
+        if (res.success && res.data && res.data.length > 0) {
+          const preferredId = localStorage.getItem(`${ACTIVE_SESSION_PREFIX}${cId}`);
+          const active = res.data.find((session) => session.id === preferredId) || res.data[0];
+          setSessions(res.data);
+          setActiveSessionId(active.id);
+          persistActiveSession(cId, active.id);
+          setMessages([]);
+          persistSessions(cId, res.data);
+        }
+      }
     } finally {
       loadingCollegeIdsRef.current.delete(cId);
     }
-  }, [lang]);
+  }, []);
 
   useEffect(() => {
     if (collegeContextReady && collegeId) {
@@ -267,19 +304,19 @@ export default function ChatPage() {
     }
   }, [collegeContextReady, collegeId, loadSessions]);
 
-  // 3. Load Message History when activeSessionId changes manually
+  // Load Message History when activeSessionId changes
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId || !collegeId) return;
 
     const currentSession = sessions.find((s) => s.id === activeSessionId);
     if (currentSession && currentSession.college_id !== collegeId) {
-      setChatError("This conversation belongs to a different college. Select a current-college conversation.");
       return;
     }
 
     if (historyLoadSessionRef.current === activeSessionId) return;
     historyLoadSessionRef.current = activeSessionId;
     const requestedCollegeId = collegeId;
+
     chatService.getSessionHistory(activeSessionId, requestedCollegeId).then((res) => {
       if (collegeIdRef.current !== requestedCollegeId || activeSessionRef.current !== activeSessionId) return;
       if (res.success && res.data?.id === activeSessionId && res.data.college_id === requestedCollegeId) {
@@ -294,25 +331,183 @@ export default function ChatPage() {
         setActiveSessionId(null);
         persistActiveSession(requestedCollegeId, null);
         setMessages([]);
-        setChatError("This conversation is no longer available. Start a new chat to continue.");
       } else {
         historyLoadSessionRef.current = null;
-        setChatError(withRequestId(res.error || "Unable to reload this conversation.", res.requestId));
       }
     });
   }, [activeSessionId, sessions, collegeId]);
 
-  // 4. Send Message Handler (Guaranteed to execute and respond)
+  // Connect current conversation to a target college
+  const connectToCollege = async (targetCollege: College, pendingQuestion?: string) => {
+    setChatError(null);
+    setCollegeId(targetCollege.id);
+    setCollegeName(targetCollege.name);
+    localStorage.setItem("selected_college_id", targetCollege.id);
+    localStorage.setItem("selected_college_name", targetCollege.name);
+    window.dispatchEvent(new Event("selected-college-change"));
+
+    const title = pendingQuestion
+      ? pendingQuestion.slice(0, 36) + (pendingQuestion.length > 36 ? "..." : "")
+      : `Conversation with ${targetCollege.name}`;
+
+    const created = await chatService.createSession(targetCollege.id, title, lang);
+    if (!created.success || !created.data) {
+      setChatError(withRequestId(created.error || "Unable to start conversation session.", created.requestId));
+      return null;
+    }
+
+    const newSession: ChatSessionData = { ...created.data, messages: [] };
+    const updatedSessions = [newSession, ...sessions.filter((s) => s.college_id === targetCollege.id)];
+    setSessions(updatedSessions);
+    setActiveSessionId(newSession.id);
+    persistActiveSession(targetCollege.id, newSession.id);
+    persistSessions(targetCollege.id, updatedSessions);
+
+    return newSession.id;
+  };
+
+  // Main Send Message Handler with Automatic College Detection and Switching
   const handleSendMessage = async (text: string) => {
     const trimmed = text.trim();
-    if (!collegeContextReady || !collegeId || !trimmed) {
-      if (collegeContextReady && !collegeId) setChatError("Select a college before starting a chat.");
+    if (!trimmed) return;
+    setChatError(null);
+
+    // Case 1: No college is currently connected
+    if (!collegeId) {
+      const detectedCollege = detectCollegeInText(trimmed, colleges);
+
+      // Append user's question first
+      const userMsgId = generateUUID();
+      const userMsg: ChatMessageData = {
+        id: userMsgId,
+        session_id: activeSessionRef.current || "pending",
+        sender_role: "user",
+        message_text: trimmed,
+        is_verified: false,
+        answer_source_type: "OFFICIAL_WEBSITE",
+        source_citations: [],
+        token_count: trimmed.split(" ").length,
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+
+      // If college name was detected in user's query:
+      if (detectedCollege) {
+        setIsLoading(true);
+        const newSessionId = await connectToCollege(detectedCollege, trimmed);
+        if (!newSessionId) {
+          setIsLoading(false);
+          return;
+        }
+
+        userMsg.session_id = newSessionId;
+
+        // If user typed only the college name / greeting:
+        if (isPureCollegeSelection(trimmed, detectedCollege)) {
+          setIsLoading(false);
+          const welcomeMsg: ChatMessageData = {
+            id: generateUUID(),
+            session_id: newSessionId,
+            sender_role: "assistant",
+            message_text: `Connected to **${detectedCollege.name}**. Ask anything about your college, like fees, admission, facilities and more.`,
+            is_verified: true,
+            answer_source_type: "ADMIN_VERIFIED",
+            source_citations: [],
+            token_count: 24,
+            created_at: new Date().toISOString(),
+          };
+          const allMsgs = [userMsg, welcomeMsg];
+          setMessages(allMsgs);
+          const refreshed = sessions.map((s) =>
+            s.id === newSessionId ? { ...s, messages: allMsgs } : s
+          );
+          setSessions(refreshed);
+          persistSessions(detectedCollege.id, refreshed);
+          return;
+        }
+
+        // User asked a specific question containing the college name
+        try {
+          const res = await chatService.sendMessage(newSessionId, trimmed, detectedCollege.id, lang, detectedCollege.name);
+          setIsLoading(false);
+          if (res.success && res.data) {
+            const assistantMsg = res.data;
+            const allMsgs = [userMsg, assistantMsg];
+            setMessages(allMsgs);
+            const refreshed = sessions.map((s) =>
+              s.id === newSessionId ? { ...s, messages: allMsgs } : s
+            );
+            setSessions(refreshed);
+            persistSessions(detectedCollege.id, refreshed);
+          } else {
+            setChatError(withRequestId(res.error || "Unable to get an answer.", res.requestId));
+          }
+        } catch (err: any) {
+          setIsLoading(false);
+          setChatError(err?.message || "Failed to communicate with college knowledge base.");
+        }
+        return;
+      }
+
+      // No college detected and no college connected -> Ask user to clarify
+      const promptClarifyMsg: ChatMessageData = {
+        id: generateUUID(),
+        session_id: "pending",
+        sender_role: "assistant",
+        message_text: "Which college information do you want? Please specify the name of your college (such as **Ahmedabad Institute of Technology** or **RC Technical Institute**), and I'll be glad to help.",
+        is_verified: false,
+        answer_source_type: "AI_GUIDANCE",
+        source_citations: [],
+        token_count: 30,
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, promptClarifyMsg]);
       return;
     }
 
+    // Case 2: A college IS already connected
     const currentCollegeId = collegeId;
-    setChatError(null);
+    const currentCollegeName = collegeName;
+    const detectedDifferentCollege = detectCollegeInText(trimmed, colleges);
 
+    // If query is about a DIFFERENT registered college:
+    if (detectedDifferentCollege && detectedDifferentCollege.id !== currentCollegeId) {
+      const userMsg: ChatMessageData = {
+        id: generateUUID(),
+        session_id: activeSessionRef.current || "session",
+        sender_role: "user",
+        message_text: trimmed,
+        is_verified: false,
+        answer_source_type: "OFFICIAL_WEBSITE",
+        source_citations: [],
+        token_count: trimmed.split(" ").length,
+        created_at: new Date().toISOString(),
+      };
+
+      const switchConfirmMsg: ChatMessageData = {
+        id: generateUUID(),
+        session_id: activeSessionRef.current || "session",
+        sender_role: "assistant",
+        message_text: `You are currently connected to ${currentCollegeName}. This question is about ${detectedDifferentCollege.name}. Would you like to switch?`,
+        is_verified: true,
+        answer_source_type: "ADMIN_VERIFIED",
+        source_citations: [],
+        token_count: 24,
+        created_at: new Date().toISOString(),
+        switch_action: {
+          targetCollegeId: detectedDifferentCollege.id,
+          targetCollegeName: detectedDifferentCollege.name,
+          currentCollegeName: currentCollegeName,
+          pendingQuestion: trimmed,
+          status: "pending",
+        },
+      };
+
+      setMessages((prev) => [...prev, userMsg, switchConfirmMsg]);
+      return;
+    }
+
+    // Normal message flow with active college
     let currentSessions = sessions.filter((session) =>
       session.college_id === currentCollegeId && session.local_state !== "unavailable"
     );
@@ -322,6 +517,7 @@ export default function ChatPage() {
 
     const activeSessionHasAccess = currentSessionId &&
       (hasAuthenticatedUser() || hasVisitorToken(currentSessionId));
+
     if (!currentSessionId || currentSessions.length === 0 || !activeSessionHasAccess) {
       const title = trimmed.slice(0, 36) + (trimmed.length > 36 ? "..." : "");
       const created = await chatService.createSession(currentCollegeId, title, lang);
@@ -340,7 +536,6 @@ export default function ChatPage() {
     }
     if (!currentSessionId) return;
 
-    // Create user message turn
     const userMsg: ChatMessageData = {
       id: generateUUID(),
       session_id: currentSessionId,
@@ -358,28 +553,13 @@ export default function ChatPage() {
     setMessages(updatedWithUser);
     setIsLoading(true);
 
-    const sessionCollegeId = currentCollegeId;
-
     try {
-      const res = await chatService.sendMessage(currentSessionId, trimmed, sessionCollegeId, lang, collegeName);
+      const res = await chatService.sendMessage(currentSessionId, trimmed, currentCollegeId, lang, currentCollegeName);
       setIsLoading(false);
       if (collegeIdRef.current !== currentCollegeId) return;
 
       if (res.success && res.data) {
-        let assistantMsg = res.data;
-        if (assistantMsg.session_id !== currentSessionId) {
-          setMessages(currentMsgs);
-          setChatError("The server returned a response for a different chat session.");
-          return;
-        }
-        const requestedCollege = detectRequestedCollege(trimmed, collegeName);
-        if (requestedCollege) {
-          assistantMsg = {
-            ...assistantMsg,
-            message_text:
-              `${assistantMsg.message_text}\n\n__CAMPUSAI_SWITCH_COLLEGE__:${requestedCollege}`,
-          };
-        }
+        const assistantMsg = res.data;
         const allMessages = [...updatedWithUser, assistantMsg];
         setMessages(allMessages);
 
@@ -420,9 +600,139 @@ export default function ChatPage() {
     }
   };
 
-  // 5. Session Actions (New, Rename, Delete, Clear)
+  // User confirmed switching to target college from in-chat card
+  const handleConfirmSwitch = async (
+    targetCollegeId: string,
+    pendingQuestion: string,
+    messageId: string
+  ) => {
+    const targetCollege = colleges.find((c) => c.id === targetCollegeId);
+    if (!targetCollege) return;
+
+    // 1. Mark switch action status as switched in the confirmation card
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId && msg.switch_action
+          ? { ...msg, switch_action: { ...msg.switch_action, status: "switched" } }
+          : msg
+      )
+    );
+
+    const prevCollegeId = collegeId;
+
+    // 2. Transition session on backend if active session exists
+    let activeId = activeSessionRef.current;
+    if (activeId && prevCollegeId) {
+      const switchRes = await chatService.switchCollege(activeId, prevCollegeId, targetCollege.id);
+      if (switchRes.success && switchRes.data) {
+        activeId = switchRes.data.id;
+        setActiveSessionId(activeId);
+        persistActiveSession(targetCollege.id, activeId);
+      } else {
+        // If switching fails, start a new session for the target college
+        activeId = null;
+      }
+    }
+
+    // 3. Update active college state & storage
+    setCollegeId(targetCollege.id);
+    setCollegeName(targetCollege.name);
+    localStorage.setItem("selected_college_id", targetCollege.id);
+    localStorage.setItem("selected_college_name", targetCollege.name);
+    window.dispatchEvent(new Event("selected-college-change"));
+
+    if (!activeId) {
+      const newSession = await chatService.createSession(targetCollege.id, pendingQuestion.slice(0, 36), lang);
+      if (newSession.success && newSession.data) {
+        activeId = newSession.data.id;
+        setActiveSessionId(activeId);
+        persistActiveSession(targetCollege.id, activeId);
+      }
+    }
+
+    if (!activeId) return;
+
+    // 4. Process pending question using new college's approved knowledge
+    setIsLoading(true);
+    try {
+      const res = await chatService.sendMessage(activeId, pendingQuestion, targetCollege.id, lang, targetCollege.name);
+      setIsLoading(false);
+      if (res.success && res.data) {
+        const assistantMsg = res.data;
+        setMessages((prev) => [...prev, assistantMsg]);
+      } else {
+        setChatError(withRequestId(res.error || "Unable to answer question for the new college.", res.requestId));
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      setChatError(err?.message || "Failed to retrieve information from the new college.");
+    }
+  };
+
+  // User chose to stay with current college from in-chat card
+  const handleStayWithCollege = (messageId: string, currentName: string) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId && msg.switch_action
+          ? { ...msg, switch_action: { ...msg.switch_action, status: "stayed" } }
+          : msg
+      )
+    );
+    const stayNotice: ChatMessageData = {
+      id: generateUUID(),
+      session_id: activeSessionRef.current || "session",
+      sender_role: "assistant",
+      message_text: `Staying with **${currentName}**. How else can I help you today?`,
+      is_verified: true,
+      answer_source_type: "ADMIN_VERIFIED",
+      source_citations: [],
+      token_count: 14,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, stayNotice]);
+  };
+
+  // Switch college from header modal
+  const handleModalSwitchCollege = async (targetCollege: College) => {
+    const prevCollegeId = collegeId;
+    const activeId = activeSessionRef.current;
+
+    if (activeId && prevCollegeId) {
+      const res = await chatService.switchCollege(activeId, prevCollegeId, targetCollege.id);
+      if (!res.success) {
+        throw new Error(res.error || "Unable to switch session to selected college.");
+      }
+    }
+
+    setCollegeId(targetCollege.id);
+    setCollegeName(targetCollege.name);
+    localStorage.setItem("selected_college_id", targetCollege.id);
+    localStorage.setItem("selected_college_name", targetCollege.name);
+    window.dispatchEvent(new Event("selected-college-change"));
+
+    const switchMsg: ChatMessageData = {
+      id: generateUUID(),
+      session_id: activeId || "session",
+      sender_role: "assistant",
+      message_text: `Conversation switched to **${targetCollege.name}**. Ask anything about your college, like fees, admission, facilities and more.`,
+      is_verified: true,
+      answer_source_type: "ADMIN_VERIFIED",
+      source_citations: [],
+      token_count: 24,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, switchMsg]);
+  };
+
+  // Session Actions (New, Rename, Delete, Clear)
   const handleNewSession = async () => {
-    if (!collegeContextReady || !collegeId) return;
+    // If no college is connected, new conversation goes to welcome screen
+    if (!collegeId) {
+      setActiveSessionId(null);
+      setMessages([]);
+      return;
+    }
+
     const currentCollegeId = collegeId;
     setChatError(null);
     const res = await chatService.createSession(currentCollegeId, "New Conversation", lang);
@@ -478,7 +788,8 @@ export default function ChatPage() {
         setMessages([]);
       } else {
         persistActiveSession(collegeId, null);
-        handleNewSession();
+        setActiveSessionId(null);
+        setMessages([]);
       }
     }
   };
@@ -531,12 +842,12 @@ export default function ChatPage() {
         currentLang={lang}
         onLanguageChange={handleLanguageChange}
         onOpenSupport={() => setIsSupportOpen(true)}
+        onOpenSwitchCollege={() => setIsSwitchCollegeOpen(true)}
+        onConfirmSwitch={handleConfirmSwitch}
+        onStayWithCollege={handleStayWithCollege}
       />
-      {collegeContextReady && !collegeId && (
-        <div role="alert" className="fixed bottom-5 right-5 z-50 rounded-lg border border-amber-500/40 bg-amber-950/90 px-4 py-3 text-sm text-amber-100 shadow-lg">
-          Select a college before starting a chat.
-        </div>
-      )}
+
+      {/* Global Error Banner */}
       {chatError && (
         <div
           role="alert"
@@ -545,6 +856,15 @@ export default function ChatPage() {
           {chatError}
         </div>
       )}
+
+      {/* Switch College Modal */}
+      <SwitchCollegeModal
+        isOpen={isSwitchCollegeOpen}
+        onClose={() => setIsSwitchCollegeOpen(false)}
+        currentCollegeId={collegeId}
+        colleges={colleges}
+        onSwitch={handleModalSwitchCollege}
+      />
 
       {/* College Support & Inquiry Modal */}
       <SupportModal

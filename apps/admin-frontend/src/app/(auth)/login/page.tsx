@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { adminApiRequest } from "@/lib/api-client";
 import { Shield, Lock, Mail, AlertCircle, ArrowRight, Zap } from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 function AdminLoginContent() {
   const router = useRouter();
@@ -209,7 +210,10 @@ function AdminLoginContent() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 bg-[#0B0B0D]">
+    <div className="relative flex items-center justify-center min-h-screen px-4 bg-[#0B0B0D]">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md p-8 rounded-2xl border border-[#2A2A30] bg-[#111114] shadow-2xl">
         <div className="h-12 w-12 rounded-xl bg-[#6366F1]/10 flex items-center justify-center text-[#6366F1] mx-auto mb-4">
           <Shield className="h-6 w-6" />

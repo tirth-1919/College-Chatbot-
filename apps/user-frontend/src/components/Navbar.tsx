@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { GraduationCap, MessageSquare, Building2, User, LogOut, ShieldCheck, Clock } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -58,7 +59,7 @@ export function Navbar() {
           {!mounted ? (
             <div className="flex items-center gap-3 min-w-[120px] justify-end"></div>
           ) : isAuthenticated ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Link
                 href="/dashboard"
                 className="flex items-center gap-1.5 text-sm text-[#F5F5F5] bg-[#1F1F23] px-3 py-1.5 rounded-md border border-[#2A2A30]"
@@ -73,6 +74,7 @@ export function Navbar() {
               >
                 <LogOut className="h-4 w-4" />
               </button>
+              <ThemeToggle />
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -88,6 +90,7 @@ export function Navbar() {
               >
                 Get Started
               </Link>
+              <ThemeToggle />
             </div>
           )}
         </div>

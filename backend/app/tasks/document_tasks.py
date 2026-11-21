@@ -190,40 +190,42 @@ async def dispatch_document_processing(
         logger.info("Queued document %s into Celery distributed queue", doc_id_str)
         return "CELERY"
     except Exception as err:
-        logger.error(
-            "Broker unavailable — could not queue document %s: %s",
+        logger.warning(
+            "Broker unavailable — falling back to LOCAL_ASYNC for document %s: %s",
             doc_id_str,
             str(err),
         )
 
-        # Update document status to FAILED directly (awaited) so it is never silently stuck in QUEUED.
-        # asyncio.ensure_future() is intentionally avoided: fire-and-forget coroutines can be
-        # dropped during event loop shutdown and would leave the document in QUEUED permanently.
+        # Broker is down — fall back to FastAPI BackgroundTasks (LOCAL_ASYNC).
+        # Do NOT mark the document as FAILED here: the background task is about to
+        # run and will correctly set PROCESSING → PENDING_REVIEW (or FAILED on its
+        # own error). Marking FAILED before the task executes caused documents to
+        # appear permanently stuck even when LOCAL_ASYNC processing succeeds.
+        if background_tasks:
+            background_tasks.add_task(
+                _run_async_document_processing, document_id, college_id
+            )
+            logger.info(
+                "Document %s queued for LOCAL_ASYNC processing via BackgroundTasks",
+                doc_id_str,
+            )
+            return "LOCAL_ASYNC"
+
+        # No BackgroundTasks context available — mark FAILED only now since there
+        # is genuinely no mechanism to process this document.
+        logger.error(
+            "Broker unavailable and no BackgroundTasks context — document %s cannot be processed",
+            doc_id_str,
+        )
         try:
             await _mark_document_failed(
                 document_id,
                 college_id,
-                "Broker unavailable: task could not be queued",
+                "Broker unavailable and no background task context: document could not be processed",
             )
         except Exception:
             logger.exception(
-                "Could not update document %s status to FAILED after broker failure",
+                "Could not update document %s status to FAILED after total dispatch failure",
                 doc_id_str,
             )
-
-        # Keep LOCAL_ASYNC fallback but log prominently and ensure it also sets FAILED on its own error.
-        if background_tasks:
-            logger.warning(
-                "Broker unavailable — falling back to LOCAL_ASYNC for document %s",
-                doc_id_str,
-            )
-            background_tasks.add_task(
-                _run_async_document_processing, document_id, college_id
-            )
-            return "LOCAL_ASYNC"
-
-        logger.error(
-            "Broker unavailable and no BackgroundTasks context — document %s will not be processed",
-            doc_id_str,
-        )
         return "LOCAL_ASYNC"

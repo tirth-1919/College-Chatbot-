@@ -13,6 +13,84 @@ export interface CollegeProfile {
   status: string;
   is_active: boolean;
   created_at: string;
+  updated_at?: string | null;
+
+  // 1. Institution Identity
+  short_name?: string | null;
+  cover_image_url?: string | null;
+  institution_type?: string | null;
+  established_year?: number | null;
+  website_url?: string | null;
+
+  // 2. Address & Location
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  district?: string | null;
+  state?: string | null;
+  country?: string | null;
+  postal_code?: string | null;
+  maps_url?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+
+  // 3. Official Contacts
+  admission_email?: string | null;
+  examination_email?: string | null;
+  placement_email?: string | null;
+  admission_helpline?: string | null;
+  alternate_phone?: string | null;
+  working_hours?: string | null;
+
+  // 4. Recognition & Accreditation
+  affiliated_university?: string | null;
+  recognized_by?: string | null;
+  aicte_approval?: string | null;
+  ugc_recognition?: string | null;
+  naac_grade?: string | null;
+  nba_accreditation?: string | null;
+  accreditation_validity?: string | null;
+  approval_document_url?: string | null;
+
+  // 5. About Institution & Leadership
+  short_description?: string | null;
+  about_text?: string | null;
+  vision?: string | null;
+  mission?: string | null;
+  leader_name?: string | null;
+  leader_designation?: string | null;
+
+  // 6. Social Media
+  linkedin_url?: string | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
+  youtube_url?: string | null;
+  twitter_url?: string | null;
+
+  // 7. Branding
+  favicon_url?: string | null;
+  primary_brand_color?: string | null;
+  secondary_brand_color?: string | null;
+
+  // 8. Draft State
+  draft_profile?: Record<string, any> | null;
+}
+
+export interface ProfileHistoryItem {
+  id: string;
+  action_type: string;
+  actor_id?: string | null;
+  actor_name?: string | null;
+  actor_email?: string | null;
+  payload_diff?: Record<string, { old: any; new: any }> | null;
+  created_at: string;
+}
+
+export interface ProfileAssetUploadResult {
+  asset_url: string;
+  asset_type: string;
+  file_name: string;
+  file_size_bytes: number;
 }
 
 export interface CollegeDashboardStats {

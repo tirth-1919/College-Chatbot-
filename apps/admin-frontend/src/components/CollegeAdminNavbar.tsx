@@ -13,6 +13,7 @@ import {
   Building2,
   ShieldCheck,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function CollegeAdminNavbar() {
   const pathname = usePathname();
@@ -83,6 +84,9 @@ export function CollegeAdminNavbar() {
           <span>Live Chatbot</span>
           <ExternalLink className="h-3 w-3" />
         </a>
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* User Profile */}
         <div className="flex items-center gap-2 pl-2 border-l border-[#2A2A30]">

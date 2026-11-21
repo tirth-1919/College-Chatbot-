@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from sqlalchemy import select, update, delete, desc, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.college import College
 from app.models.website import WebsiteSource, CrawlJob, CrawlEvent, WebsitePage
@@ -17,6 +18,7 @@ from app.models.knowledge import KnowledgeChunk, KnowledgeReview, ExtractedFact
 from app.models.chat import ChatMessage, ChatSession
 from app.models.feedback_support import SupportTicket, Feedback
 from app.models.user import User
+from app.models.audit import AuditLog
 
 
 class CollegeAdminRepository:
@@ -34,17 +36,84 @@ class CollegeAdminRepository:
         return res.scalar_one_or_none()
 
     async def update_college(self, college_id: uuid.UUID, updates: Dict[str, Any]) -> Optional[College]:
-        """Updates permitted institutional fields."""
+        """Updates permitted institutional fields (allows clearing nullable fields to None/empty)."""
         college = await self.get_college(college_id)
         if not college:
             return None
 
+        # Protected fields that college admins can never alter
+        PROTECTED = {"id", "status", "is_active", "slug"}
         for key, val in updates.items():
-            if val is not None and hasattr(college, key) and key not in ("id", "status", "is_active", "slug"):
-                setattr(college, key, val)
+            if key in PROTECTED or not hasattr(college, key):
+                continue
+            setattr(college, key, val)
 
         await self.session.flush()
         return college
+
+    async def save_draft(self, college_id: uuid.UUID, draft_data: Dict[str, Any]) -> Optional[College]:
+        """Saves uncommitted profile draft for the institution."""
+        college = await self.get_college(college_id)
+        if not college:
+            return None
+        college.draft_profile = draft_data
+        await self.session.flush()
+        return college
+
+    async def get_draft(self, college_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+        """Retrieves currently saved uncommitted profile draft."""
+        college = await self.get_college(college_id)
+        if not college:
+            return None
+        return college.draft_profile
+
+    async def delete_draft(self, college_id: uuid.UUID) -> Optional[College]:
+        """Discards uncommitted profile draft."""
+        college = await self.get_college(college_id)
+        if not college:
+            return None
+        college.draft_profile = None
+        await self.session.flush()
+        return college
+
+    async def log_profile_change(
+        self,
+        college_id: uuid.UUID,
+        actor_id: Optional[uuid.UUID],
+        payload_diff: Dict[str, Any],
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> AuditLog:
+        """Records an audit log entry for college profile modifications."""
+        audit_entry = AuditLog(
+            id=uuid.uuid4(),
+            college_id=college_id,
+            actor_user_id=actor_id,
+            action_type="COLLEGE_PROFILE_UPDATED",
+            target_entity="colleges",
+            target_id=college_id,
+            payload_diff=payload_diff,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            created_at=datetime.now(timezone.utc),
+        )
+        self.session.add(audit_entry)
+        await self.session.flush()
+        return audit_entry
+
+    async def get_profile_history(self, college_id: uuid.UUID, limit: int = 20) -> List[AuditLog]:
+        """Retrieves recent audit history for institutional profile changes."""
+        res = await self.session.execute(
+            select(AuditLog)
+            .options(selectinload(AuditLog.actor))
+            .where(
+                AuditLog.college_id == college_id,
+                AuditLog.target_entity == "colleges",
+            )
+            .order_by(desc(AuditLog.created_at))
+            .limit(limit)
+        )
+        return list(res.scalars().all())
 
     # ==========================================================================
     # 2. Dashboard Aggregations
@@ -187,9 +256,10 @@ class CollegeAdminRepository:
         self, college_id: uuid.UUID, source_id: Optional[uuid.UUID] = None, limit: int = 20
     ) -> List[CrawlJob]:
         """Lists crawl execution jobs for this college."""
-        query = select(CrawlJob).where(CrawlJob.college_id == college_id).order_by(desc(CrawlJob.created_at)).limit(limit)
+        query = select(CrawlJob).where(CrawlJob.college_id == college_id)
         if source_id:
             query = query.where(CrawlJob.source_id == source_id)
+        query = query.order_by(desc(CrawlJob.created_at)).limit(limit)
         res = await self.session.execute(query)
         return list(res.scalars().all())
 
@@ -210,7 +280,7 @@ class CollegeAdminRepository:
             pages_discovered=0,
             pages_crawled=0,
             pages_failed=0,
-            started_at=datetime.now(timezone.utc),
+            started_at=None,  # Set to actual time only when job transitions to RUNNING
         )
         self.session.add(job)
 
@@ -457,6 +527,98 @@ class CollegeAdminRepository:
         await self.session.flush()
         return chunk
 
+    async def approve_and_publish_all_pending(
+        self,
+        college_id: uuid.UUID,
+        reviewer_id: Optional[uuid.UUID] = None,
+        source_type: Optional[str] = None,
+    ) -> Dict[str, int]:
+        """Bulk approve + publish all PENDING_REVIEW (and optionally APPROVED) chunks in one pass.
+
+        Returns counts of approved and published chunks.
+        """
+        # Step 1: fetch all PENDING_REVIEW chunks (not yet approved)
+        pending_query = select(KnowledgeChunk).where(
+            KnowledgeChunk.college_id == college_id,
+            KnowledgeChunk.status == "PENDING_REVIEW",
+        )
+        if source_type:
+            pending_query = pending_query.where(KnowledgeChunk.source_type == source_type)
+        pending_res = await self.session.execute(pending_query)
+        pending_chunks = list(pending_res.scalars().all())
+
+        approved_count = 0
+        for chunk in pending_chunks:
+            chunk.status = "APPROVED"
+            chunk.is_active = False
+            review = KnowledgeReview(
+                id=uuid.uuid4(),
+                chunk_id=chunk.id,
+                reviewed_by_user_id=reviewer_id,
+                review_action="APPROVED",
+                notes="Bulk auto-approved via admin publish-all",
+            )
+            self.session.add(review)
+            approved_count += 1
+
+        # Step 2: fetch all APPROVED chunks (includes just-approved ones above)
+        approved_query = select(KnowledgeChunk).where(
+            KnowledgeChunk.college_id == college_id,
+            KnowledgeChunk.status == "APPROVED",
+            KnowledgeChunk.is_active == False,
+        )
+        if source_type:
+            approved_query = approved_query.where(KnowledgeChunk.source_type == source_type)
+        await self.session.flush()  # Flush pending state before the second query
+        approved_res = await self.session.execute(approved_query)
+        approved_chunks = list(approved_res.scalars().all())
+
+        published_count = 0
+        for chunk in approved_chunks:
+            chunk.status = "PUBLISHED"
+            chunk.is_active = True
+            review = KnowledgeReview(
+                id=uuid.uuid4(),
+                chunk_id=chunk.id,
+                reviewed_by_user_id=reviewer_id,
+                review_action="PUBLISH",
+                notes="Bulk published via admin publish-all",
+            )
+            self.session.add(review)
+            published_count += 1
+
+        await self.session.flush()
+        return {"approved_count": approved_count, "published_count": published_count}
+
+    async def publish_all_approved(
+        self,
+        college_id: uuid.UUID,
+        reviewer_id: Optional[uuid.UUID] = None,
+    ) -> int:
+        """Publishes all APPROVED (but not yet live) chunks for this college."""
+        query = select(KnowledgeChunk).where(
+            KnowledgeChunk.college_id == college_id,
+            KnowledgeChunk.status == "APPROVED",
+            KnowledgeChunk.is_active == False,
+        )
+        res = await self.session.execute(query)
+        chunks = list(res.scalars().all())
+        count = 0
+        for chunk in chunks:
+            chunk.status = "PUBLISHED"
+            chunk.is_active = True
+            review = KnowledgeReview(
+                id=uuid.uuid4(),
+                chunk_id=chunk.id,
+                reviewed_by_user_id=reviewer_id,
+                review_action="PUBLISH",
+                notes="Bulk published via publish-all endpoint",
+            )
+            self.session.add(review)
+            count += 1
+        await self.session.flush()
+        return count
+
     # ==========================================================================
     # 7. Structured Facts (Extracted Facts)
     # ==========================================================================
@@ -593,9 +755,9 @@ class CollegeAdminRepository:
         return list(res.scalars().all())
 
     async def resolve_support_ticket(
-        self, college_id: uuid.UUID, ticket_id: uuid.UUID, status: str
+        self, college_id: uuid.UUID, ticket_id: uuid.UUID, status: str, resolution_notes: Optional[str] = None
     ) -> Optional[SupportTicket]:
-        """Transitions support ticket status."""
+        """Transitions support ticket status and saves resolution notes."""
         res = await self.session.execute(
             select(SupportTicket).where(
                 SupportTicket.college_id == college_id,
@@ -606,13 +768,17 @@ class CollegeAdminRepository:
         if not ticket:
             return None
         ticket.status = status
+        if resolution_notes is not None:
+            ticket.resolution_notes = resolution_notes
+        ticket.updated_at = datetime.now(timezone.utc)
         await self.session.flush()
         return ticket
 
     async def list_feedback(self, college_id: uuid.UUID, limit: int = 50) -> List[Feedback]:
-        """Lists student message ratings and commentary for this college."""
+        """Lists student message ratings and commentary for this college, with user eagerly loaded."""
         res = await self.session.execute(
             select(Feedback)
+            .options(selectinload(Feedback.user))
             .where(Feedback.college_id == college_id)
             .order_by(desc(Feedback.created_at))
             .limit(limit)

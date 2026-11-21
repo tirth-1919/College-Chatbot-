@@ -3,14 +3,242 @@
 @tailwind utilities;
 
 :root {
-  --background: #0B0B0D;
-  --foreground: #F5F5F5;
+  --bg-main: #FFFFFF;
+  --bg-sidebar: #F8FAFC;
+  --bg-panel: #F1F5F9;
+  --bg-input: #FFFFFF;
+  --border-color: #E2E8F0;
+  --text-primary: #111827;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --hover-subtle: #E2E8F0;
+  --code-bg: #F1F5F9;
+}
+
+html.dark {
+  --bg-main: #000000;
+  --bg-sidebar: #111111;
+  --bg-panel: #161616;
+  --bg-input: #1F1F1F;
+  --border-color: #2A2A2A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --hover-subtle: #222222;
+  --code-bg: #1F1F23;
+}
+
+html {
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: var(--text-primary);
+  background-color: var(--bg-main);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   min-height: 100vh;
 }
 
+/* ============================================================
+   DARK MODE MAPPINGS (Exact design specs: #000000, #111111, #161616, #1F1F1F, #2A2A2A, #FFFFFF, #A1A1AA)
+   ============================================================ */
+html.dark,
+html.dark body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+}
+
+html.dark .bg-\[\#0B0B0D\],
+html.dark .bg-\[\#0b0b0d\],
+html.dark .bg-\[\#000000\] {
+  background-color: var(--bg-main) !important;
+}
+
+html.dark aside,
+html.dark aside .bg-\[\#111114\],
+html.dark aside .bg-\[\#111114\]\/80,
+html.dark .sidebar,
+html.dark .sidebar-bg {
+  background-color: var(--bg-sidebar) !important;
+}
+
+html.dark .bg-\[\#111114\],
+html.dark .bg-\[\#111114\]\/80,
+html.dark .bg-\[\#161616\],
+html.dark .bg-\[\#18181B\],
+html.dark .bg-\[\#18181b\] {
+  background-color: var(--bg-panel) !important;
+}
+
+html.dark .bg-\[\#1F1F23\],
+html.dark .bg-\[\#1f1f23\],
+html.dark .bg-\[\#27272A\],
+html.dark .bg-\[\#27272a\] {
+  background-color: var(--bg-input) !important;
+}
+
+html.dark .border-\[\#2A2A30\],
+html.dark .border-\[\#2a2a30\],
+html.dark .border-\[\#1F1F23\],
+html.dark .border-\[\#1f1f23\],
+html.dark .border-\[\#3F3F46\],
+html.dark .border-\[\#3f3f46\],
+html.dark .divide-\[\#1F1F23\] > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-\[\#2A2A30\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-color) !important;
+}
+
+html.dark .text-\[\#F5F5F5\],
+html.dark .text-\[\#f5f5f5\],
+html.dark .text-\[\#D4D4D8\],
+html.dark .text-\[\#d4d4d8\] {
+  color: var(--text-primary) !important;
+}
+
+html.dark .text-\[\#A1A1AA\],
+html.dark .text-\[\#a1a1aa\] {
+  color: var(--text-secondary) !important;
+}
+
+html.dark .text-\[\#71717A\],
+html.dark .text-\[\#71717a\],
+html.dark .text-\[\#3F3F46\],
+html.dark .text-\[\#3f3f46\] {
+  color: var(--text-muted) !important;
+}
+
+/* ============================================================
+   LIGHT MODE MAPPINGS (Exact design specs: #FFFFFF, #F8FAFC, #F1F5F9, #FFFFFF, #E2E8F0, #111827, #64748B)
+   ============================================================ */
+html:not(.dark),
+html.light,
+html:not(.dark) body,
+html.light body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+}
+
+html:not(.dark) .bg-\[\#0B0B0D\],
+html:not(.dark) .bg-\[\#0b0b0d\],
+html:not(.dark) .bg-\[\#000000\],
+html.light .bg-\[\#0B0B0D\],
+html.light .bg-\[\#0b0b0d\],
+html.light .bg-\[\#000000\] {
+  background-color: var(--bg-main) !important;
+}
+
+/* Sidebars in Light Mode -> #F8FAFC */
+html:not(.dark) aside,
+html.light aside,
+html:not(.dark) aside .bg-\[\#111114\],
+html.light aside .bg-\[\#111114\],
+html:not(.dark) aside .bg-\[\#1F1F23\],
+html.light aside .bg-\[\#1F1F23\],
+html:not(.dark) .sidebar,
+html.light .sidebar,
+html:not(.dark) .sidebar-bg,
+html.light .sidebar-bg {
+  background-color: var(--bg-sidebar) !important;
+}
+
+/* Cards, Panels, Modals, Navbars, Tables in Light Mode -> #F1F5F9 */
+html:not(.dark) .bg-\[\#111114\],
+html:not(.dark) .bg-\[\#111114\]\/80,
+html:not(.dark) .bg-\[\#161616\],
+html:not(.dark) .bg-\[\#18181B\],
+html:not(.dark) .bg-\[\#18181b\],
+html.light .bg-\[\#111114\],
+html.light .bg-\[\#111114\]\/80,
+html.light .bg-\[\#161616\],
+html.light .bg-\[\#18181B\],
+html.light .bg-\[\#18181b\] {
+  background-color: var(--bg-panel) !important;
+}
+
+/* Inputs, Textareas, Sub-buttons in Light Mode -> #FFFFFF */
+html:not(.dark) .bg-\[\#1F1F23\],
+html:not(.dark) .bg-\[\#1f1f23\],
+html:not(.dark) .bg-\[\#27272A\],
+html:not(.dark) .bg-\[\#27272a\],
+html.light .bg-\[\#1F1F23\],
+html.light .bg-\[\#1f1f23\],
+html.light .bg-\[\#27272A\],
+html.light .bg-\[\#27272a\] {
+  background-color: var(--bg-input) !important;
+}
+
+/* Borders and Dividers in Light Mode -> #E2E8F0 */
+html:not(.dark) .border-\[\#2A2A30\],
+html:not(.dark) .border-\[\#2a2a30\],
+html:not(.dark) .border-\[\#1F1F23\],
+html:not(.dark) .border-\[\#1f1f23\],
+html:not(.dark) .border-\[\#3F3F46\],
+html:not(.dark) .border-\[\#3f3f46\],
+html:not(.dark) .divide-\[\#1F1F23\] > :not([hidden]) ~ :not([hidden]),
+html:not(.dark) .divide-\[\#2A2A30\] > :not([hidden]) ~ :not([hidden]),
+html.light .border-\[\#2A2A30\],
+html.light .border-\[\#2a2a30\],
+html.light .border-\[\#1F1F23\],
+html.light .border-\[\#1f1f23\],
+html.light .border-\[\#3F3F46\],
+html.light .border-\[\#3f3f46\],
+html.light .divide-\[\#1F1F23\] > :not([hidden]) ~ :not([hidden]),
+html.light .divide-\[\#2A2A30\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-color) !important;
+}
+
+/* Primary text in Light Mode -> #111827 */
+html:not(.dark) .text-\[\#F5F5F5\],
+html:not(.dark) .text-\[\#f5f5f5\],
+html:not(.dark) .text-\[\#D4D4D8\],
+html:not(.dark) .text-\[\#d4d4d8\],
+html.light .text-\[\#F5F5F5\],
+html.light .text-\[\#f5f5f5\],
+html.light .text-\[\#D4D4D8\],
+html.light .text-\[\#d4d4d8\] {
+  color: var(--text-primary) !important;
+}
+
+/* Secondary text in Light Mode -> #64748B */
+html:not(.dark) .text-\[\#A1A1AA\],
+html:not(.dark) .text-\[\#a1a1aa\],
+html.light .text-\[\#A1A1AA\],
+html.light .text-\[\#a1a1aa\] {
+  color: var(--text-secondary) !important;
+}
+
+/* Muted text in Light Mode -> #94A3B8 */
+html:not(.dark) .text-\[\#71717A\],
+html:not(.dark) .text-\[\#71717a\],
+html:not(.dark) .text-\[\#3F3F46\],
+html:not(.dark) .text-\[\#3f3f46\],
+html.light .text-\[\#71717A\],
+html.light .text-\[\#71717a\],
+html.light .text-\[\#3F3F46\],
+html.light .text-\[\#3f3f46\] {
+  color: var(--text-muted) !important;
+}
+
+/* Hover effects in Light Mode */
+html:not(.dark) .hover\:bg-\[\#1F1F23\]:hover,
+html.light .hover\:bg-\[\#1F1F23\]:hover,
+html:not(.dark) .hover\:bg-\[\#2A2A30\]:hover,
+html.light .hover\:bg-\[\#2A2A30\]:hover,
+html:not(.dark) .hover\:bg-\[\#18181B\]\/50:hover,
+html.light .hover\:bg-\[\#18181B\]\/50:hover {
+  background-color: var(--hover-subtle) !important;
+}
+
+html:not(.dark) .hover\:text-\[\#F5F5F5\]:hover,
+html.light .hover\:text-\[\#F5F5F5\]:hover {
+  color: var(--text-primary) !important;
+}
+
+/* Form input styling support */
+html.dark input, html.dark textarea, html.dark select {
+  color-scheme: dark;
+}
+html:not(.dark) input, html:not(.dark) textarea, html:not(.dark) select,
+html.light input, html.light textarea, html.light select {
+  color-scheme: light;
+}

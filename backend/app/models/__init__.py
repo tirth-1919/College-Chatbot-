@@ -15,6 +15,7 @@ from app.models.ai import AIProviderConfig, AIProviderEvent
 from app.models.audit import AuditLog
 from app.models.feedback_support import Feedback, SupportTicket, SupportTicketReply
 from app.models.notification import InAppNotification
+from app.models.academic import AcademicCourse, AcademicFee, CollegeGalleryImage, AcademicChangeHistory
 from app.models.registration import (
     CollegeRegistration,
     RegistrationReview,
@@ -54,6 +55,10 @@ __all__ = [
     "SupportTicket",
     "SupportTicketReply",
     "InAppNotification",
+    "AcademicCourse",
+    "AcademicFee",
+    "CollegeGalleryImage",
+    "AcademicChangeHistory",
     # 6. AI Management & Telemetry
     "AIProviderConfig",
     "AIProviderEvent",

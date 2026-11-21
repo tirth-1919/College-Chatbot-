@@ -6,6 +6,8 @@
 import { adminApiRequest } from "@/lib/api-client";
 import {
   CollegeProfile,
+  ProfileHistoryItem,
+  ProfileAssetUploadResult,
   CollegeAdminDashboard,
   WebsiteSource,
   CrawlJob,
@@ -33,16 +35,42 @@ export const collegeAdminService = {
     return adminApiRequest<CollegeProfile>("/college-admin/profile");
   },
 
-  async updateProfile(data: {
-    name?: string;
-    official_domain?: string;
-    contact_email?: string;
-    contact_phone?: string;
-    logo_url?: string;
-  }) {
+  async updateProfile(data: Partial<CollegeProfile>) {
     return adminApiRequest<CollegeProfile>("/college-admin/profile", {
       method: "PATCH",
       body: JSON.stringify(data),
+    });
+  },
+
+  async saveDraft(draftData: Record<string, any>) {
+    return adminApiRequest<Record<string, any>>("/college-admin/profile/draft", {
+      method: "POST",
+      body: JSON.stringify({ draft_data: draftData }),
+    });
+  },
+
+  async getDraft() {
+    return adminApiRequest<Record<string, any> | null>("/college-admin/profile/draft");
+  },
+
+  async deleteDraft() {
+    return adminApiRequest<boolean>("/college-admin/profile/draft", {
+      method: "DELETE",
+    });
+  },
+
+  async getProfileHistory(limit = 20) {
+    return adminApiRequest<ProfileHistoryItem[]>(`/college-admin/profile/history?limit=${limit}`);
+  },
+
+  async uploadProfileAsset(file: File, assetType: "logo" | "cover" | "favicon" | "approval_document") {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("asset_type", assetType);
+
+    return adminApiRequest<ProfileAssetUploadResult>("/college-admin/profile/upload-image", {
+      method: "POST",
+      body: formData,
     });
   },
 

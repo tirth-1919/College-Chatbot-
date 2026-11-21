@@ -46,6 +46,7 @@ const NAV_GROUPS = [
       { name: "Knowledge Base", href: "/college-admin/knowledge", icon: Database },
       { name: "Review Queue", href: "/college-admin/reviews", icon: CheckSquare },
       { name: "Structured Facts", href: "/college-admin/structured-data", icon: Layers },
+      { name: "Courses & Fees", href: "/college-admin/academic", icon: GraduationCap },
     ],
   },
   {

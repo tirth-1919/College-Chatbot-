@@ -3,9 +3,9 @@
 Represents an academic institution tenant (e.g. AIT College, RCTI College).
 """
 
-from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import Boolean, String, Text
-from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from sqlalchemy import Boolean, Float, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base, UUIDPrimaryKeyMixin, TimestampMixin
 
@@ -37,6 +37,66 @@ class College(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         index=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+
+    # 1. Institutional Identity & Classification
+    short_name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    cover_image_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    institution_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    established_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    website_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # 2. Address & Geolocation
+    address_line1: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    address_line2: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    district: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    country: Mapped[str] = mapped_column(String(100), default="India", nullable=False)
+    postal_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    maps_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # 3. Official & Departmental Contacts
+    admission_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    examination_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    placement_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    admission_helpline: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    alternate_phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    working_hours: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+
+    # 4. Recognition & Accreditation
+    affiliated_university: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    recognized_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    aicte_approval: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    ugc_recognition: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    naac_grade: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    nba_accreditation: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    accreditation_validity: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    approval_document_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # 5. About Institution & Leadership
+    short_description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    about_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    vision: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    mission: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    leader_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    leader_designation: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # 6. Social Media
+    linkedin_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    instagram_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    facebook_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    youtube_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    twitter_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # 7. Branding & Theming
+    favicon_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    primary_brand_color: Mapped[Optional[str]] = mapped_column(String(20), default="#10B981", nullable=True)
+    secondary_brand_color: Mapped[Optional[str]] = mapped_column(String(20), default="#6366F1", nullable=True)
+
+    # 8. Draft Profile State
+    draft_profile: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
 
     # Relationships
     memberships: Mapped[List["CollegeMembership"]] = relationship(

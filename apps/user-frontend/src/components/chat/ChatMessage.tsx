@@ -7,7 +7,6 @@ import { SourceCitation } from "./SourceCitation";
 import { FeedbackModal } from "./FeedbackModal";
 import { useVoice } from "@/hooks/use-voice";
 import { SupportedLanguage } from "@/hooks/use-translation";
-import Link from "next/link";
 import {
   Copy,
   Check,
@@ -15,7 +14,6 @@ import {
   VolumeX,
   RotateCcw,
   ThumbsUp,
-  User,
   Sparkles,
   ArrowLeftRight,
 } from "lucide-react";
@@ -24,17 +22,18 @@ interface ChatMessageProps {
   message: ChatMessageData;
   onRegenerate?: () => void;
   lang: SupportedLanguage;
+  onConfirmSwitch?: (targetCollegeId: string, pendingQuestion: string, messageId: string) => void;
+  onStayWithCollege?: (messageId: string, currentCollegeName: string) => void;
 }
 
-export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  onRegenerate,
+  lang,
+  onConfirmSwitch,
+  onStayWithCollege,
+}: ChatMessageProps) {
   const isUser = message.sender_role === "user";
-  const switchCollegeMatch = !isUser
-    ? message.message_text.match(/__CAMPUSAI_SWITCH_COLLEGE__:([^\n]+)/)
-    : null;
-  const switchCollegeName = switchCollegeMatch?.[1]?.trim() || null;
-  const displayText = switchCollegeName
-    ? message.message_text.replace(/__CAMPUSAI_SWITCH_COLLEGE__:[^\n]+/, "").trim()
-    : message.message_text;
   const [copied, setCopied] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const { isSpeaking, speak, stopSpeaking } = useVoice();
@@ -49,7 +48,6 @@ export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
     if (isSpeaking) {
       stopSpeaking();
     } else {
-      // Strip markdown markers for smooth audio readout
       const cleanText = message.message_text
         .replace(/[*_#`~>]/g, "")
         .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
@@ -94,20 +92,87 @@ export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
         )}
 
         {/* Message Content */}
-        <div className="whitespace-pre-wrap">{displayText}</div>
+        <div className="whitespace-pre-wrap">{message.message_text}</div>
 
-        {switchCollegeName && (
-          <Link
-            href="/colleges"
-            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#6366F1]/50 bg-[#6366F1]/10 px-3 py-2 text-xs font-semibold text-[#A5B4FC] hover:bg-[#6366F1]/20"
-          >
-            <ArrowLeftRight className="h-3.5 w-3.5" />
-            Switch to {switchCollegeName}
-          </Link>
+        {!isUser && message.source_citations?.some((citation) => citation.image_url) && (
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {message.source_citations.filter((citation) => citation.image_url).map((image, index) => (
+              <a key={`${image.image_url}-${index}`} href={image.image_url} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-xl border border-[#2A2A30] bg-[#1F1F23]">
+                <img src={image.image_url} alt={image.title} loading="lazy" className="w-full aspect-[4/3] object-cover group-hover:scale-[1.02] transition-transform" />
+                <div className="p-2.5">
+                  <div className="text-xs font-semibold">{image.title}</div>
+                  {image.image_category && <div className="mt-1 text-[10px] uppercase tracking-wide text-[#A1A1AA]">{image.image_category.replaceAll("_", " ")}</div>}
+                  {image.image_description && <div className="mt-1 text-xs text-[#A1A1AA]">{image.image_description}</div>}
+                  {image.event_name && <div className="mt-1 text-xs text-[#A1A1AA]">{image.event_name}{image.event_date ? ` · ${image.event_date}` : ""}</div>}
+                  {image.url && <div className="mt-1 text-[10px] text-[#818CF8]">Source</div>}
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* In-Chat College Switch Confirmation Card */}
+        {message.switch_action && (
+          <div className="mt-3 p-3.5 rounded-xl border border-[#6366F1]/30 bg-[#6366F1]/5">
+            <div className="flex items-start gap-2.5 mb-3">
+              <ArrowLeftRight className="h-4 w-4 text-[#6366F1] mt-0.5 shrink-0" />
+              <p className="text-xs text-[#F5F5F5] leading-relaxed">
+                You are currently connected to{" "}
+                <strong className="text-white font-semibold">
+                  {message.switch_action.currentCollegeName}
+                </strong>
+                . This question is about{" "}
+                <strong className="text-white font-semibold">
+                  {message.switch_action.targetCollegeName}
+                </strong>
+                . Would you like to switch?
+              </p>
+            </div>
+
+            {message.switch_action.status === "switched" ? (
+              <div className="inline-flex items-center gap-1.5 text-xs text-[#10B981] font-medium bg-[#10B981]/10 px-2.5 py-1 rounded-lg border border-[#10B981]/20">
+                <Check className="h-3.5 w-3.5" />
+                Switched to {message.switch_action.targetCollegeName}
+              </div>
+            ) : message.switch_action.status === "stayed" ? (
+              <div className="inline-flex items-center gap-1.5 text-xs text-[#A1A1AA] font-medium bg-[#1F1F23] px-2.5 py-1 rounded-lg border border-[#2A2A30]">
+                Stayed with {message.switch_action.currentCollegeName}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onConfirmSwitch?.(
+                      message.switch_action!.targetCollegeId,
+                      message.switch_action!.pendingQuestion,
+                      message.id
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <ArrowLeftRight className="h-3.5 w-3.5" />
+                  Switch to {message.switch_action.targetCollegeName}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onStayWithCollege?.(
+                      message.id,
+                      message.switch_action!.currentCollegeName
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-lg border border-[#2A2A30] bg-[#1F1F23] hover:bg-[#2A2A30] text-[#A1A1AA] hover:text-[#F5F5F5] text-xs font-medium transition"
+                >
+                  Stay with {message.switch_action.currentCollegeName}
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Source Citations */}
-        {!isUser && message.source_citations && (
+        {!isUser && message.source_citations && message.source_citations.length > 0 && (
           <SourceCitation citations={message.source_citations} />
         )}
 
@@ -150,7 +215,7 @@ export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
                 <button
                   onClick={onRegenerate}
                   className="p-1.5 rounded-md hover:bg-[#1F1F23] hover:text-[#F5F5F5] transition"
-                  title="Regenerate answer"
+                  title="Regenerate response"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                 </button>
@@ -158,8 +223,8 @@ export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
 
               <button
                 onClick={() => setIsFeedbackOpen(true)}
-                className="p-1.5 rounded-md hover:bg-[#1F1F23] hover:text-[#10B981] transition"
-                title="Rate answer"
+                className="p-1.5 rounded-md hover:bg-[#1F1F23] hover:text-[#F5F5F5] transition"
+                title="Give feedback"
               >
                 <ThumbsUp className="h-3.5 w-3.5" />
               </button>
@@ -168,14 +233,7 @@ export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
         </div>
       </div>
 
-      {isUser && (
-        <div className="h-8 w-8 rounded-full bg-[#1F1F23] border border-[#2A2A30] flex items-center justify-center text-[#A1A1AA] shrink-0 mt-1">
-          <User className="h-4 w-4" />
-        </div>
-      )}
-
-      {/* Feedback Modal */}
-      {!isUser && (
+      {isFeedbackOpen && (
         <FeedbackModal
           messageId={message.id}
           sessionId={message.session_id}
@@ -186,4 +244,3 @@ export function ChatMessage({ message, onRegenerate, lang }: ChatMessageProps) {
     </div>
   );
 }
-

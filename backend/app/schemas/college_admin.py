@@ -26,6 +26,67 @@ class CollegeProfileResponse(BaseModel):
     status: str
     is_active: bool
     created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    # 1. Institution Identity
+    short_name: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    institution_type: Optional[str] = None
+    established_year: Optional[int] = None
+    website_url: Optional[str] = None
+
+    # 2. Address & Location
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = "India"
+    postal_code: Optional[str] = None
+    maps_url: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    # 3. Official Contacts
+    admission_email: Optional[str] = None
+    examination_email: Optional[str] = None
+    placement_email: Optional[str] = None
+    admission_helpline: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    working_hours: Optional[str] = None
+
+    # 4. Recognition & Accreditation
+    affiliated_university: Optional[str] = None
+    recognized_by: Optional[str] = None
+    aicte_approval: Optional[str] = None
+    ugc_recognition: Optional[str] = None
+    naac_grade: Optional[str] = None
+    nba_accreditation: Optional[str] = None
+    accreditation_validity: Optional[str] = None
+    approval_document_url: Optional[str] = None
+
+    # 5. About Institution & Leadership
+    short_description: Optional[str] = None
+    about_text: Optional[str] = None
+    vision: Optional[str] = None
+    mission: Optional[str] = None
+    leader_name: Optional[str] = None
+    leader_designation: Optional[str] = None
+
+    # 6. Social Media
+    linkedin_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    youtube_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+
+    # 7. Branding
+    favicon_url: Optional[str] = None
+    primary_brand_color: Optional[str] = "#10B981"
+    secondary_brand_color: Optional[str] = "#6366F1"
+
+    # 8. Draft State
+    draft_profile: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
@@ -39,6 +100,93 @@ class CollegeProfileUpdateRequest(BaseModel):
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     logo_url: Optional[str] = None
+
+    # 1. Institution Identity
+    short_name: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    institution_type: Optional[str] = None
+    established_year: Optional[int] = None
+    website_url: Optional[str] = None
+
+    # 2. Address & Location
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    postal_code: Optional[str] = None
+    maps_url: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    # 3. Official Contacts
+    admission_email: Optional[str] = None
+    examination_email: Optional[str] = None
+    placement_email: Optional[str] = None
+    admission_helpline: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    working_hours: Optional[str] = None
+
+    # 4. Recognition & Accreditation
+    affiliated_university: Optional[str] = None
+    recognized_by: Optional[str] = None
+    aicte_approval: Optional[str] = None
+    ugc_recognition: Optional[str] = None
+    naac_grade: Optional[str] = None
+    nba_accreditation: Optional[str] = None
+    accreditation_validity: Optional[str] = None
+    approval_document_url: Optional[str] = None
+
+    # 5. About Institution & Leadership
+    short_description: Optional[str] = None
+    about_text: Optional[str] = None
+    vision: Optional[str] = None
+    mission: Optional[str] = None
+    leader_name: Optional[str] = None
+    leader_designation: Optional[str] = None
+
+    # 6. Social Media
+    linkedin_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    youtube_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+
+    # 7. Branding
+    favicon_url: Optional[str] = None
+    primary_brand_color: Optional[str] = None
+    secondary_brand_color: Optional[str] = None
+
+
+class CollegeDraftSaveRequest(BaseModel):
+    """Payload to save an in-progress draft profile."""
+
+    draft_data: Dict[str, Any]
+
+
+class CollegeProfileHistoryItemResponse(BaseModel):
+    """Historical audit entry for profile modifications."""
+
+    id: uuid.UUID
+    action_type: str
+    actor_id: Optional[uuid.UUID] = None
+    actor_name: Optional[str] = None
+    actor_email: Optional[str] = None
+    payload_diff: Optional[Dict[str, Any]] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProfileAssetUploadResponse(BaseModel):
+    """Response returned upon successful asset upload."""
+
+    asset_url: str
+    asset_type: str
+    file_name: str
+    file_size_bytes: int
 
 
 # ==============================================================================
@@ -77,11 +225,31 @@ class WebsiteSourceResponse(BaseModel):
     crawl_frequency: str
     is_active: bool
     last_crawled_at: Optional[datetime] = None
-    pages_count: int = 0
+    pages_count: int = 0  # Computed separately; not a DB column — always defaults to 0
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Override to safely handle the computed pages_count field missing on the ORM object."""
+        if not isinstance(obj, dict) and not hasattr(obj, "pages_count"):
+            data = {
+                "id": obj.id,
+                "college_id": obj.college_id,
+                "base_url": obj.base_url,
+                "allowed_subdomains": obj.allowed_subdomains,
+                "max_depth": obj.max_depth,
+                "max_pages": obj.max_pages,
+                "crawl_frequency": obj.crawl_frequency,
+                "is_active": obj.is_active,
+                "last_crawled_at": obj.last_crawled_at,
+                "pages_count": 0,
+                "created_at": obj.created_at,
+            }
+            return super().model_validate(data, **kwargs)
+        return super().model_validate(obj, **kwargs)
 
 
 class CrawlJobResponse(BaseModel):
@@ -174,13 +342,17 @@ class WebsitePageResponse(BaseModel):
 # ==============================================================================
 
 class DocumentCreateRequest(BaseModel):
-    """Metadata payload for document upload."""
+    """Metadata payload for document upload (JSON pre-upload registration)."""
 
     original_filename: str
     file_size_bytes: int
     mime_type: str = "application/pdf"
     category: Optional[str] = "GENERAL"
     description: Optional[str] = None
+    checksum_sha256: Optional[str] = Field(
+        default=None,
+        description="Real SHA-256 hex checksum (64 chars) of the already-uploaded file.",
+    )
 
 
 class DocumentDetailResponse(BaseModel):

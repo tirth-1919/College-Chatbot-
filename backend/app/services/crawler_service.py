@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import tenant_session
 from app.models.college import College
 from app.models.website import CrawlEvent, CrawlJob, WebsitePage, WebsiteSource
+from app.models.academic import CollegeGalleryImage
 from app.services.html_extractor import parse_and_clean_html
 from app.services.robots_parser import (
     CRAWLER_USER_AGENT,
@@ -258,6 +259,34 @@ class WebsiteCrawlerService:
 
                 # Save or deduplicate page
                 async with tenant_session(college_id=college_id) as session:
+                    for candidate in parsed_content.image_candidates:
+                        try:
+                            validate_url_security(candidate["url"])
+                            if not is_url_in_college_domain(candidate["url"], official_domain, allowed_subdomains):
+                                continue
+                        except Exception:
+                            continue
+                        digest = __import__("hashlib").sha256(candidate["url"].encode()).hexdigest()
+                        exists = await session.scalar(select(CollegeGalleryImage.id).where(
+                            CollegeGalleryImage.college_id == college_id,
+                            CollegeGalleryImage.content_hash == digest,
+                        ))
+                        if exists:
+                            continue
+                        context = (candidate["title"] + " " + candidate["description"] + " " + parsed_content.title).lower()
+                        category = next((key for terms, key in [
+                            (("library",), "LIBRARY"), (("laboratory", "lab"), "LABORATORY"),
+                            (("hostel",), "HOSTEL"), (("canteen", "cafeteria"), "CANTEEN"),
+                            (("auditorium", "seminar hall"), "AUDITORIUM"), (("event", "festival", "annual day"), "EVENTS"),
+                            (("entrance", "gate"), "ENTRANCE"), (("campus", "building"), "CAMPUS")
+                        ] if any(term in context for term in terms)), "OTHER")
+                        session.add(CollegeGalleryImage(
+                            college_id=college_id, image_url=candidate["url"],
+                            image_title=candidate["title"][:255] or parsed_content.title,
+                            image_description=candidate["description"] or parsed_content.meta_description,
+                            image_category=category, source_url=parsed_content.url,
+                            verification_status="PENDING", is_active=False, content_hash=digest,
+                        ))
                     is_new_or_changed = await self._save_or_deduplicate_page(
                         session=session,
                         college_id=college_id,

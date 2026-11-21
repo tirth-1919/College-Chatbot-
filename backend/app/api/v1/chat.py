@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Security, 
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.database.session import get_db, set_chat_visitor_token, set_rls_context
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
@@ -19,9 +20,11 @@ from app.models.feedback_support import Feedback
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.college_repository import CollegeRepository
 from app.services.rag_service import rag_service
+from app.services.academic_service import answer_structured_question
 from app.schemas.chat import (
     CreateSessionRequest,
     RenameSessionRequest,
+    SwitchCollegeRequest,
     SendMessageRequest,
     ChatMessageResponse,
     ChatSessionResponse,
@@ -314,6 +317,71 @@ async def rename_chat_session(
     )
 
 
+@router.post(
+    "/sessions/{session_id}/switch-college",
+    response_model=APIResponse[ChatSessionResponse],
+    summary="Switch active college for a conversation session",
+)
+async def switch_session_college(
+    session_id: uuid.UUID,
+    req: SwitchCollegeRequest,
+    request: Request,
+    current_user: Optional[User] = Depends(get_optional_chat_user),
+    session: AsyncSession = Depends(get_db),
+    visitor_token: Optional[str] = Header(None, alias="X-Chat-Visitor-Token"),
+):
+    """Safely transitions an active conversation to a new registered college institution.
+    Preserves tenant isolation and RLS integrity by establishing a tenant-scoped session
+    for the target college while honoring student/visitor ownership.
+    """
+    requested_college_id = _requested_college_id(request)
+    await _set_chat_context(session, requested_college_id, current_user, visitor_token)
+    chat_repo = ChatRepository(session)
+    chat_session = await chat_repo.get_session(session_id)
+    if not chat_session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found.")
+    _assert_session_college(chat_session, requested_college_id)
+    _assert_session_ownership(chat_session, current_user, visitor_token)
+
+    tenant_service = TenantService(session)
+    if current_user:
+        target_college = await tenant_service.validate_user_access_to_college(
+            current_user, req.new_college_id
+        )
+    else:
+        target_college = await tenant_service.get_active_college(req.new_college_id)
+    if not target_college:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target college institution not found or inactive.",
+        )
+
+    # Establish target college RLS context
+    await _set_chat_context(session, target_college.id, current_user, visitor_token)
+
+    new_session = ChatSession(
+        college_id=target_college.id,
+        user_id=current_user.id if current_user else None,
+        visitor_token_hash=(
+            hashlib.sha256(visitor_token.encode("utf-8")).hexdigest()
+            if visitor_token else None
+        ),
+        session_title=chat_session.session_title,
+        language=chat_session.language,
+        is_active=True,
+    )
+    created = await chat_repo.create_session(new_session)
+    response_data = ChatSessionResponse.model_validate(created)
+    response_data.visitor_token = visitor_token
+    await session.commit()
+
+    return APIResponse(
+        success=True,
+        message=f"Session switched to {target_college.name}",
+        data=response_data,
+    )
+
+
 @router.delete(
     "/sessions/{session_id}",
     response_model=APIResponse[bool],
@@ -391,7 +459,7 @@ async def send_chat_message(
         sender_role="user",
         message_text=req.message_text.strip(),
         is_verified=False,
-        answer_source_type="OFFICIAL_WEBSITE",
+        answer_source_type="NO_RELIABLE_INFORMATION",
         source_citations=[],
         token_count=len(req.message_text.split()),
         model_used=None,
@@ -405,14 +473,35 @@ async def send_chat_message(
 
     # 3. RAG Answer Generation with Context Continuity
     lang = req.language or chat_session.language or "en"
-    rag_result = await rag_service.answer_question(
-        college_id=chat_session.college_id,
-        query=req.message_text.strip(),
-        session=session,
-        language=lang,
-        college=college,
-        session_id=session_id,
+    recent_user_messages = (await session.execute(
+        select(ChatMessage.message_text).where(
+            ChatMessage.session_id == session_id,
+            ChatMessage.sender_role == "user",
+            ChatMessage.id != user_msg.id,
+        ).order_by(ChatMessage.created_at.desc()).limit(5)
+    )).scalars().all()
+    structured = await answer_structured_question(
+        session, chat_session.college_id, req.message_text.strip(), " ".join(recent_user_messages)
     )
+    if structured:
+        rag_result = {
+            "answer_text": structured["message_text"],
+            "is_verified": structured["is_verified"],
+            "answer_source_type": structured["answer_source_type"],
+            "source_citations": structured["source_citations"],
+            "token_count": len(structured["message_text"].split()),
+            "model_used": "Structured College Records",
+            "actual_provider": "STRUCTURED_DATA",
+        }
+    else:
+        rag_result = await rag_service.answer_question(
+            college_id=chat_session.college_id,
+            query=req.message_text.strip(),
+            session=session,
+            language=lang,
+            college=college,
+            session_id=session_id,
+        )
 
     # Prefer actual_model from richer result dict, fall back to model_used
     model_used = rag_result.get("actual_model") or rag_result.get("model_used")
@@ -493,7 +582,7 @@ async def stream_chat_message(
         sender_role="user",
         message_text=req.message_text.strip(),
         is_verified=False,
-        answer_source_type="OFFICIAL_WEBSITE",
+        answer_source_type="NO_RELIABLE_INFORMATION",
         source_citations=[],
         token_count=len(req.message_text.split()),
         model_used=None,

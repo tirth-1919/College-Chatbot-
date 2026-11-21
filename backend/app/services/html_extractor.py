@@ -44,6 +44,7 @@ class ExtractedPageContent:
         headings: List[Dict[str, str]],
         tables_markdown: List[str],
         discovered_links: List[str],
+        image_candidates: Optional[List[Dict[str, str]]] = None,
         requires_js: bool = False,
     ):
         self.url = url
@@ -56,6 +57,7 @@ class ExtractedPageContent:
         self.headings = headings
         self.tables_markdown = tables_markdown
         self.discovered_links = discovered_links
+        self.image_candidates = image_candidates or []
         self.requires_js = requires_js
 
 
@@ -162,6 +164,31 @@ def parse_and_clean_html(
             seen_links.add(resolved)
             discovered_links.append(resolved)
 
+    # Preserve meaningful image metadata before decorative DOM cleanup.
+    image_candidates: List[Dict[str, str]] = []
+    seen_images: Set[str] = set()
+    for image in soup.find_all("img", src=True):
+        src = normalize_url(image.get("src", "").strip(), page_url)
+        alt = (image.get("alt") or "").strip()
+        if not src or src in seen_images or re.search(r"(logo|icon|avatar|sprite|tracking|pixel|banner-ad)", src + " " + alt, re.I):
+            continue
+        width = image.get("width")
+        height = image.get("height")
+        try:
+            if width and height and int(width) < 120 and int(height) < 90:
+                continue
+        except (TypeError, ValueError):
+            pass
+        parent = image.parent
+        caption = ""
+        if parent:
+            caption_tag = parent.find("figcaption") or parent.find("p")
+            caption = caption_tag.get_text(" ", strip=True)[:500] if caption_tag else ""
+        if not alt and not caption:
+            continue
+        seen_images.add(src)
+        image_candidates.append({"url": src, "title": alt or caption[:255], "description": caption})
+
     # 5. Extract Headings Hierarchy
     headings: List[Dict[str, str]] = []
     for h in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
@@ -237,6 +264,7 @@ def parse_and_clean_html(
         headings=headings,
         tables_markdown=tables_md,
         discovered_links=discovered_links,
+        image_candidates=image_candidates[:100],
         requires_js=requires_js,
     )
 

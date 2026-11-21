@@ -20,6 +20,12 @@ class RenameSessionRequest(BaseModel):
     session_title: str = Field(min_length=1, max_length=255)
 
 
+class SwitchCollegeRequest(BaseModel):
+    """Payload to switch active college institution for an existing chat session."""
+
+    new_college_id: uuid.UUID
+
+
 class SendMessageRequest(BaseModel):
     """Payload for submitting a user question to the chatbot."""
 
