@@ -222,11 +222,13 @@ const target = targetArg ? targetArg.split('=')[1] : 'all';
 printBanner();
 
 // 1. Start Backend API (with debugpy on 127.0.0.1:5678)
+let backendPythonCommand = null;
 if (target === 'all' || target === 'backend') {
   freePort(DEBUG_PORTS.backend);
   freePort(8000);
   const pyCmd = checkPython();
   if (pyCmd) {
+    backendPythonCommand = pyCmd;
     // Launch via debugpy so VS Code can attach to the Python process.
     // --listen binds to localhost only (never 0.0.0.0).
     // No --wait-for-client so the server starts immediately without blocking.
@@ -247,6 +249,25 @@ if (target === 'all' || target === 'backend') {
   } else {
     console.log(`${colors.yellow}[BACKEND] Python runtime not detected or execution alias stub active.${colors.reset}`);
     console.log(`${colors.yellow}[BACKEND] To start FastAPI backend manually: cd backend && python -m uvicorn app.main:app --reload --port 8000${colors.reset}\n`);
+  }
+}
+
+// 1b. Start the Celery consumer alongside the API so queued crawls and
+// document-processing jobs do not remain pending during local development.
+if (target === 'all' || target === 'backend' || target === 'worker') {
+  const workerPython = backendPythonCommand || checkPython();
+  if (workerPython) {
+    startProcess(
+      'WORKER', colors.yellow,
+      workerPython,
+      [
+        '-m', 'celery', '-A', 'app.tasks.celery_app.celery_app', 'worker',
+        '--loglevel=INFO', '--pool=solo', '--queues=crawlers,documents,celery',
+      ],
+      BACKEND_DIR
+    );
+  } else {
+    console.log(`${colors.yellow}[WORKER] Python runtime not detected; queued background jobs will not run.${colors.reset}`);
   }
 }
 

@@ -47,7 +47,7 @@ export function UserProfileModal({
             </div>
             <div>
               <h2 className="text-base font-semibold text-[#F5F5F5]">Account & Settings</h2>
-              <p className="text-xs text-[#A1A1AA]">Manage your CampusAI preferences</p>
+              <p className="text-xs text-[#A1A1AA]">Manage your AI FAQ Colleges Chatbot preferences</p>
             </div>
           </div>
           <button

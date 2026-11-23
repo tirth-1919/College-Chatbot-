@@ -14,8 +14,6 @@ import {
   Edit2,
   Check,
   X,
-  ChevronLeft,
-  ChevronRight,
   GraduationCap,
   MoreHorizontal,
   User as UserIcon,
@@ -30,24 +28,22 @@ import {
 
 interface ChatSidebarProps {
   sessions: ChatSessionData[];
+  collegeNames: Record<string, string>;
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
   onRenameSession: (id: string, newTitle: string) => void;
   onDeleteSession: (id: string) => void;
-  isOpen: boolean;
-  onToggle: () => void;
 }
 
 export function ChatSidebar({
   sessions,
+  collegeNames,
   activeSessionId,
   onSelectSession,
   onNewSession,
   onRenameSession,
   onDeleteSession,
-  isOpen,
-  onToggle,
 }: ChatSidebarProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -75,7 +71,7 @@ export function ChatSidebar({
   }, [isProfileMenuOpen]);
 
   const filteredSessions = sessions.filter((s) =>
-    s.session_title.toLowerCase().includes(searchTerm.toLowerCase())
+    `${s.session_title} ${collegeNames[s.college_id] || ""}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const startEditing = (s: ChatSessionData) => {
@@ -90,40 +86,20 @@ export function ChatSidebar({
     setEditingId(null);
   };
 
-  if (!isOpen) {
-    return (
-      <button
-        onClick={onToggle}
-        className="fixed left-3 top-4 z-40 p-2.5 rounded-xl border border-[#2A2A30] bg-[#111114] text-[#A1A1AA] hover:text-[#F5F5F5] hover:border-[#6366F1] shadow-xl transition cursor-pointer"
-        title="Open sidebar"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
-    );
-  }
-
   return (
     <>
-      <div className="w-72 border-r border-[#2A2A30] bg-[#111114] flex flex-col h-full shrink-0 relative transition-all">
-        {/* Top Header: CampusAI Logo + Collapse Button */}
+      <div className="w-56 sm:w-64 lg:w-72 border-r border-[#2A2A30] bg-[#111114] flex flex-col h-full shrink-0 relative">
+        {/* Top Header: Product wordmark */}
         <div className="px-4 py-3.5 border-b border-[#2A2A30] flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition">
             <div className="h-8 w-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-white font-bold shadow-sm">
               <GraduationCap className="h-4 w-4" />
             </div>
             <span className="font-semibold text-sm text-[#F5F5F5] tracking-tight">
-              Campus<span className="text-[#6366F1]">AI</span>
+              AI FAQ Colleges Chatbot
             </span>
           </Link>
 
-          <button
-            type="button"
-            onClick={onToggle}
-            className="p-1.5 rounded-lg text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-[#1F1F23] transition cursor-pointer"
-            title="Collapse sidebar"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
         </div>
 
         {/* New Conversation Button (ChatGPT style) */}
@@ -146,7 +122,7 @@ export function ChatSidebar({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search conversations..."
+              placeholder="Search chats or colleges..."
               className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#1F1F23] border border-[#2A2A30] text-xs text-[#F5F5F5] placeholder-[#A1A1AA]/50 focus:outline-none focus:border-[#6366F1] transition"
             />
           </div>
@@ -223,7 +199,12 @@ export function ChatSidebar({
                         className="flex items-center gap-2.5 truncate flex-1 cursor-pointer"
                       >
                         <MessageSquare className="h-3.5 w-3.5 shrink-0 text-[#6366F1]" />
-                        <span className="truncate">{s.session_title}</span>
+                        <span className="min-w-0 truncate">
+                          <span className="block truncate">{s.session_title}</span>
+                          {collegeNames[s.college_id] && (
+                            <span className="block truncate text-[10px] font-normal opacity-70">{collegeNames[s.college_id]}</span>
+                          )}
+                        </span>
                       </div>
 
                       <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition">

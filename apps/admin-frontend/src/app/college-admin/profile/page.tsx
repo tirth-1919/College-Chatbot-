@@ -157,12 +157,20 @@ const INITIAL_FORM: ProfileFormData = {
   secondary_brand_color: "#6366F1",
 };
 
+const PROFILE_STEPS = [
+  { title: "Institution", description: "Name, website, and profile photo" },
+  { title: "Location & Contacts", description: "Address and contact details" },
+  { title: "Recognition & About", description: "Accreditation and college overview" },
+  { title: "Leadership & Social", description: "Leadership and social links" },
+] as const;
+
 export default function CollegeProfilePage() {
   const [profile, setProfile] = useState<CollegeProfile | null>(null);
   const [formData, setFormData] = useState<ProfileFormData>(INITIAL_FORM);
   const [originalData, setOriginalData] = useState<ProfileFormData>(INITIAL_FORM);
   const [hasDraft, setHasDraft] = useState(false);
   const [draftTimestamp, setDraftTimestamp] = useState<string | null>(null);
+  const [activeStep, setActiveStep] = useState(0);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -279,7 +287,7 @@ export default function CollegeProfilePage() {
       { key: "official_domain", label: "Official Domain", weight: 8, filled: !!formData.official_domain.trim() },
       { key: "contact_email", label: "Contact Email", weight: 8, filled: !!formData.contact_email.trim() },
       { key: "contact_phone", label: "Official Phone", weight: 5, filled: !!formData.contact_phone.trim() },
-      { key: "logo_url", label: "College Logo", weight: 6, filled: !!formData.logo_url.trim() },
+      { key: "logo_url", label: "College Profile Photo", weight: 6, filled: !!formData.logo_url.trim() },
       { key: "cover_image_url", label: "Cover Image", weight: 5, filled: !!formData.cover_image_url.trim() },
       { key: "institution_type", label: "Institution Type", weight: 4, filled: !!formData.institution_type.trim() },
       { key: "established_year", label: "Established Year", weight: 4, filled: !!formData.established_year.trim() },
@@ -311,6 +319,46 @@ export default function CollegeProfilePage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleNextStep = () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if (activeStep === 0 && !formData.name.trim()) {
+      setErrorMsg("Institution Legal Name is required before continuing.");
+      return;
+    }
+    if (activeStep === 0 && !formData.official_domain.trim()) {
+      setErrorMsg("Official Institutional Domain is required before continuing.");
+      return;
+    }
+    if (activeStep === 1 && !formData.contact_email.trim()) {
+      setErrorMsg("Official Contact Email is required before continuing.");
+      return;
+    }
+    if (activeStep === 1 && !/^\S+@\S+\.\S+$/.test(formData.contact_email.trim())) {
+      setErrorMsg("Enter a valid Official Contact Email before continuing.");
+      return;
+    }
+
+    setActiveStep((current) => Math.min(current + 1, PROFILE_STEPS.length - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePreviousStep = () => {
+    setErrorMsg(null);
+    setActiveStep((current) => Math.max(current - 1, 0));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleWizardSubmit = (e: React.FormEvent) => {
+    if (activeStep < PROFILE_STEPS.length - 1) {
+      e.preventDefault();
+      handleNextStep();
+      return;
+    }
+    void handleSubmit(e);
+  };
+
   // Secure Image / Asset Upload Handler
   const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -336,7 +384,7 @@ export default function CollegeProfilePage() {
       const uploadedData = res.data;
       if (res.success && uploadedData) {
         setFormData((prev) => ({ ...prev, [targetField]: uploadedData.asset_url }));
-        setSuccessMsg(`${assetType.replace("_", " ").toUpperCase()} uploaded and verified!`);
+        setSuccessMsg(assetType === "logo" ? "College profile photo uploaded and preview updated." : `${assetType.replace("_", " ").toUpperCase()} uploaded successfully.`);
         setTimeout(() => setSuccessMsg(null), 3500);
       } else {
         setErrorMsg(res.error || "Upload failed. Please verify the file format.");
@@ -516,6 +564,7 @@ export default function CollegeProfilePage() {
   // Reset Changes (Cancel)
   const handleCancel = () => {
     setFormData(originalData);
+    setActiveStep(0);
     setSuccessMsg("Changes cancelled. Restored published values.");
     setTimeout(() => setSuccessMsg(null), 3000);
   };
@@ -716,9 +765,29 @@ export default function CollegeProfilePage() {
         </div>
       )}
 
-      {/* Main Form: Two Column Desktop Layout, 1 Column Mobile Layout */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="p-5 rounded-2xl border border-[#2A2A30] bg-[#111114] space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-[#F5F5F5]">Step {activeStep + 1} of {PROFILE_STEPS.length}: {PROFILE_STEPS[activeStep].title}</p>
+            <p className="text-[11px] text-[#A1A1AA] mt-1">{PROFILE_STEPS[activeStep].description}</p>
+          </div>
+          <span className="text-[11px] text-[#A1A1AA]">{Math.round(((activeStep + 1) / PROFILE_STEPS.length) * 100)}%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-[#1F1F23] overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={PROFILE_STEPS.length} aria-valuenow={activeStep + 1}>
+          <div className="h-full rounded-full bg-gradient-to-r from-[#10B981] to-[#6366F1] transition-all" style={{ width: `${((activeStep + 1) / PROFILE_STEPS.length) * 100}%` }} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {PROFILE_STEPS.map((step, index) => (
+            <div key={step.title} className={`rounded-lg px-3 py-2 text-[11px] ${index === activeStep ? "bg-[#10B981]/10 text-[#10B981]" : index < activeStep ? "text-[#A1A1AA]" : "text-[#71717A]"}`}>
+              <span className="font-semibold">{index + 1}. {step.title}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <form onSubmit={handleWizardSubmit} className="space-y-6">
+        {activeStep === 0 && (
+          <div className="grid grid-cols-1 gap-6 items-start">
           {/* ================================================================= */}
           {/* CARD 1: INSTITUTION IDENTITY */}
           {/* ================================================================= */}
@@ -939,21 +1008,21 @@ export default function CollegeProfilePage() {
 
               {/* Logo & Favicon row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Rounded-Square Logo Preview */}
+                {/* College Profile Photo / Logo Preview */}
                 <div>
                   <label className="block text-[#A1A1AA] font-medium mb-1">
-                    Institution Logo (Rounded Square)
+                    College Profile Photo
                   </label>
                   <div className="flex items-center gap-3">
-                    <div className="relative w-16 h-16 rounded-xl border border-[#2A2A30] bg-[#1F1F23] overflow-hidden flex items-center justify-center shrink-0">
+                    <div className="relative w-20 h-20 rounded-full border-2 border-[#10B981]/50 bg-[#1F1F23] overflow-hidden flex items-center justify-center shrink-0">
                       {formData.logo_url ? (
                         <img
                           src={formData.logo_url}
-                          alt="Logo Preview"
-                          className="w-full h-full object-contain p-1"
+                          alt="College profile photo preview"
+                          className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Building2 className="h-6 w-6 text-[#71717A]" />
+                        <Building2 className="h-8 w-8 text-[#71717A]" />
                       )}
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -963,9 +1032,9 @@ export default function CollegeProfilePage() {
                         disabled={uploadingField === "logo_url"}
                         className="px-3 py-1.5 rounded-lg border border-[#2A2A30] bg-[#1F1F23] hover:bg-[#2A2A30] text-[11px] font-medium text-[#F5F5F5] transition text-left"
                       >
-                        {uploadingField === "logo_url" ? "Uploading..." : "Upload Logo"}
+                        {uploadingField === "logo_url" ? "Uploading..." : formData.logo_url ? "Change Photo" : "Upload Photo"}
                       </button>
-                      <span className="text-[10px] text-[#71717A]">PNG, SVG or WebP (&lt;5MB)</span>
+                      <span className="text-[10px] text-[#71717A]">PNG, JPG, SVG or WebP (&lt;5MB)</span>
                     </div>
                   </div>
                 </div>
@@ -1048,7 +1117,11 @@ export default function CollegeProfilePage() {
               </div>
             </div>
           </div>
+          </div>
+        )}
 
+        {activeStep === 1 && (
+          <div className="grid grid-cols-1 gap-6 items-start">
           {/* ================================================================= */}
           {/* CARD 3: ADDRESS & LOCATION */}
           {/* ================================================================= */}
@@ -1338,7 +1411,11 @@ export default function CollegeProfilePage() {
               </div>
             </div>
           </div>
+          </div>
+        )}
 
+        {activeStep === 2 && (
+          <div className="grid grid-cols-1 gap-6 items-start">
           {/* ================================================================= */}
           {/* CARD 5: RECOGNITION & ACCREDITATION */}
           {/* ================================================================= */}
@@ -1573,7 +1650,11 @@ export default function CollegeProfilePage() {
               </div>
             </div>
           </div>
+          </div>
+        )}
 
+        {activeStep === 3 && (
+          <div className="grid grid-cols-1 gap-6 items-start">
           {/* ================================================================= */}
           {/* CARD 7: LEADERSHIP */}
           {/* ================================================================= */}
@@ -1689,6 +1770,7 @@ export default function CollegeProfilePage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Bottom Actions Bar */}
         <div className="p-4 rounded-2xl border border-[#2A2A30] bg-[#111114] flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -1714,14 +1796,35 @@ export default function CollegeProfilePage() {
               {isDraftSaving ? "Saving..." : "Save Draft"}
             </button>
 
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="px-5 py-2 rounded-xl bg-[#10B981] hover:bg-[#059669] text-xs font-semibold text-white shadow-lg shadow-[#10B981]/25 transition disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {isSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              Save Changes
-            </button>
+            {activeStep > 0 && (
+              <button
+                type="button"
+                onClick={handlePreviousStep}
+                className="px-4 py-2 rounded-xl border border-[#2A2A30] bg-[#1F1F23] hover:bg-[#2A2A30] text-xs font-medium text-[#F5F5F5] transition"
+              >
+                Back
+              </button>
+            )}
+
+            {activeStep < PROFILE_STEPS.length - 1 ? (
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={Boolean(uploadingField)}
+                className="px-5 py-2 rounded-xl bg-[#10B981] hover:bg-[#059669] text-xs font-semibold text-white shadow-lg shadow-[#10B981]/25 transition disabled:opacity-50"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isSaving || Boolean(uploadingField)}
+                className="px-5 py-2 rounded-xl bg-[#10B981] hover:bg-[#059669] text-xs font-semibold text-white shadow-lg shadow-[#10B981]/25 transition disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Save Changes
+              </button>
+            )}
           </div>
         </div>
       </form>

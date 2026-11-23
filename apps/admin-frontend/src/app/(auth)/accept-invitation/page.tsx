@@ -143,7 +143,7 @@ function AcceptInvitationContent() {
             Accept Administrator Invitation
           </h1>
           <p className="text-xs text-[#A1A1AA] mt-1 max-w-sm mx-auto">
-            You have been granted institutional governance authority on CampusAI.
+            You have been granted institutional governance authority on AI FAQ Colleges Chatbot.
           </p>
         </div>
 

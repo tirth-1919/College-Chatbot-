@@ -79,8 +79,16 @@ async def test_readiness_worker_false_when_no_workers_respond():
         async def _fake_aclose():
             return None
 
+        async def _fake_smembers(_key):
+            return set()
+
+        async def _fake_mget(_keys):
+            return []
+
         mock_redis_instance.ping = _fake_ping
         mock_redis_instance.aclose = _fake_aclose
+        mock_redis_instance.smembers = _fake_smembers
+        mock_redis_instance.mget = _fake_mget
         mock_redis_factory.return_value = mock_redis_instance
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -90,6 +98,8 @@ async def test_readiness_worker_false_when_no_workers_respond():
         assert "checks" in data
         # An empty ping response means no live worker → must be false.
         assert data["checks"]["worker"] is False
+        assert response.status_code == 503
+        assert data["status"] == "not_ready"
 
 
 @pytest.mark.asyncio
@@ -111,9 +121,17 @@ async def test_readiness_worker_true_when_worker_responds():
         async def _fake_aclose():
             return None
 
+        async def _fake_smembers(_key):
+            return {b"test-worker:1234"}
+
+        async def _fake_mget(keys):
+            return [b"1234" for _ in keys]
+
         mock_redis_instance = MagicMock()
         mock_redis_instance.ping = _fake_ping
         mock_redis_instance.aclose = _fake_aclose
+        mock_redis_instance.smembers = _fake_smembers
+        mock_redis_instance.mget = _fake_mget
         mock_redis_factory.return_value = mock_redis_instance
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -123,4 +141,6 @@ async def test_readiness_worker_true_when_worker_responds():
         assert "checks" in data
         # A worker replied → must be true.
         assert data["checks"]["worker"] is True
+        assert response.status_code == 200
+        assert data["status"] == "ready"
 

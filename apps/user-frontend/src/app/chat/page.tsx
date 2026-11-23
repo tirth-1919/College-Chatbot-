@@ -96,11 +96,11 @@ export default function ChatPage() {
   const [collegeName, setCollegeName] = useState<string>("");
   const [collegeContextReady, setCollegeContextReady] = useState(false);
   const [sessions, setSessions] = useState<ChatSessionData[]>([]);
+  const [historySessions, setHistorySessions] = useState<ChatSessionData[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isSwitchCollegeOpen, setIsSwitchCollegeOpen] = useState(false);
 
@@ -120,6 +120,17 @@ export default function ChatPage() {
   const loadingCollegeIdsRef = useRef(new Set<string>());
   const initialLoadedRef = useRef(false);
 
+  const mergeHistorySessions = useCallback((incoming: ChatSessionData[]) => {
+    if (!incoming.length) return;
+    setHistorySessions((previous) => {
+      const merged = new Map(previous.map((session) => [session.id, session]));
+      incoming.forEach((session) => merged.set(session.id, { ...merged.get(session.id), ...session }));
+      return Array.from(merged.values()).sort((a, b) =>
+        (b.updated_at || b.created_at || "").localeCompare(a.updated_at || a.created_at || "")
+      );
+    });
+  }, []);
+
   // Fetch registered colleges directory on mount
   useEffect(() => {
     collegeService.getColleges(true).then((res) => {
@@ -128,6 +139,61 @@ export default function ChatPage() {
       }
     });
   }, []);
+
+  // Keep the history list across college changes. Each server request remains
+  // scoped to one college; anonymous sessions are read only from this browser.
+  // Local history is rendered immediately, even when no college is selected or
+  // the college directory has not finished loading yet.
+  useEffect(() => {
+    let cancelled = false;
+    const readLocalHistories = () => {
+      const localSessions: ChatSessionData[] = [];
+      for (const key of Object.keys(localStorage)) {
+        if (!key.startsWith(STORAGE_PREFIX)) continue;
+        try {
+          const cached = JSON.parse(localStorage.getItem(key) || "[]") as ChatSessionData[];
+          if (Array.isArray(cached)) {
+            localSessions.push(...cached.filter((session) =>
+              session.college_id && session.local_state !== "unavailable" &&
+              (hasAuthenticatedUser() || hasVisitorToken(session.id))
+            ));
+          }
+        } catch {}
+      }
+      const unique = new Map(localSessions.map((session) => [session.id, session]));
+      return Array.from(unique.values()).sort((a, b) =>
+        (b.updated_at || b.created_at || "").localeCompare(a.updated_at || a.created_at || "")
+      );
+    };
+
+    setHistorySessions(readLocalHistories());
+    const loadAllHistories = async () => {
+      if (hasAuthenticatedUser() && colleges.length) {
+        try {
+          const results = await Promise.all(colleges.map((college) => chatService.listSessions(college.id)));
+          if (!cancelled) {
+            const all = results.flatMap((result) => result.success ? (result.data || []) : []);
+            const unique = new Map(all.map((session) => [session.id, session]));
+            setHistorySessions(Array.from(unique.values()).sort((a, b) =>
+              (b.updated_at || b.created_at || "").localeCompare(a.updated_at || a.created_at || "")
+            ));
+          }
+        } catch {
+          // Keep the locally cached history visible if the server is unavailable.
+        }
+        return;
+      }
+
+      if (!hasAuthenticatedUser()) {
+        const localSessions = readLocalHistories();
+        if (!cancelled) {
+          setHistorySessions(localSessions);
+        }
+      }
+    };
+    void loadAllHistories();
+    return () => { cancelled = true; };
+  }, [colleges]);
 
   // Redirect expired sessions
   useEffect(() => {
@@ -268,6 +334,7 @@ export default function ChatPage() {
         if (verified.length > 0) {
           const active = verified.find((session) => session.id === preferredId) || verified[0];
           setSessions(verified);
+          mergeHistorySessions(verified);
           historyLoadSessionRef.current = active.id;
           setActiveSessionId(active.id);
           persistActiveSession(cId, active.id);
@@ -290,6 +357,7 @@ export default function ChatPage() {
           const preferredId = localStorage.getItem(`${ACTIVE_SESSION_PREFIX}${cId}`);
           const active = res.data.find((session) => session.id === preferredId) || res.data[0];
           setSessions(res.data);
+          mergeHistorySessions(res.data);
           setActiveSessionId(active.id);
           persistActiveSession(cId, active.id);
 
@@ -310,7 +378,7 @@ export default function ChatPage() {
     } finally {
       loadingCollegeIdsRef.current.delete(cId);
     }
-  }, []);
+  }, [mergeHistorySessions]);
 
   // Handle active college changes — always keep chat history on screen
   const prevCollegeIdRef = useRef<string>("");
@@ -390,6 +458,7 @@ export default function ChatPage() {
 
     const updatedSessions = [newSession, ...cachedTargetSessions.filter((s) => s.id !== newSession.id)];
     setSessions(updatedSessions);
+    mergeHistorySessions(updatedSessions);
     setActiveSessionId(newSession.id);
     persistActiveSession(targetCollege.id, newSession.id);
     persistSessions(targetCollege.id, updatedSessions);
@@ -453,6 +522,7 @@ export default function ChatPage() {
             s.id === newSessionId ? { ...s, messages: allMsgs } : s
           );
           setSessions(refreshed);
+          mergeHistorySessions(refreshed);
           persistSessions(detectedCollege.id, refreshed);
           return;
         }
@@ -469,6 +539,7 @@ export default function ChatPage() {
               s.id === newSessionId ? { ...s, messages: allMsgs } : s
             );
             setSessions(refreshed);
+            mergeHistorySessions(refreshed);
             persistSessions(detectedCollege.id, refreshed);
           } else {
             setChatError(withRequestId(res.error || "Unable to get an answer.", res.requestId));
@@ -615,6 +686,7 @@ export default function ChatPage() {
         });
 
         setSessions(refreshed);
+        mergeHistorySessions(refreshed);
         persistSessions(currentCollegeId, refreshed);
       } else {
         setMessages(currentMsgs);
@@ -806,6 +878,7 @@ export default function ChatPage() {
       const newSession: ChatSessionData = { ...res.data, messages: [] };
       const updated = [newSession, ...sessions.filter((session) => session.id !== newSession.id && session.college_id === currentCollegeId)];
       setSessions(updated);
+      mergeHistorySessions(updated);
       historyLoadSessionRef.current = newSession.id;
       setActiveSessionId(newSession.id);
       setMessages([]);
@@ -817,37 +890,46 @@ export default function ChatPage() {
   };
 
   const handleRenameSession = async (id: string, newTitle: string) => {
-    const targetSession = sessions.find((session) => session.id === id);
-    if (!targetSession || targetSession.college_id !== collegeId) {
-      setChatError("This conversation does not belong to the selected college.");
-      return;
-    }
-    const result = await chatService.renameSession(id, newTitle, collegeId);
+    const targetSession = historySessions.find((session) => session.id === id);
+    if (!targetSession?.college_id) return;
+    const result = await chatService.renameSession(id, newTitle, targetSession.college_id);
     if (!result.success) {
       setChatError(result.error || "Unable to rename the chat session.");
       return;
     }
-    const updated = sessions.map((s) => (s.id === id ? { ...s, session_title: newTitle } : s));
-    setSessions(updated);
-    if (collegeId) persistSessions(collegeId, updated);
+    const renamed = { ...targetSession, session_title: newTitle };
+    setHistorySessions((previous) => previous.map((session) => session.id === id ? renamed : session));
+    if (targetSession.college_id === collegeId) {
+      const updated = sessions.map((session) => session.id === id ? renamed : session);
+      setSessions(updated);
+      persistSessions(targetSession.college_id, updated);
+    } else {
+      const raw = localStorage.getItem(`${STORAGE_PREFIX}${targetSession.college_id}`);
+      const cached = raw ? JSON.parse(raw) as ChatSessionData[] : [];
+      persistSessions(targetSession.college_id, cached.map((session) => session.id === id ? renamed : session));
+    }
   };
 
   const handleDeleteSession = async (id: string) => {
-    const targetSession = sessions.find((session) => session.id === id);
-    if (!targetSession || targetSession.college_id !== collegeId) {
-      setChatError("This conversation does not belong to the selected college.");
-      return;
-    }
-    const result = await chatService.deleteSession(id, collegeId);
+    const targetSession = historySessions.find((session) => session.id === id);
+    if (!targetSession?.college_id) return;
+    const result = await chatService.deleteSession(id, targetSession.college_id);
     if (!result.success) {
       setChatError(result.error || "Unable to delete the chat session.");
       return;
     }
-    const remaining = sessions.filter((s) => s.id !== id);
-    setSessions(remaining);
-    if (collegeId) persistSessions(collegeId, remaining);
+    setHistorySessions((previous) => previous.filter((session) => session.id !== id));
+    const collegeSessions = targetSession.college_id === collegeId
+      ? sessions
+      : (() => {
+          try { return JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}${targetSession.college_id}`) || "[]") as ChatSessionData[]; }
+          catch { return []; }
+        })();
+    const remaining = collegeSessions.filter((session) => session.id !== id);
+    if (targetSession.college_id === collegeId) setSessions(remaining);
+    persistSessions(targetSession.college_id, remaining);
 
-    if (activeSessionId === id) {
+    if (activeSessionId === id && targetSession.college_id === collegeId) {
       if (remaining.length > 0) {
         setActiveSessionId(remaining[0].id);
         persistActiveSession(collegeId, remaining[0].id);
@@ -880,22 +962,31 @@ export default function ChatPage() {
     <div className="flex h-screen overflow-hidden bg-[#0B0B0D]">
       {/* Conversation History Sidebar */}
       <ChatSidebar
-        sessions={sessions}
+        sessions={historySessions}
+        collegeNames={Object.fromEntries(colleges.map((college) => [college.id, college.name]))}
         activeSessionId={activeSessionId}
         onSelectSession={(id) => {
-          const selectedSession = sessions.find((session) => session.id === id);
-          if (!selectedSession || selectedSession.college_id !== collegeId) return;
+          const selectedSession = historySessions.find((session) => session.id === id);
+          if (!selectedSession?.college_id) return;
           if (activeSessionRef.current === id) return;
+          const selectedCollege = colleges.find((college) => college.id === selectedSession.college_id);
+          if (!selectedCollege) return;
+          if (collegeId !== selectedCollege.id) {
+            setCollegeId(selectedCollege.id);
+            setCollegeName(selectedCollege.name);
+            localStorage.setItem("selected_college_id", selectedCollege.id);
+            localStorage.setItem("selected_college_name", selectedCollege.name);
+            window.dispatchEvent(new Event("selected-college-change"));
+            setSessions(historySessions.filter((session) => session.college_id === selectedCollege.id));
+          }
           historyLoadSessionRef.current = null;
           setActiveSessionId(id);
-          persistActiveSession(collegeId, id);
+          persistActiveSession(selectedCollege.id, id);
           setMessages(selectedSession.messages || []);
         }}
         onNewSession={handleNewSession}
         onRenameSession={handleRenameSession}
         onDeleteSession={handleDeleteSession}
-        isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
 
       {/* Main Chat Interface Window */}

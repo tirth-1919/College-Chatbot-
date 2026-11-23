@@ -20,16 +20,22 @@ export default function CollegeAnalyticsPage() {
   const [analytics, setAnalytics] = useState<CollegeAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("30D");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchAnalytics = async () => {
     setIsLoading(true);
+    setAnalytics(null);
+    setLoadError(null);
     try {
       const res = await collegeAdminService.getAnalytics(timeRange);
       if (res.success && res.data) {
         setAnalytics(res.data);
+      } else {
+        setLoadError(res.message || "Analytics could not be loaded.");
       }
     } catch (err) {
       console.error("Failed to load college analytics:", err);
+      setLoadError("Analytics could not be loaded. Please refresh and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -40,44 +46,21 @@ export default function CollegeAnalyticsPage() {
   }, [timeRange]);
 
   const data = analytics || {
-    total_queries: 116,
-    daily_queries: [
-      { date: "Mon", queries: 12 },
-      { date: "Tue", queries: 18 },
-      { date: "Wed", queries: 15 },
-      { date: "Thu", queries: 22 },
-      { date: "Fri", queries: 26 },
-      { date: "Sat", queries: 14 },
-      { date: "Sun", queries: 9 },
-    ],
-    popular_questions: [
-      { query: "What are the engineering admission cutoffs for 2026?", count: 28 },
-      { query: "What is the fee structure for computer science?", count: 24 },
-      { query: "Are hostel accommodations available on campus?", count: 18 },
-      { query: "What documents are required during physical reporting?", count: 15 },
-      { query: "Who is the Head of Department for IT?", count: 11 },
-    ],
-    unanswered_questions: [
-      "What is the bus fee from Gandhinagar sector 7?",
-      "Can diploma holders apply for direct 3rd semester without ACPC?",
-    ],
-    source_usage: {
-      "Official Website Pages": 58,
-      "Uploaded PDF Circulars": 36,
-      "Structured Catalog": 6,
-    },
-    badge_distribution: {
-      OFFICIAL_WEBSITE: 64,
-      ADMIN_VERIFIED: 28,
-      GEMINI_UNVERIFIED: 6,
-      SECONDARY_AI_FALLBACK: 1,
-      NO_RELIABLE_INFORMATION: 1,
-      AI_GUIDANCE: 0,
-      OPENAI_UNVERIFIED: 0,
-      XKIRO_UNVERIFIED: 0,
-    },
-    satisfaction_score: 4.8,
+    total_queries: 0,
+    popular_questions: [],
+    frequent_questions: [],
+    unanswered_questions: [],
+    source_usage: {},
+    source_distribution: {},
+    badge_distribution: {},
+    satisfaction_score: 0,
+    positive_feedback_count: 0,
+    negative_feedback_count: 0,
   };
+  const popularQuestions = data.popular_questions || data.frequent_questions || [];
+  const unansweredQuestions = data.unanswered_questions || [];
+  const hasFeedback = (data.positive_feedback_count || 0) + (data.negative_feedback_count || 0) > 0;
+  const answerDistribution = data.badge_distribution || data.source_distribution || {};
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -120,6 +103,9 @@ export default function CollegeAnalyticsPage() {
         </div>
       </div>
 
+      {isLoading && <div className="text-xs text-[#A1A1AA]" role="status">Loading analytics for {timeRange}…</div>}
+      {loadError && <div className="p-3 rounded-lg border border-[#EF4444]/30 bg-[#EF4444]/10 text-xs text-[#FCA5A5]" role="alert">{loadError}</div>}
+
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <DashboardCard
@@ -132,20 +118,20 @@ export default function CollegeAnalyticsPage() {
 
         <DashboardCard
           title="Satisfaction Rating"
-          value={`${data.satisfaction_score ?? data.satisfaction_rate ?? 4.8} / 5.0`}
-          subtitle="Student answer ratings"
-          trend="High Accuracy"
-          trendUp={true}
+          value={hasFeedback ? `${data.satisfaction_score ?? data.satisfaction_rate ?? 0} / 5.0` : "No ratings"}
+          subtitle="Ratings in selected date range"
+          trend={hasFeedback ? "Based on student feedback" : "No feedback in range"}
+          trendUp={hasFeedback}
           icon={<Star className="h-5 w-5" />}
           iconColor="text-[#F59E0B] bg-[#F59E0B]/10"
         />
 
         <DashboardCard
           title="Identified Knowledge Gaps"
-          value={(data.unanswered_questions || []).length}
+          value={unansweredQuestions.length}
           subtitle="Questions requiring new circulars"
-          trend={(data.unanswered_questions || []).length > 0 ? "Review Needed" : "All Answered"}
-          trendUp={(data.unanswered_questions || []).length === 0}
+          trend={unansweredQuestions.length > 0 ? "Review Needed" : "None in range"}
+          trendUp={unansweredQuestions.length === 0}
           icon={<AlertCircle className="h-5 w-5" />}
           iconColor="text-[#EF4444] bg-[#EF4444]/10"
         />
@@ -164,7 +150,7 @@ export default function CollegeAnalyticsPage() {
           </div>
 
           <div className="divide-y divide-[#1F1F23]">
-            {(data.popular_questions || []).map((q, idx) => {
+            {popularQuestions.length > 0 ? popularQuestions.map((q, idx) => {
               const queryText = (q as any).query || (q as any).question || "";
               return (
                 <div key={idx} className="py-3 flex items-center justify-between text-xs gap-3">
@@ -176,7 +162,7 @@ export default function CollegeAnalyticsPage() {
                   </span>
                 </div>
               );
-            })}
+            }) : <p className="py-6 text-xs text-[#71717A]">No student questions in this date range.</p>}
           </div>
         </div>
 
@@ -194,9 +180,10 @@ export default function CollegeAnalyticsPage() {
           </p>
 
           <div className="space-y-3">
-            {(data.unanswered_questions || []).map((uq, idx) => {
-              const questionText = typeof uq === "string" ? uq : (uq as any).question || "";
-              const count = typeof uq === "object" && (uq as any).count ? `(${(uq as any).count} asks)` : "";
+            {unansweredQuestions.length > 0 ? unansweredQuestions.map((uq, idx) => {
+              const questionText = typeof uq === "string" ? uq : (uq as any).query || (uq as any).question || "";
+              const occurrenceCount = typeof uq === "object" ? (uq as any).count || (uq as any).occurrence_count : 0;
+              const count = occurrenceCount ? `(${occurrenceCount} asks)` : "";
               return (
                 <div
                   key={idx}
@@ -213,13 +200,13 @@ export default function CollegeAnalyticsPage() {
                   )}
                 </div>
               );
-            })}
+            }) : <p className="py-4 text-xs text-[#71717A]">No unanswered questions in this date range.</p>}
           </div>
         </div>
       </div>
 
       {/* Trust & Grounding Distribution */}
-      {data.badge_distribution && (
+      {Object.keys(answerDistribution).length > 0 && (
         <div className="p-6 rounded-2xl border border-[#2A2A30] bg-[#111114] space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[#F5F5F5] flex items-center gap-2">
@@ -229,54 +216,12 @@ export default function CollegeAnalyticsPage() {
             <span className="text-[10px] text-[#A1A1AA]">Based on verified queries</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
-            <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
-              <span className="text-[10px] text-[#10B981] font-semibold block uppercase">Official Website</span>
-              <span className="text-lg font-bold text-[#F5F5F5]">
-                {data.badge_distribution.OFFICIAL_WEBSITE || 0}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
-              <span className="text-[10px] text-[#6366F1] font-semibold block uppercase">Admin Verified</span>
-              <span className="text-lg font-bold text-[#F5F5F5]">
-                {data.badge_distribution.ADMIN_VERIFIED || 0}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
-              <span className="text-[10px] text-[#F59E0B] font-semibold block uppercase">Gemini AI</span>
-              <span className="text-lg font-bold text-[#F5F5F5]">
-                {data.badge_distribution.GEMINI_UNVERIFIED || 0}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
-              <span className="text-[10px] text-[#3B82F6] font-semibold block uppercase">Fallback AI</span>
-              <span className="text-lg font-bold text-[#F5F5F5]">
-                {data.badge_distribution.SECONDARY_AI_FALLBACK || 0}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
-              <span className="text-[10px] text-[#EF4444] font-semibold block uppercase">No Reliable Info</span>
-              <span className="text-lg font-bold text-[#F5F5F5]">
-                {data.badge_distribution.NO_RELIABLE_INFORMATION || 0}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
-              <span className="text-[10px] text-[#F59E0B] font-semibold block uppercase">AI Guidance</span>
-              <span className="text-lg font-bold text-[#F5F5F5]">
-                {data.badge_distribution.AI_GUIDANCE || 0}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
-              <span className="text-[10px] text-[#F59E0B] font-semibold block uppercase">OpenAI Unverified</span>
-              <span className="text-lg font-bold text-[#F5F5F5]">
-                {data.badge_distribution.OPENAI_UNVERIFIED || 0}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
-              <span className="text-[10px] text-[#F59E0B] font-semibold block uppercase">xKiro Unverified</span>
-              <span className="text-lg font-bold text-[#F5F5F5]">
-                {data.badge_distribution.XKIRO_UNVERIFIED || 0}
-              </span>
-            </div>
+            {Object.entries(answerDistribution).map(([label, count]) => (
+              <div key={label} className="p-3 rounded-xl bg-[#0B0B0D] border border-[#2A2A30]">
+                <span className="text-[10px] text-[#A1A1AA] font-semibold block uppercase">{label.replaceAll("_", " ")}</span>
+                <span className="text-lg font-bold text-[#F5F5F5]">{count}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

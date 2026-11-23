@@ -58,7 +58,7 @@ export default function LandingPage() {
               Architecture
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold text-[#F5F5F5]">
-              How CampusAI Delivers Zero Hallucinations
+              How AI FAQ Colleges Chatbot Delivers Zero Hallucinations
             </h2>
           </div>
 
@@ -147,7 +147,7 @@ export default function LandingPage() {
             <div className="h-6 w-6 rounded-md bg-[#6366F1] flex items-center justify-center text-white font-bold text-xs">
               C
             </div>
-            <span className="font-semibold text-[#F5F5F5]">CampusAI College Chatbot</span>
+            <span className="font-semibold text-[#F5F5F5]">AI FAQ Colleges Chatbot</span>
             <span>— Enterprise Multi-Tenant SaaS</span>
           </div>
 

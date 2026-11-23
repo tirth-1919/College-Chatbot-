@@ -237,7 +237,7 @@ export default function CollegeOnboardingWizardPage() {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-[#F5F5F5]">
-                  Welcome to CampusAI, {collegeData.name}!
+                  Welcome to AI FAQ Colleges Chatbot, {collegeData.name}!
                 </h2>
                 <p className="text-xs text-[#A1A1AA] mt-1 leading-relaxed">
                   Your college registration has been officially approved by the Global Super Administrator.

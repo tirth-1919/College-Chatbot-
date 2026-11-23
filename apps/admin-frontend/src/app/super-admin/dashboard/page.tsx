@@ -221,7 +221,7 @@ export default function SuperAdminDashboardPage() {
                 Recent Institutional Onboardings
               </h3>
               <p className="text-[11px] text-[#A1A1AA]">
-                Latest colleges registered on CampusAI
+                Latest colleges registered on AI FAQ Colleges Chatbot
               </p>
             </div>
             <Link

@@ -47,6 +47,7 @@ const NAV_GROUPS = [
       { name: "Review Queue", href: "/college-admin/reviews", icon: CheckSquare },
       { name: "Structured Facts", href: "/college-admin/structured-data", icon: Layers },
       { name: "Courses & Fees", href: "/college-admin/academic", icon: GraduationCap },
+      { name: "Image Gallery", href: "/college-admin/gallery", icon: Building2 },
     ],
   },
   {
@@ -80,7 +81,7 @@ export function CollegeAdminSidebar() {
             {!collapsed && (
               <div>
                 <span className="font-semibold text-sm text-[#F5F5F5] tracking-tight block leading-tight">
-                  CampusAI <span className="text-[#10B981]">Admin</span>
+                  AI FAQ Colleges Chatbot <span className="text-[#10B981]">Admin</span>
                 </span>
                 <span className="text-[10px] text-[#A1A1AA] uppercase tracking-wider block">
                   College Workspace

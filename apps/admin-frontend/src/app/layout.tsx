@@ -3,7 +3,7 @@ import "@/styles/globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "CampusAI Administration Portal | Institutional Knowledge Hub",
+  title: "AI FAQ Colleges Chatbot Administration Portal | Institutional Knowledge Hub",
   description: "Secure, role-gated administrative portal for College and Global Super Admins.",
 };
 

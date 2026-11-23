@@ -263,12 +263,17 @@ export interface CollegeAnalytics {
   active_knowledge_chunks?: number;
   daily_queries?: Array<{ date: string; queries: number; verified_queries?: number }>;
   daily_trends?: Array<{ date: string; queries: number; verified_queries: number }>;
+  daily_query_trend?: Array<{ date: string; queries: number }>;
   popular_questions?: Array<{ query?: string; question?: string; count: number; percentage?: number }>;
+  frequent_questions?: Array<{ query: string; count: number; category?: string; latest_asked_at?: string | null }>;
   top_questions?: Array<{ question: string; count: number; last_asked_at?: string; percentage?: number }>;
-  unanswered_questions: Array<string | { question: string; count: number; last_asked_at?: string; sample_session_id?: string }>;
+  unanswered_questions: Array<string | { query?: string; question?: string; count?: number; occurrence_count?: number; last_asked_at?: string; sample_session_id?: string }>;
   source_usage?: Record<string, number>;
   source_distribution?: Record<string, number>;
-  badge_distribution: Record<string, number>;
+  badge_distribution?: Record<string, number>;
+  category_distribution?: Record<string, number>;
+  positive_feedback_count?: number;
+  negative_feedback_count?: number;
   category_breakdown?: Record<string, number>;
 }
 

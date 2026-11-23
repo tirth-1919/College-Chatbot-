@@ -147,7 +147,7 @@ export function ChatInput({
         </button>
       </form>
       <div className="text-center text-[11px] text-[#A1A1AA]/60 mt-2">
-        CampusAI provides verified college facts. Never rely on unverified guidance for official admission payments.
+        AI FAQ Colleges Chatbot provides verified college facts. Never rely on unverified guidance for official admission payments.
       </div>
     </div>
   );

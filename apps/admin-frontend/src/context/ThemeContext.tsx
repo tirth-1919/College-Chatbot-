@@ -60,7 +60,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState(newTheme);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, newTheme);
-    } catch {}
+    } catch { }
     applyTheme(newTheme);
   };
 
@@ -81,8 +81,8 @@ export function useTheme(): ThemeContextType {
   if (!context) {
     return {
       theme: "dark",
-      toggleTheme: () => {},
-      setTheme: () => {},
+      toggleTheme: () => { },
+      setTheme: () => { },
     };
   }
   return context;

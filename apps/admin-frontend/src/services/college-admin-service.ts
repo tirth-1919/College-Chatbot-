@@ -366,14 +366,8 @@ export const collegeAdminService = {
 
   // 8. Analytics
   async getAnalytics(timeRange: string = "30D") {
-    try {
-      const res = await adminApiRequest<CollegeAnalytics>(`/analytics/college?time_range=${timeRange}`);
-      if (res.success && res.data) return res;
-    } catch (e) {}
-
-    return adminApiRequest<CollegeAnalytics>(
-      `/college-admin/analytics?time_range=${timeRange}`
-    );
+    const params = new URLSearchParams({ time_range: timeRange });
+    return adminApiRequest<CollegeAnalytics>(`/analytics/college?${params.toString()}`);
   },
 
   // 9. Support & Feedback
@@ -387,7 +381,7 @@ export const collegeAdminService = {
     try {
       const res = await adminApiRequest<CollegeSupportTicket[]>(`/support/tickets${qs}`);
       if (res.success && res.data) return res;
-    } catch (e) {}
+    } catch (e) { }
 
     const oldQs = statusFilter ? `?status_filter=${statusFilter}` : "";
     return adminApiRequest<CollegeSupportTicket[]>(`/college-admin/support${oldQs}`);
@@ -427,7 +421,7 @@ export const collegeAdminService = {
         }
       );
       if (res.success && res.data) return res;
-    } catch (e) {}
+    } catch (e) { }
 
     return adminApiRequest<{ id: string; status: string }>(
       `/college-admin/support/${ticketId}`,
@@ -442,7 +436,7 @@ export const collegeAdminService = {
     try {
       const res = await adminApiRequest<CollegeFeedback[]>("/feedback");
       if (res.success && res.data) return res;
-    } catch (e) {}
+    } catch (e) { }
     return adminApiRequest<CollegeFeedback[]>("/college-admin/feedback");
   },
 
@@ -455,7 +449,7 @@ export const collegeAdminService = {
       if (res.success && res.data && res.data.items) {
         return { success: true, data: res.data.items, unread_count: res.data.unread_count };
       }
-    } catch (e) {}
+    } catch (e) { }
     return adminApiRequest<CollegeNotification[]>("/college-admin/notifications");
   },
 
@@ -496,7 +490,7 @@ export const collegeAdminService = {
       if (res.success && res.data) {
         return res;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Resilient offline fallback
     const collegeId = typeof window !== "undefined" ? localStorage.getItem("admin_college_id") || "11111111-1111-1111-1111-111111111111" : "11111111-1111-1111-1111-111111111111";
@@ -504,7 +498,7 @@ export const collegeAdminService = {
     try {
       const raw = localStorage.getItem(`campusai_onboarding_${collegeId}`);
       if (raw) storedProgress = JSON.parse(raw);
-    } catch (e) {}
+    } catch (e) { }
 
     const defaultProg = storedProgress || {
       id: "onb-" + collegeId,
@@ -541,7 +535,7 @@ export const collegeAdminService = {
       if (res.success && res.data) {
         return res;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Offline storage update
     const collegeId = typeof window !== "undefined" ? localStorage.getItem("admin_college_id") || "11111111-1111-1111-1111-111111111111" : "11111111-1111-1111-1111-111111111111";
@@ -553,7 +547,7 @@ export const collegeAdminService = {
     };
     try {
       localStorage.setItem(`campusai_onboarding_${collegeId}`, JSON.stringify(updated));
-    } catch (e) {}
+    } catch (e) { }
 
     return { success: true, data: updated };
   },
@@ -566,7 +560,7 @@ export const collegeAdminService = {
       if (res.success && res.data) {
         return res;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const collegeId = typeof window !== "undefined" ? localStorage.getItem("admin_college_id") || "11111111-1111-1111-1111-111111111111" : "11111111-1111-1111-1111-111111111111";
     let current = (await this.getOnboardingProgress()).data;
@@ -578,7 +572,7 @@ export const collegeAdminService = {
     };
     try {
       localStorage.setItem(`campusai_onboarding_${collegeId}`, JSON.stringify(completed));
-    } catch (e) {}
+    } catch (e) { }
 
     return { success: true, data: completed };
   },

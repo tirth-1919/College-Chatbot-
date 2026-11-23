@@ -88,19 +88,52 @@ async def run_integration_suite() -> List[Dict[str, Any]]:
             q_data = query_res.json().get("data", {})
             assert "message_text" in q_data or "answer" in q_data or "text" in q_data or "reply" in q_data or query_res.status_code == 200
 
+            # Exercise the image citation transport through the real chat
+            # endpoint: the structured-gallery result must survive response
+            # validation, persistence, and history reload unchanged.
+            expected_image_url = "https://www.aitindia.in/Library/sudylib.png"
+            with patch(
+                "app.api.v1.chat.answer_structured_question",
+                new=AsyncMock(return_value={
+                    "message_text": "Verified AIT photographs",
+                    "is_verified": True,
+                    "answer_source_type": "ADMIN_VERIFIED",
+                    "source_citations": [{
+                        "title": "AIT Library",
+                        "source_type": "ADMIN_VERIFIED",
+                        "url": "https://www.aitindia.in/facilities/library",
+                        "image_url": expected_image_url,
+                        "image_category": "LIBRARY",
+                    }],
+                }),
+            ):
+                image_res = await client.post(
+                    f"/api/v1/chat/sessions/{sess_id}/messages",
+                    json={"message_text": "Show all AIT images", "language": "en"},
+                    headers=headers,
+                )
+            assert image_res.status_code in [200, 201], f"Image chat query failed: {image_res.status_code}"
+            image_data = image_res.json().get("data", {})
+            citations = image_data.get("source_citations", [])
+            assert any(citation.get("image_url") == expected_image_url for citation in citations), \
+                "Image URL was lost before the chat response reached the client"
+
             history_res = await client.get(
                 f"/api/v1/chat/sessions/{sess_id}",
                 headers=headers,
             )
             assert history_res.status_code == 200, f"Chat history reload failed: {history_res.status_code}"
-            saved_roles = {
-                message.get("sender_role")
-                for message in history_res.json().get("data", {}).get("messages", [])
-            }
+            saved_messages = history_res.json().get("data", {}).get("messages", [])
+            saved_roles = {message.get("sender_role") for message in saved_messages}
             assert {"user", "assistant"}.issubset(saved_roles), "User and assistant messages were not both persisted"
+            saved_image_response = next((message for message in saved_messages if any(
+                citation.get("image_url") == expected_image_url
+                for citation in message.get("source_citations", [])
+            )), None)
+            assert saved_image_response, "Image citation was not preserved in the chat history"
 
             w1_passed = True
-            w1_detail = "Login -> Profile -> College Directory -> Chat Session -> Persisted User/Assistant Messages and History Reload (AI stubbed)"
+            w1_detail = "Login -> Profile -> College Directory -> Chat Session -> Image Citation Response -> Persisted Image Citation and History Reload (AI stubbed)"
         except Exception as exc:
             w1_detail = f"Failed at step: {str(exc)}"
 

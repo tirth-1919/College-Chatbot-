@@ -74,7 +74,7 @@ export function AdminSidebar() {
             {!collapsed && (
               <div>
                 <span className="font-semibold text-sm text-[#F5F5F5] tracking-tight block leading-tight">
-                  CampusAI <span className="text-[#6366F1]">SaaS</span>
+                  AI FAQ Colleges Chatbot <span className="text-[#6366F1]">SaaS</span>
                 </span>
                 <span className="text-[10px] text-[#A1A1AA] uppercase tracking-wider block">
                   Super Admin

@@ -398,6 +398,15 @@ class CollegeAdminRepository:
         doc = await self.get_document(college_id, doc_id)
         if not doc:
             return False
+        # Extracted facts intentionally use a generic source_id (PDF or WEBSITE),
+        # so they have no database FK cascade. Remove document facts explicitly.
+        await self.session.execute(
+            delete(ExtractedFact).where(
+                ExtractedFact.college_id == college_id,
+                ExtractedFact.source_type == "PDF",
+                ExtractedFact.source_id == doc_id,
+            )
+        )
         await self.session.delete(doc)
         await self.session.flush()
         return True

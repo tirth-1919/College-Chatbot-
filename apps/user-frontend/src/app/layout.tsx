@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "AI FAQ College Chat Bot | Verified College Intelligence",
+  title: "AI FAQ Colleges Chatbot | Verified College Intelligence",
   description: "Accurate, source-grounded college information powered by official websites, brochures, and AI.",
 };
 

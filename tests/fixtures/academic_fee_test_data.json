@@ -1,0 +1,10 @@
+{
+  "purpose": "implementation_test_fixture_only",
+  "production_seed": false,
+  "college": "AIT",
+  "course": "BCA",
+  "fees": [
+    {"semester": 1, "amount": 16000, "currency": "INR", "verification_status": "APPROVED"},
+    {"semester": 2, "amount": 32000, "currency": "INR", "verification_status": "APPROVED"}
+  ]
+}

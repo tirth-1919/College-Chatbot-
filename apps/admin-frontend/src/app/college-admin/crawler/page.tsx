@@ -35,6 +35,16 @@ export default function CrawlerManagementPage() {
   const [isStarting, setIsStarting] = useState(false);
   const [selectedPage, setSelectedPage] = useState<WebsitePage | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const hasLiveJobs = jobs.some((job) => job.status === "PENDING" || job.status === "RUNNING");
+
+  const getJobProgress = (job: CrawlJob) => {
+    if (job.status === "COMPLETED") return 100;
+    const total = Math.max(0, job.pages_discovered);
+    if (total === 0) return 0;
+    const processed = Math.max(0, job.pages_crawled) + Math.max(0, job.pages_failed);
+    const percent = Math.min(100, Math.round((processed / total) * 100));
+    return job.status === "RUNNING" ? Math.min(95, percent) : percent;
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -86,11 +96,9 @@ export default function CrawlerManagementPage() {
     fetchData();
   }, []);
 
-  // Real-time polling when a job is active
+  // Keep the full job list and selected job telemetry fresh while any crawl is queued or running.
   useEffect(() => {
-    if (!activeJob || (activeJob.status !== "RUNNING" && activeJob.status !== "PENDING")) {
-      return;
-    }
+    if (!hasLiveJobs) return;
 
     const timer = setInterval(async () => {
       try {
@@ -100,7 +108,7 @@ export default function CrawlerManagementPage() {
         ]);
         if (jobsRes.success && jobsRes.data) {
           setJobs(jobsRes.data);
-          const current = jobsRes.data.find((j) => j.id === activeJob.id) || jobsRes.data[0];
+          const current = jobsRes.data.find((j) => j.id === activeJob?.id) || jobsRes.data.find((j) => j.status === "RUNNING") || jobsRes.data[0];
           if (current) {
             setActiveJob(current);
             loadEvents(current.id);
@@ -115,7 +123,7 @@ export default function CrawlerManagementPage() {
     }, 3000);
 
     return () => clearInterval(timer);
-  }, [activeJob?.id, activeJob?.status]);
+  }, [hasLiveJobs, activeJob?.id]);
 
   const handleStartCrawl = async () => {
     if (!selectedSourceId) return;
@@ -208,6 +216,73 @@ export default function CrawlerManagementPage() {
           </button>
         </div>
       </div>
+
+      {/* Live crawl progress for every recent job */}
+      <section className="p-5 rounded-2xl border border-[#2A2A30] bg-[#111114] space-y-4" aria-labelledby="crawl-progress-heading">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 id="crawl-progress-heading" className="text-sm font-semibold text-[#F5F5F5]">All Crawl Progress</h2>
+            <p className="text-[11px] text-[#A1A1AA] mt-1">Live status for the latest {jobs.length} crawl jobs. Queued jobs begin progressing when a crawler worker picks them up.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+            {(["RUNNING", "PENDING", "COMPLETED", "FAILED"] as const).map((status) => (
+              <span key={status} className="px-2 py-1 rounded-md bg-[#18181B] border border-[#2A2A30] text-[#A1A1AA]">
+                {status} {jobs.filter((job) => job.status === status).length}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {jobs.length > 0 ? (
+          <div className="space-y-2">
+            {jobs.map((job) => {
+              const percent = getJobProgress(job);
+              const isSelected = activeJob?.id === job.id;
+              const isLive = job.status === "PENDING" || job.status === "RUNNING";
+              return (
+                <button
+                  key={job.id}
+                  type="button"
+                  onClick={() => { setActiveJob(job); loadEvents(job.id); }}
+                  className={`w-full text-left p-3 rounded-xl border transition ${isSelected ? "border-[#10B981]/50 bg-[#10B981]/5" : "border-[#2A2A30] bg-[#18181B] hover:border-[#3F3F46]"}`}
+                  aria-label={`View crawl job ${job.id}, ${job.status}`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <span className="block text-xs font-semibold text-[#F5F5F5] truncate">{job.base_url || `Crawl job ${job.id.slice(0, 8)}`}</span>
+                      <span className="text-[10px] text-[#71717A] font-mono">{job.id.slice(0, 8)} · {new Date(job.created_at).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={job.status} />
+                      <span className="text-[10px] text-[#A1A1AA] font-mono min-w-10 text-right">{percent}%</span>
+                    </div>
+                  </div>
+                  <div
+                    className="h-2 w-full overflow-hidden rounded-full bg-[#2A2A30]"
+                    role="progressbar"
+                    aria-label={`Crawl progress ${job.id}`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent}
+                  >
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${job.status === "FAILED" ? "bg-[#EF4444]" : job.status === "COMPLETED" ? "bg-[#10B981]" : job.status === "PENDING" ? "bg-[#F59E0B]/70" : "bg-[#10B981]"} ${job.status === "RUNNING" && job.pages_discovered === 0 ? "w-1/3 animate-pulse" : ""}`}
+                      style={job.status === "RUNNING" && job.pages_discovered === 0 ? undefined : { width: `${percent}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between gap-2 mt-1.5 text-[10px] text-[#71717A] font-mono">
+                    <span>{job.status === "PENDING" ? "Waiting for worker" : job.status === "RUNNING" && job.pages_discovered === 0 ? "Discovering pages…" : `${job.pages_crawled + job.pages_failed} / ${job.pages_discovered} pages processed`}</span>
+                    <span>{job.pages_crawled} crawled · {job.pages_failed} failed</span>
+                  </div>
+                  {job.failure_reason && <p className="text-[10px] text-[#EF4444] mt-1 break-words">{job.failure_reason}</p>}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-xs text-[#71717A]">No crawl jobs yet. Start a crawl to see its progress here.</div>
+        )}
+      </section>
 
       {/* Active Job Telemetry Panel */}
       {activeJob && (

@@ -236,7 +236,7 @@ export default function RegisterCollegePage() {
             College Institutional Onboarding
           </h1>
           <p className="text-xs text-[#A1A1AA] mt-1 max-w-md mx-auto">
-            Apply to integrate your college with CampusAI for verified student assistance, official website crawling, and human-in-the-loop knowledge review.
+            Apply to integrate your college with AI FAQ Colleges Chatbot for verified student assistance, official website crawling, and human-in-the-loop knowledge review.
           </p>
         </div>
 
@@ -380,7 +380,7 @@ export default function RegisterCollegePage() {
                         className="w-full px-3.5 py-2.5 rounded-lg bg-[#1F1F23] border border-[#2A2A30] text-[#F5F5F5] placeholder-[#A1A1AA]/50 text-xs font-mono focus:outline-none focus:border-[#6366F1] transition"
                       />
                       <span className="text-[10px] text-[#A1A1AA]/70 mt-1 block">
-                        Unique URL: campusai.edu/{formData.slug || "slug"}
+                        Unique URL: your-college-domain/{formData.slug || "slug"}
                       </span>
                     </div>
 

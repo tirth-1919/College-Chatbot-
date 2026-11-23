@@ -4,7 +4,6 @@ Provides real-time liveness and readiness telemetry for Kubernetes, Docker, and 
 Safe for public monitoring probes: Never exposes internal hostnames, passwords, or stack traces.
 """
 
-import asyncio
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +11,7 @@ from app.database.session import get_db
 from app.schemas.common import HealthResponse, ReadinessResponse
 from app.core.config import settings
 from app.core.logging import logger
+from app.tasks.worker_health import HEARTBEAT_PREFIX, WORKER_SET_KEY
 
 router = APIRouter(prefix="/health", tags=["System Health"])
 
@@ -78,34 +78,31 @@ async def check_readiness(
         logger.warning("Readiness check: Redis broker unreachable (%s)", str(err))
         checks["redis"] = False
 
-    # 3. Probe Celery worker availability via control.ping (requires a live worker process).
-    #    Skip the network call entirely when Redis is down — avoids a double timeout.
+    # 3. Probe for a worker's short-lived Redis heartbeat. Celery's Redis pidbox
+    #    control queue relies on a Lua script unsupported by some legacy brokers.
     if not checks["redis"]:
         checks["worker"] = False
     else:
+        worker_redis = None
         try:
-            from app.tasks.celery_app import celery_app
-
-            loop = asyncio.get_event_loop()
-            # Run the blocking control.ping in a thread so the async endpoint cannot hang.
-            # timeout=1.0 is passed to Celery; we wrap in wait_for with 2 s budget as a hard cap.
-            ping_response = await asyncio.wait_for(
-                loop.run_in_executor(
-                    None,
-                    lambda: celery_app.control.ping(timeout=1.0),
-                ),
-                timeout=2.0,
-            )
-            # ping returns a list of dicts (one per worker); an empty list means no workers alive.
-            checks["worker"] = bool(ping_response)
-        except asyncio.TimeoutError:
-            logger.warning("Readiness check: Celery worker ping timed out")
-            checks["worker"] = False
+            worker_redis = aioredis.from_url(settings.CELERY_BROKER_URL, socket_timeout=2.0)
+            worker_ids = await worker_redis.smembers(WORKER_SET_KEY)
+            heartbeat_keys = [
+                HEARTBEAT_PREFIX + (worker_id.decode() if isinstance(worker_id, bytes) else str(worker_id))
+                for worker_id in worker_ids
+            ]
+            heartbeats = await worker_redis.mget(heartbeat_keys) if heartbeat_keys else []
+            checks["worker"] = any(heartbeats)
         except Exception as err:
-            logger.warning("Readiness check: Celery worker ping failed (%s)", str(err))
+            logger.warning("Readiness check: Celery worker heartbeat unavailable (%s)", str(err))
             checks["worker"] = False
+        finally:
+            if worker_redis:
+                await worker_redis.aclose()
 
-    is_all_ready = checks["database"] and checks["redis"]
+    # A live worker is required to process queued document and crawler jobs.
+    # Do not report readiness while those background queues have no consumer.
+    is_all_ready = checks["database"] and checks["redis"] and checks["worker"] and checks["storage"]
     if not is_all_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 

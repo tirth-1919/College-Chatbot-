@@ -253,31 +253,27 @@ export const superAdminService = {
   async getUsageAnalytics(
     timeRange: string = "30D"
   ): Promise<{ success: boolean; message?: string; data?: UsageAnalytics; error?: string }> {
-    try {
-      const res = await adminApiRequest<any>(`/analytics/platform?time_range=${timeRange}`);
-      if (res.success && res.data) {
-        const p = res.data as Record<string, any>;
-        const ai = (p.ai_metrics ?? {}) as Record<string, any>;
-        const colleges = Array.isArray(p.top_active_colleges) ? p.top_active_colleges : [];
-        const normalized: UsageAnalytics = {
-          total_queries: p.total_questions_asked ?? 0,
-          total_tokens: ai.total_tokens ?? 0,
-          prompt_tokens: ai.prompt_tokens ?? 0,
-          completion_tokens: ai.completion_tokens ?? 0,
-          average_latency_ms: ai.average_latency_ms ?? 0,
-          fallback_rate_percent: ai.fallback_rate_percent ?? 0,
-          estimated_cost_usd: ai.estimated_cost_usd ?? 0,
-          top_colleges: colleges.map((c: Record<string, any>) => ({
-            name: c.name ?? "Unknown",
-            queries: c.queries ?? 0,
-            tokens: c.tokens ?? 0,
-            percent: c.percent ?? 0,
-          })),
-        };
-        return { success: true, message: res.message, data: normalized };
-      }
-    } catch (e) {}
-    return adminApiRequest<UsageAnalytics>("/super-admin/analytics");
+    const res = await adminApiRequest<any>(`/analytics/platform?time_range=${encodeURIComponent(timeRange)}`);
+    if (!res.success || !res.data) return res;
+    const p = res.data as Record<string, any>;
+    const ai = (p.ai_metrics ?? {}) as Record<string, any>;
+    const colleges = Array.isArray(p.top_active_colleges) ? p.top_active_colleges : [];
+    const normalized: UsageAnalytics = {
+      total_queries: p.total_questions_asked ?? 0,
+      total_tokens: ai.total_tokens ?? 0,
+      prompt_tokens: ai.prompt_tokens ?? 0,
+      completion_tokens: ai.completion_tokens ?? 0,
+      average_latency_ms: ai.average_latency_ms ?? 0,
+      fallback_rate_percent: ai.fallback_rate_percent ?? 0,
+      estimated_cost_usd: ai.estimated_cost_usd ?? 0,
+      top_colleges: colleges.map((c: Record<string, any>) => ({
+        name: c.name ?? "Unknown",
+        queries: c.queries ?? 0,
+        tokens: c.tokens ?? 0,
+        percent: c.percent ?? 0,
+      })),
+    };
+    return { success: true, message: res.message, data: normalized };
   },
 
   async getPlatformAnalytics(timeRange: string = "30D") {

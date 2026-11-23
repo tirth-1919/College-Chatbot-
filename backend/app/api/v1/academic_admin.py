@@ -112,6 +112,13 @@ async def create_fee(payload: FeeInput, context: CollegeTenantContext = Depends(
     return APIResponse(success=True, message="Fee schedule saved", data={c.name: getattr(row, c.name) for c in row.__table__.columns})
 
 
+@router.get("/fees", response_model=APIResponse[list])
+async def list_fees(context: CollegeTenantContext = Depends(get_college_context)):
+    rows = (await context.session.execute(select(AcademicFee).where(
+        AcademicFee.college_id == context.college.id).order_by(AcademicFee.updated_at.desc()))).scalars().all()
+    return APIResponse(success=True, message="Fee schedules loaded", data=[{c.name: getattr(row, c.name) for c in row.__table__.columns} for row in rows])
+
+
 @router.get("/images", response_model=APIResponse[list])
 async def list_images(context: CollegeTenantContext = Depends(get_college_context)):
     rows = (await context.session.execute(select(CollegeGalleryImage).where(
@@ -132,3 +139,20 @@ async def create_image(payload: ImageInput, context: CollegeTenantContext = Depe
     await context.session.commit()
     await context.session.refresh(row)
     return APIResponse(success=True, message="Gallery image saved", data={c.name: getattr(row, c.name) for c in row.__table__.columns})
+
+
+@router.patch("/images/{image_id}", response_model=APIResponse[dict])
+async def update_image(image_id: uuid.UUID, payload: ImageInput, context: CollegeTenantContext = Depends(get_college_context)):
+    row = await context.session.scalar(select(CollegeGalleryImage).where(
+        CollegeGalleryImage.id == image_id, CollegeGalleryImage.college_id == context.college.id))
+    if not row:
+        raise HTTPException(status_code=404, detail="Image not found")
+    row.image_url = str(payload.image_url)
+    row.source_url = str(payload.source_url) if payload.source_url else None
+    row.content_hash = hashlib.sha256(row.image_url.encode()).hexdigest()
+    for key, value in payload.model_dump(exclude={"image_url", "source_url"}).items():
+        setattr(row, key, value)
+    _history(context, "IMAGE", row.id, "UPDATE", payload.model_dump(mode="json"))
+    await context.session.commit()
+    await context.session.refresh(row)
+    return APIResponse(success=True, message="Image updated", data={c.name: getattr(row, c.name) for c in row.__table__.columns})

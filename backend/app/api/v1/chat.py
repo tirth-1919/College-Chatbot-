@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Security, 
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from app.database.session import get_db, set_chat_visitor_token, set_rls_context
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
@@ -473,15 +472,8 @@ async def send_chat_message(
 
     # 3. RAG Answer Generation with Context Continuity
     lang = req.language or chat_session.language or "en"
-    recent_user_messages = (await session.execute(
-        select(ChatMessage.message_text).where(
-            ChatMessage.session_id == session_id,
-            ChatMessage.sender_role == "user",
-            ChatMessage.id != user_msg.id,
-        ).order_by(ChatMessage.created_at.desc()).limit(5)
-    )).scalars().all()
     structured = await answer_structured_question(
-        session, chat_session.college_id, req.message_text.strip(), " ".join(recent_user_messages)
+        session, chat_session.college_id, req.message_text.strip(), getattr(chat_session, "session_title", "")
     )
     if structured:
         rag_result = {

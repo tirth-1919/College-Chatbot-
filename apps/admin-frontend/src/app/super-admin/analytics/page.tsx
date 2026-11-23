@@ -20,16 +20,22 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<UsageAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("30D");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchAnalytics = async () => {
     setIsLoading(true);
+    setAnalytics(null);
+    setLoadError(null);
     try {
       const res = await superAdminService.getUsageAnalytics(timeRange);
       if (res.success && res.data) {
         setAnalytics(res.data);
+      } else {
+        setLoadError(res.message || "Analytics could not be loaded.");
       }
     } catch (err) {
       console.error("Failed to load analytics:", err);
+      setLoadError("Analytics could not be loaded. Please refresh and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -40,17 +46,14 @@ export default function AnalyticsPage() {
   }, [timeRange]);
 
   const data = analytics || {
-    total_queries: 128,
-    total_tokens: 64900,
-    prompt_tokens: 48500,
-    completion_tokens: 16400,
-    average_latency_ms: 174.5,
-    fallback_rate_percent: 1.2,
-    estimated_cost_usd: 0.0171,
-    top_colleges: [
-      { name: "Ahmedabad Institute of Technology", queries: 84, tokens: 42000, percent: 65.6 },
-      { name: "RC Technical Institute", queries: 44, tokens: 22900, percent: 34.4 },
-    ],
+    total_queries: 0,
+    total_tokens: 0,
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    average_latency_ms: 0,
+    fallback_rate_percent: 0,
+    estimated_cost_usd: 0,
+    top_colleges: [],
   };
 
   return (
@@ -103,6 +106,7 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <>
+          {loadError && <div className="mb-4 p-3 rounded-lg border border-[#EF4444]/30 bg-[#EF4444]/10 text-xs text-[#FCA5A5]" role="alert">{loadError}</div>}
           {/* Metric Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <DashboardCard

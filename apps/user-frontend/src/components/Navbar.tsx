@@ -29,7 +29,7 @@ export function Navbar() {
             <GraduationCap className="h-5 w-5" />
           </div>
           <span className="font-semibold text-lg text-[#F5F5F5] tracking-tight">
-            Campus<span className="text-[#6366F1]">AI</span>
+            AI FAQ Colleges Chatbot
           </span>
         </Link>
 

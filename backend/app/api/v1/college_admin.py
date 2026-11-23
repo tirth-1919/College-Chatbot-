@@ -39,6 +39,7 @@ from app.tasks.knowledge_tasks import (
     dispatch_document_knowledge_processing,
 )
 from app.services.knowledge_service import knowledge_service
+from app.services.analytics_service import analytics_service
 from app.schemas.common import APIResponse
 from app.schemas.registration import (
     CollegeOnboardingProgressResponse,
@@ -1660,12 +1661,27 @@ async def get_college_analytics(
 ):
     """Returns analytics scoped strictly to this college's chatbot interactions."""
     college = ctx.college
-    repo = CollegeAdminRepository(ctx.session)
-    data = await repo.get_college_analytics(college.id, time_range=time_range)
+    data = await analytics_service.get_college_analytics(
+        college_id=college.id,
+        time_range=time_range,
+        session=ctx.session,
+    )
+    response_data = CollegeAnalyticsResponse(
+        total_queries=data.total_queries,
+        daily_queries=data.daily_query_trend,
+        popular_questions=[item.model_dump() for item in data.frequent_questions],
+        unanswered_questions=[
+            f"{item.query} ({item.occurrence_count} asks)"
+            for item in data.unanswered_questions
+        ],
+        source_usage=data.source_distribution,
+        badge_distribution=data.source_distribution,
+        satisfaction_score=data.satisfaction_score,
+    )
     return APIResponse(
         success=True,
         message="College analytics loaded",
-        data=CollegeAnalyticsResponse(**data),
+        data=response_data,
     )
 
 
